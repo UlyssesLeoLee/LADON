@@ -1,0 +1,12 @@
+stateDiagram-v2
+ [*] --> LOCAL
+ LOCAL --> QUEUED: policy permitted
+ QUEUED --> UPLOADING
+ UPLOADING --> REMOTE_WRITTEN
+ REMOTE_WRITTEN --> VERIFIED: readback sha256
+ VERIFIED --> COLD: optional local eviction
+ UPLOADING --> RETRY_WAIT: timeout/rate-limit
+ RETRY_WAIT --> QUEUED
+ REMOTE_WRITTEN --> CORRUPT: hash/auth failure
+ CORRUPT --> QUEUED: re-upload after review
+ LOCAL --> LOCAL_PROTECTED: sensitive

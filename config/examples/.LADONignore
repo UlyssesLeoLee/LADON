@@ -1,0 +1,12 @@
+# LADON Ignore v1: Gitignore-style, external transfer blocked by default.
+.env
+.env.*
+*.pem
+*.key
+*.p12
+**/credentials.json
+**/secrets/
+private/
+confidential/
+**/*_secret.xlsx
+# Exceptions should never override system-protected .LADONignore itself.

@@ -1,0 +1,976 @@
+{
+  "product": "LADON Explorer",
+  "version": "1.3.0",
+  "date": "2026-11-18",
+  "baseline": "Design and source candidate, no production acceptance",
+  "requirements": 100,
+  "nonfunctional_requirements": 43,
+  "test_specs": {
+    "UT": 55,
+    "IT": 30,
+    "ST": 74
+  },
+  "svg_count": 20,
+  "interactive_html": "ui-v13-responsive/interactive-preview.html",
+  "cloud_control_plane": "optional Vercel for team; not live",
+  "rust_build": "not run",
+  "cloud_oauth": "not run",
+  "windows_shell_test": "not run",
+  "files": [
+    {
+      "path": ".github/workflows/rust-ci.yml",
+      "bytes": 636,
+      "sha256": "cbcf791fc2cc083c557f16ef09ec0bacc4544b694421c496afe317871ac2f5c4"
+    },
+    {
+      "path": ".gitignore",
+      "bytes": 95,
+      "sha256": "15ccf896c233215d049490e3606a8e2d19455f456a4f85988f17ee3912b88698"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "bytes": 1122,
+      "sha256": "62291c4e9c3db713171475696af64cf3035c81637fa35f543ca1a56ec5a16f92"
+    },
+    {
+      "path": "Cargo.toml",
+      "bytes": 999,
+      "sha256": "8c27ccdccdfb230f0aae21f8a50450c8b1d917a24e706b2b53f901ad88b0e553"
+    },
+    {
+      "path": "LADON_UI_V1_2_独立原型.zip",
+      "bytes": 2218133,
+      "sha256": "b0a44a57f739beba2eb13eb59c4f8cf60f7c638c7d5220fc6ae872f44712754e"
+    },
+    {
+      "path": "QA_REPORT.json",
+      "bytes": 1271,
+      "sha256": "d4caabda5e591fb6bb34a6e55824ff6944a2d3e8bbb58af3c071479b8fcbce62"
+    },
+    {
+      "path": "README.md",
+      "bytes": 7100,
+      "sha256": "82500aa6808e8b9b7af1798085388a38c1647f9066ccc655783c54b05bbb5d2c"
+    },
+    {
+      "path": "api/README.md",
+      "bytes": 492,
+      "sha256": "699ed4579758cd1a8f77d90c9c0da2365ce907f71f8faac847cfef151267b97d"
+    },
+    {
+      "path": "api/ladon-agent-capabilities.yaml",
+      "bytes": 1186,
+      "sha256": "8be5061774f7d9e0ecc59e0ab827088dfa872a963521df9b382eedfa7dec94a1"
+    },
+    {
+      "path": "api/ladon-agent-openapi.yaml",
+      "bytes": 72515,
+      "sha256": "5fb0f36a1b7af32aac55bc70aa0231c459c058db14de36ef34ed57b7015531df"
+    },
+    {
+      "path": "build.rs",
+      "bytes": 554,
+      "sha256": "85590d900dd1a1f1589ad49b5e2c2387c47be23f7c84a5e9d7d9e13f3669e4a5"
+    },
+    {
+      "path": "config/default.yaml",
+      "bytes": 2277,
+      "sha256": "4043c415954bf9525d7bac54bf7cfea95c00a000e7a91b23d084c6b8ad8067b4"
+    },
+    {
+      "path": "config/examples/.LADONignore",
+      "bytes": 249,
+      "sha256": "dd771276bf7e5c9111e79404192e94b61474ed33b44bdcc70000146c5116b57e"
+    },
+    {
+      "path": "design/mermaid/01_system_architecture.mmd",
+      "bytes": 447,
+      "sha256": "5908a4b7fab99747f9b0e76ee260ad8dbccd01c9a729e3880066d325f373959c"
+    },
+    {
+      "path": "design/mermaid/02_event_lifecycle.mmd",
+      "bytes": 572,
+      "sha256": "3275bcd3b4aded9b5382cd68b690e5d33cb23af2c2bdab9737ecd6db03f73dee"
+    },
+    {
+      "path": "design/mermaid/03_ER.mmd",
+      "bytes": 703,
+      "sha256": "60f2d3c08f9f23d01a32b9ff153a1554ce813189e474e30975d74a1aa7913800"
+    },
+    {
+      "path": "design/mermaid/04_filespace_commit.mmd",
+      "bytes": 548,
+      "sha256": "8c61b551bf083dc3625ee89495444c6021ba89f91a20eedff94bf2c8fd5c4d4e"
+    },
+    {
+      "path": "design/mermaid/05_archive_state.mmd",
+      "bytes": 407,
+      "sha256": "6edd78941493f9a9085ec9e4ee611983a9aa55053bf87dc675511f48ef2b80b6"
+    },
+    {
+      "path": "design/mermaid/06_ignore_policy.mmd",
+      "bytes": 357,
+      "sha256": "67e426c5a514cde5a6e5b1dae5fab2ba20b55abbe7f7938ca12586b7b9f3ed29"
+    },
+    {
+      "path": "design/mermaid/07_requirements_trace.mmd",
+      "bytes": 262,
+      "sha256": "91fed96388e93fb7cb1bda8158921c1684bce3e278a93ccf0ca4cbbefadb80f4"
+    },
+    {
+      "path": "design/nema/change_reason.nema",
+      "bytes": 93,
+      "sha256": "e16c35d3f2a800bb4f5d8f31481d2f99602c9675e300f13f314f73c9b19bccc4"
+    },
+    {
+      "path": "design/nema/event_record.nema",
+      "bytes": 197,
+      "sha256": "90b2fcc09a85c6ce260c1d991f4e69a66c7aa79da8e99523112b3d94d8eec024"
+    },
+    {
+      "path": "design/nema/parallel_tasks.nema",
+      "bytes": 237,
+      "sha256": "26cba8461e9d18807d50d15b064394123281989f1a6c78e63f8bc173d9b00e00"
+    },
+    {
+      "path": "design/nema/requirements_trace.nema",
+      "bytes": 272,
+      "sha256": "a6fa03518585f49e9d7e8638d10a642c70cc64959d0c07187bf137644293b7fb"
+    },
+    {
+      "path": "design/nfrs.json",
+      "bytes": 6195,
+      "sha256": "11094155ce33129409277ead25046a967b6e9b3b5b6df5271748347eae1f664e"
+    },
+    {
+      "path": "design/requirements.json",
+      "bytes": 41952,
+      "sha256": "02acc99c083cd7d43ffef1b48757e387cdd57a8b1615489f1a41ab94cd94c845"
+    },
+    {
+      "path": "design/testcases.json",
+      "bytes": 29314,
+      "sha256": "9faf490ce8954e987da3c9f2549e7e66570ba89435fda6cf1edcc1d4e54197c1"
+    },
+    {
+      "path": "docs/00_guide/00_交付说明与标准映射.md",
+      "bytes": 3260,
+      "sha256": "67a365c4433195c82e41e9902a39725c8bae31a0209119a4785dc9ea5e582b8c"
+    },
+    {
+      "path": "docs/00_guide/01_实施状态与关键风险.md",
+      "bytes": 3017,
+      "sha256": "91d1d60928f4444c86e4dfb1cb98f50f35cd9041239b0138a4b34d570dfa8274"
+    },
+    {
+      "path": "docs/00_guide/02_V1.2变更影响与实施等级.md",
+      "bytes": 1580,
+      "sha256": "049bad0301b764489bf6d3b526be8443da0549c51ca6f5ab14c1ce521e722c69"
+    },
+    {
+      "path": "docs/01_requirements/10_总体要件定义.md",
+      "bytes": 18368,
+      "sha256": "cc019fe821406cffdd2be84bdd69ab8842e57f156d85a0fdd4921dba3759f18e"
+    },
+    {
+      "path": "docs/01_requirements/11_文档治理业务要件.md",
+      "bytes": 2607,
+      "sha256": "b2cd37215ac9855198c7aacd30c8897ba4959e96bd94a1dca78aadfd89c49429"
+    },
+    {
+      "path": "docs/01_requirements/12_非功能与安全要件.md",
+      "bytes": 5449,
+      "sha256": "d7917c7c563d776b212e6ca497e6fcdebcb06d8ed76bcdcfb59c3d31d7b39738"
+    },
+    {
+      "path": "docs/01_requirements/13_用例与业务流程.md",
+      "bytes": 2848,
+      "sha256": "1fc6450bd4105b30500f5bd5b8dd5085d279a22891b83ef1b1c7fec2eb0b268e"
+    },
+    {
+      "path": "docs/01_requirements/14_验收判定标准.md",
+      "bytes": 1600,
+      "sha256": "c7039d4abd156dd86bb83aa30061e705da08e73ce601ec841c040f0ea7e7bff1"
+    },
+    {
+      "path": "docs/01_requirements/15_V1.3_增量要件定义.md",
+      "bytes": 3040,
+      "sha256": "826de808b7d89bda482ae529d6d7f3f22656aabe1c2102fc68b5b391c98b6f43"
+    },
+    {
+      "path": "docs/02_basic_design/20_总体基本设计.md",
+      "bytes": 3764,
+      "sha256": "9579e537ef346f1392ce552cb085c253e0d6b9c5c27f029d1b677c18258cf7d0"
+    },
+    {
+      "path": "docs/02_basic_design/21_UI基本设计.md",
+      "bytes": 3701,
+      "sha256": "6678d769678254096b52d273bfb4ea9c7c0c8034a7fa958521807addf70aff2e"
+    },
+    {
+      "path": "docs/02_basic_design/22_模块架构基本设计.md",
+      "bytes": 2484,
+      "sha256": "d05744275387f74f042d15130344799405d9d2e6764aa6f47b1e1cf4dc442b4e"
+    },
+    {
+      "path": "docs/02_basic_design/23_数据存储基本设计.md",
+      "bytes": 2667,
+      "sha256": "f96c65b142f61477e01f36ae42bd587e9521da2ee99f94b68d8be9bcb45a54ac"
+    },
+    {
+      "path": "docs/02_basic_design/24_外部接口与UI基本设计.md",
+      "bytes": 2857,
+      "sha256": "4e14d4a1ef9ddf81a8762f3a9cf91892ce187fd784a60258d9633c69b7ec2e55"
+    },
+    {
+      "path": "docs/02_basic_design/25_安全与运用基本设计.md",
+      "bytes": 1938,
+      "sha256": "15d8c00ad2a5a0f74ab56ee7b57936cf2ef6569af4556f2c914b9e03de414db1"
+    },
+    {
+      "path": "docs/02_basic_design/26_现代侘寂UI与聊天基本设计.md",
+      "bytes": 3916,
+      "sha256": "13d53240068482c24c6f64657e0d9f5703497e7ebdba4cad940a09f34cb41cf8"
+    },
+    {
+      "path": "docs/02_basic_design/27_本地优先与最小后端.md",
+      "bytes": 2593,
+      "sha256": "584f5a3b3c71a75d423c7412657e9dc9e153814d08657d7113261e664139cc68"
+    },
+    {
+      "path": "docs/02_basic_design/28_自适应现代侘寂UI.md",
+      "bytes": 2374,
+      "sha256": "b59300a33288d2b25fcdc4835ee132b674d1c2a01c65c96f2a12d0173fa19f94"
+    },
+    {
+      "path": "docs/02_basic_design/29_云存储与涌现功能基本设计.md",
+      "bytes": 779,
+      "sha256": "83727ac5f94970b9dda9a9a8bba24283c008f8c0dc346a42ef2ac8fce45662a2"
+    },
+    {
+      "path": "docs/03_detailed_design/30_模块与DB详细设计.md",
+      "bytes": 2584,
+      "sha256": "2f3096492fd29deb314559c893cb406a1bdbf203317ed6490cfba68e727d55da"
+    },
+    {
+      "path": "docs/03_detailed_design/31_事件与版本算法.md",
+      "bytes": 2642,
+      "sha256": "ea15607a7044e408503483bab61083afda9d4be89f327ee8414e89719867f782"
+    },
+    {
+      "path": "docs/03_detailed_design/32_存储与接口详细设计.md",
+      "bytes": 3589,
+      "sha256": "ed517a0e4ea967153d536de5e31313c78d8c0b4772782d888fb2bd4834c67639"
+    },
+    {
+      "path": "docs/03_detailed_design/33_并行与任务详细设计.md",
+      "bytes": 2302,
+      "sha256": "3cfbc7bc394351bbb0445dc6a9bcb3b80dd9c2dfefc6e99729d874d698559900"
+    },
+    {
+      "path": "docs/03_detailed_design/34_LADONignore策略详细设计.md",
+      "bytes": 2189,
+      "sha256": "eea7232511b1411a08029aa342403e72dc40cab790e3c08f2b26deedfb238398"
+    },
+    {
+      "path": "docs/03_detailed_design/35_NEMA图谱与Diff详细设计.md",
+      "bytes": 2099,
+      "sha256": "adca1c747bd0a812fd65be0a69247f472bde24fd1df52eb611c6cb8d5c862f0f"
+    },
+    {
+      "path": "docs/03_detailed_design/36_数据库事务与变更策略.md",
+      "bytes": 2084,
+      "sha256": "e7b239786185d30391659eba6342323535d2a0d93ad958a61b8fa53a8de16663"
+    },
+    {
+      "path": "docs/03_detailed_design/37_搜索与批量标签详细设计.md",
+      "bytes": 1989,
+      "sha256": "3b7d4127c43a86c3fcec860426c690804224a9034bb38a93287e2698604a5c83"
+    },
+    {
+      "path": "docs/03_detailed_design/38_文档编辑与LSP详细设计.md",
+      "bytes": 1742,
+      "sha256": "602bdc2769e0474629b2999d732b12f0e9d866507718caef627d3987f0fb1c04"
+    },
+    {
+      "path": "docs/03_detailed_design/39_运维故障恢复详细设计.md",
+      "bytes": 1941,
+      "sha256": "dde90049b04d18daad8a22a49bcf0d087e786f5a54e9fab71987b8f705cf1ced"
+    },
+    {
+      "path": "docs/03_detailed_design/40_WindowsShell菜单与隔离.md",
+      "bytes": 5074,
+      "sha256": "ecb5046ee26f4200c7c6e6bf8bfce961a3ddcdedf20d6f9fc42d0731602feaa4"
+    },
+    {
+      "path": "docs/03_detailed_design/41_租户聊天与同步.md",
+      "bytes": 4280,
+      "sha256": "50c6a085f983e5aeca96031eff36223c8407666fb3c8eebcea3292523bc52809"
+    },
+    {
+      "path": "docs/03_detailed_design/42_AgentFolderAPI详细设计.md",
+      "bytes": 4141,
+      "sha256": "49019e331be0a21c081a3c21f33dfba072ec1649da9e1c33c33b719029749327"
+    },
+    {
+      "path": "docs/03_detailed_design/43_云盘Provider多租户归档.md",
+      "bytes": 3176,
+      "sha256": "b735a956780835f0b0ab552657b7c751b73191725d690c134571bc2387710cb0"
+    },
+    {
+      "path": "docs/03_detailed_design/44_Drive无后端归档协议.md",
+      "bytes": 3173,
+      "sha256": "330e9a64c01c09c6f2ad255ccfcf28f7a55e74e2bd5b98249bdf1992d5aba03c"
+    },
+    {
+      "path": "docs/03_detailed_design/45_事件同步与冲突恢复.md",
+      "bytes": 1553,
+      "sha256": "9ad18af2e3c9563e632ad5fa393ef42891b6cd1504991433aa7528f31a0be32e"
+    },
+    {
+      "path": "docs/03_detailed_design/46_租户与零知识边界.md",
+      "bytes": 1963,
+      "sha256": "c889bda0e2655add11242b996833a5bb36973705ebdc83cde04fcc2ca5ae853e"
+    },
+    {
+      "path": "docs/03_detailed_design/47_通信Dock与信息渐隐.md",
+      "bytes": 1889,
+      "sha256": "15fbcb9229e8e40c782536a4775d05aec653c08eea9aa917c5f046f1a9fc0e87"
+    },
+    {
+      "path": "docs/03_detailed_design/48_Provider能力协商与迁移.md",
+      "bytes": 1226,
+      "sha256": "63b4ef1f8ee535f09d6f4df151d0207ec140ca18e063d5106227370c13adc0ec"
+    },
+    {
+      "path": "docs/03_detailed_design/49_涌现式设计与AI节流.md",
+      "bytes": 1190,
+      "sha256": "c6da8c396786bdac9b07253b3119791d24b8a0f3381cca663ea4f17866bf680d"
+    },
+    {
+      "path": "docs/04_tests/40_测试计划.md",
+      "bytes": 2907,
+      "sha256": "47de6363c90000accc9e5141070f4f1090eb834dd91ade477edea7c4a953d140"
+    },
+    {
+      "path": "docs/04_tests/41_UT详细设计.md",
+      "bytes": 4725,
+      "sha256": "82b5b97ce257739418e8629ca2e97835a467d01c1ec3e601194e7d657f154677"
+    },
+    {
+      "path": "docs/04_tests/42_IT详细设计.md",
+      "bytes": 3669,
+      "sha256": "7b3824504fb333f9c66b0be1c10ff03c33b0c09dfed0dece1e4f78eb5a2abc88"
+    },
+    {
+      "path": "docs/04_tests/43_ST详细设计.md",
+      "bytes": 5936,
+      "sha256": "61c29ec2565775159dcc69c993c4c298123d7c61ec29c9d3aa6a80f1751db875"
+    },
+    {
+      "path": "docs/04_tests/44_受入测试与审核.md",
+      "bytes": 2518,
+      "sha256": "0efb26919406f1dfffd5f09c8c1bf1953ee2108a961d076571af22d4cc167cdd"
+    },
+    {
+      "path": "docs/04_tests/45_性能安全与灾备.md",
+      "bytes": 1644,
+      "sha256": "b4c740eb66d769cab1a7c801437ac9885fb86697797e1f7c571750d6b415c009"
+    },
+    {
+      "path": "docs/04_tests/46_测试执行记录与缺陷.md",
+      "bytes": 1426,
+      "sha256": "f10e89b7644296a277703ca5926118b0dae9bea21a0456e53187b247e715d31c"
+    },
+    {
+      "path": "docs/04_tests/47_新增Shell与协作测试用例.md",
+      "bytes": 6884,
+      "sha256": "f1bef39c9fe8d3f3bbaf70a5c78024722cd0edfa443399a3500b11cfd502d71b"
+    },
+    {
+      "path": "docs/04_tests/48_V1.3补充_UT_IT_ST测试规格.md",
+      "bytes": 1293,
+      "sha256": "21a3e04b13fc0fdc0656b8e869cf6e31c31a6d71048964dcc5dce15868544c26"
+    },
+    {
+      "path": "docs/04_tests/49_V1.3受入判定与失败注入.md",
+      "bytes": 1175,
+      "sha256": "7ae13c3e6dd5451a55538cf44d12a02c4e526c947893f4466874f5653af495b3"
+    },
+    {
+      "path": "docs/04_tests/要求追踪_测试管理.xlsx",
+      "bytes": 58697,
+      "sha256": "6ecc2e95c76dacd827f75eeefb79a8fa13e173b114c3a2c88b70a3e429c1caa6"
+    },
+    {
+      "path": "docs/05_operations/50_安装运行.md",
+      "bytes": 2840,
+      "sha256": "53227efca32d1b3772f7a8969da4f04a7014c1af9cb862bfb726e6ad271c9636"
+    },
+    {
+      "path": "docs/05_operations/51_备份恢复与存储迁移.md",
+      "bytes": 1253,
+      "sha256": "bfca0b14295f48b3e21997acaa02501d6372f328b4a147d9991bcc77a0337fa2"
+    },
+    {
+      "path": "docs/05_operations/52_技术路线与阶段计划.md",
+      "bytes": 1231,
+      "sha256": "6338b5ed65450ca0d54acd9f1f87a9b9305e7841e1b74ab9d28f242b9df3171f"
+    },
+    {
+      "path": "docs/05_operations/53_用户操作说明.md",
+      "bytes": 1716,
+      "sha256": "f398322c3b030366ea219c455fbcb6b0a01fc099f42662171b770b05dabe60a3"
+    },
+    {
+      "path": "docs/05_operations/54_许可证与官方资料.md",
+      "bytes": 1542,
+      "sha256": "3655bcccb16fda10b60b10b8963c682c378657f928dcf9dcf0c4e88ae5df54a5"
+    },
+    {
+      "path": "docs/05_operations/55_GoogleDrive配置与租户部署.md",
+      "bytes": 1723,
+      "sha256": "6f059886b1db6d36103fea8d1e5b6fe3b0bdd09a5d8d3c850556eae5cf83eba3"
+    },
+    {
+      "path": "docs/05_operations/56_版本升级迁移与回滚.md",
+      "bytes": 879,
+      "sha256": "7bd44c5dd0ad0881c3373cb170de4b74dc0f51e78321d56fc67195245ebdba08"
+    },
+    {
+      "path": "native/shell_menu.cpp",
+      "bytes": 5690,
+      "sha256": "fb68295328668610850d553f67e7145f1b60a0c5bb847655c22fcaae4719eaf2"
+    },
+    {
+      "path": "protocol/drive-layout-v1.yaml",
+      "bytes": 2153,
+      "sha256": "25bf6ccfdc4d7bd8c77edd49af092f19486801a1f111b95b17361deefdd748a9"
+    },
+    {
+      "path": "scripts/build_v13_ui.py",
+      "bytes": 7188,
+      "sha256": "d3c9382e67406064d51a5d051b58bc8f64a226d29802dc74d4bcec1ecea1f567"
+    },
+    {
+      "path": "scripts/generate_svg_prototypes.py",
+      "bytes": 37066,
+      "sha256": "77e5d9eca51882cce5eedb88baf3e87d18055c0f1638525e5a66b8fed43ab6cc"
+    },
+    {
+      "path": "scripts/it_smoke.sh",
+      "bytes": 417,
+      "sha256": "efdda54eddd080ed2580d269c4e77752b1bb1a61cdd3c0df6f445399a8bd0bed"
+    },
+    {
+      "path": "scripts/package_v13.py",
+      "bytes": 2042,
+      "sha256": "d2c4a3a312b9347712c191efdb64fbb156f90950ae7ba82e992879de2fb11020"
+    },
+    {
+      "path": "scripts/qa_v13.py",
+      "bytes": 4304,
+      "sha256": "02a5e62803b121775fb2a399395b56397a775f6b4f9eb1f2bb3d506a91f1c6c4"
+    },
+    {
+      "path": "scripts/st_smoke.ps1",
+      "bytes": 1103,
+      "sha256": "a51ed8c113cb4beed10bd1a481b387cda020528793f41ed30d8a9d47c637f4e6"
+    },
+    {
+      "path": "scripts/st_windows_shell_matrix.ps1",
+      "bytes": 801,
+      "sha256": "900167e70380ebdcdc4336a6cc7527b8f19e9e0591c1c7fe3ea54415c12e3999"
+    },
+    {
+      "path": "server/vercel/.env.example",
+      "bytes": 190,
+      "sha256": "f5c02938218008872b7a31aa734c19665c9746151e64f058b49a5c05a033eaf2"
+    },
+    {
+      "path": "server/vercel/README.md",
+      "bytes": 1756,
+      "sha256": "a013b7d1528cf843706020109f9034581137826d8c637f27616b7c61ac0b3410"
+    },
+    {
+      "path": "server/vercel/app/api/internal/prune/route.ts",
+      "bytes": 645,
+      "sha256": "accda8f9755da5aaec6e855473000320a26fa7744e15af7b2bd32512a7eeca52"
+    },
+    {
+      "path": "server/vercel/app/api/v1/auth/session/route.ts",
+      "bytes": 286,
+      "sha256": "89d558998082e079559be1916eb41845c1532cd23db3c4ea59fe6eb10bb26ee1"
+    },
+    {
+      "path": "server/vercel/app/api/v1/chat/route.ts",
+      "bytes": 3188,
+      "sha256": "a64a3e8ae2bd09015189e4941e691624d54b8086867bb7f1861285f6f1c1b00c"
+    },
+    {
+      "path": "server/vercel/app/api/v1/workspaces/route.ts",
+      "bytes": 609,
+      "sha256": "b6d6b0cc4e8a8d13bd5d001e620f97529e0e2416c1d54bb375eea39d3daa4321"
+    },
+    {
+      "path": "server/vercel/app/page.tsx",
+      "bytes": 221,
+      "sha256": "b62a090faec8b304663b56ae190b5abd40a3a8b398baeb2281393628825781cf"
+    },
+    {
+      "path": "server/vercel/lib/auth.ts",
+      "bytes": 2187,
+      "sha256": "47c2a672c3ae2e21ce84b6727443ac09af02490241565340ed51672b3a2b5c63"
+    },
+    {
+      "path": "server/vercel/lib/db.ts",
+      "bytes": 453,
+      "sha256": "f7ff20acbfe919f0e0a51f703b9bc3898eb613ab046443482442c67cc51bd50c"
+    },
+    {
+      "path": "server/vercel/next-env.d.ts",
+      "bytes": 81,
+      "sha256": "879741880b6ab48da99dcc06dcc674d381c9826137b0496bf7bb368f302de9fc"
+    },
+    {
+      "path": "server/vercel/package.json",
+      "bytes": 375,
+      "sha256": "f084cb0a2aebb96681afc25bfdbddca91d75a84df83407b2f6b05335f43d86b7"
+    },
+    {
+      "path": "server/vercel/tsconfig.json",
+      "bytes": 272,
+      "sha256": "ef1fc6cb6c46931053f6476c48a840dc7a1ca4685f38d0d3b9d006302b728305"
+    },
+    {
+      "path": "server/vercel/vercel.json",
+      "bytes": 66,
+      "sha256": "04f7bd3f491fd52b03fcbe07befd6ace2cbd324f8127473678a3883f717e1dc2"
+    },
+    {
+      "path": "sql/001_initial.sql",
+      "bytes": 3609,
+      "sha256": "265848a54547274756e5095af30c77b60e157bb8766a6e7a525705b7741b5005"
+    },
+    {
+      "path": "sql/002_collaboration_shell_agent.sql",
+      "bytes": 5498,
+      "sha256": "6e2ac891a3bf66b3a7fb44224902f9fda20ad4259b50467471e87d7ec7a02f8c"
+    },
+    {
+      "path": "sql/003_drive_rules_control_plane.sql",
+      "bytes": 2875,
+      "sha256": "391b7f7023977f5250184176747445f0da06026c0d8f7fd92c9c412d97f2fd19"
+    },
+    {
+      "path": "src/agent_api.rs",
+      "bytes": 4535,
+      "sha256": "dbd88e2485d27caff9aec253311bfc18c63402f6c51fccc294c6de0d9b3398bb"
+    },
+    {
+      "path": "src/archive.rs",
+      "bytes": 4710,
+      "sha256": "753686475c7df58dacbcd31e52bd64bd08860444b805b2623b3559e1fd82b460"
+    },
+    {
+      "path": "src/auth.rs",
+      "bytes": 2531,
+      "sha256": "b572e0cac9bff144dbf9e12aa222e4703f1d6e89a83383ef19734113a796de94"
+    },
+    {
+      "path": "src/cloud_journal.rs",
+      "bytes": 5818,
+      "sha256": "018be34589c33b479b618ca0b4447100b560c44ddfdedb76179351d184dc2ccd"
+    },
+    {
+      "path": "src/crypto.rs",
+      "bytes": 2692,
+      "sha256": "11f4fb738b799ce64e57bc8457b084b8ec85ba95ea557b97e5d12850d7cee024"
+    },
+    {
+      "path": "src/diff.rs",
+      "bytes": 2797,
+      "sha256": "16900317cf66237fe491ea4037f3a5c3d535053c43552701baff3cb676801406"
+    },
+    {
+      "path": "src/emergence.rs",
+      "bytes": 1891,
+      "sha256": "ea3960ca391350e773a42852e543829ab68abfa330def3215f5587ccf2797005"
+    },
+    {
+      "path": "src/engine.rs",
+      "bytes": 10972,
+      "sha256": "ce17acec1c217daf29a58d57ca6762b7a2e219cc2cf9c34ae8a29ae81f6a0b42"
+    },
+    {
+      "path": "src/lib.rs",
+      "bytes": 520,
+      "sha256": "f4a2863a4354a2bc723789854fa79e8b66d3f666fc48d24e5239ac9748bf43c6"
+    },
+    {
+      "path": "src/main.rs",
+      "bytes": 14137,
+      "sha256": "0157a7bc33f8567c64d2f4a89a5f804c0d3292f7177f03aa85d32850e58b4df1"
+    },
+    {
+      "path": "src/model.rs",
+      "bytes": 1522,
+      "sha256": "798af35182c7358cd4b60ec8e3dccd9c8b0a86834985ed02d5c331672b729956"
+    },
+    {
+      "path": "src/nema.rs",
+      "bytes": 4345,
+      "sha256": "054c314087e9eddccfcdb178a81746964731a559ce6adc419d7df598e9cecc49"
+    },
+    {
+      "path": "src/policy.rs",
+      "bytes": 5154,
+      "sha256": "e0eecd499ed2901d0c88b9340c3de348088b6a2a88598ee76a4ace3a00b9c21a"
+    },
+    {
+      "path": "src/provider.rs",
+      "bytes": 6075,
+      "sha256": "490aeb44f19e35242dad7b48fd24784deb230c6852214267002d71f5672b0f56"
+    },
+    {
+      "path": "src/search.rs",
+      "bytes": 1668,
+      "sha256": "3b4e60646bd8c792df8dfc963387e1d0d443e1794cfa48ae2a423ff61be9b373"
+    },
+    {
+      "path": "src/shell.rs",
+      "bytes": 2093,
+      "sha256": "64328925600189af4233be459af4567299c365339ac346483997d40080c809d4"
+    },
+    {
+      "path": "src/storage_rules.rs",
+      "bytes": 4488,
+      "sha256": "54b470c0a16c9e08d1097a9101460f275009db883eb27d6cecf8978ba7d07e9a"
+    },
+    {
+      "path": "src/store.rs",
+      "bytes": 16045,
+      "sha256": "97f06daa692ed9893e873679b075c6382e49121e60d5f62bddda92a0e1aa4dba"
+    },
+    {
+      "path": "src/tagging.rs",
+      "bytes": 2907,
+      "sha256": "a2ecffcde1f39870957499e594297273fc6129c71bd3e03630b74801b82ae786"
+    },
+    {
+      "path": "src/ui_layout.rs",
+      "bytes": 2699,
+      "sha256": "d58ac4e97ca46efc3fd66ee2ac0a756853c3105e112cab31c1cef0f0765e8441"
+    },
+    {
+      "path": "src/workspace.rs",
+      "bytes": 1732,
+      "sha256": "4c154131f7ee6d9f82aa7e6edbfd1eb0fedb8923975e50b5d0817fff91533220"
+    },
+    {
+      "path": "tests/it_agent_folder.rs",
+      "bytes": 764,
+      "sha256": "782e8edf4d7be872a4cf18e88cd86335a1a60dd9d96f0dfdb6fd7c7a71e57396"
+    },
+    {
+      "path": "tests/it_history.rs",
+      "bytes": 3267,
+      "sha256": "3d5b44c5495f96aedef136b8782d02ba1a1f10feae63f6e5e8cf0375b9808de7"
+    },
+    {
+      "path": "tests/it_nema_task.rs",
+      "bytes": 1028,
+      "sha256": "c4c9434a4264a8bb16aa6b7f0c750dcf97ec75894d0db4b993ee7a698acaa625"
+    },
+    {
+      "path": "ui-modern-svg/00_%E6%96%B0%E7%89%8814%E5%9C%BA%E6%99%AF%E6%80%BB%E8%A7%88.png",
+      "bytes": 394119,
+      "sha256": "fe6d1aa53ba39e866369aa124a5604c9766f18d479e0e8cc218ba820a97a746f"
+    },
+    {
+      "path": "ui-modern-svg/00_新版14场景总览.png",
+      "bytes": 394119,
+      "sha256": "fe6d1aa53ba39e866369aa124a5604c9766f18d479e0e8cc218ba820a97a746f"
+    },
+    {
+      "path": "ui-modern-svg/01_极简默认浏览.png",
+      "bytes": 91773,
+      "sha256": "ab69c2cf122c7c2b0370cfd8eea7d143fe7a37bbab39f37e7e6730464082ad2c"
+    },
+    {
+      "path": "ui-modern-svg/01_极简默认浏览.svg",
+      "bytes": 34251,
+      "sha256": "65557cf0e2613b86dad7425a93a8ba80442150681f8d3b81c4947c77ab40e911"
+    },
+    {
+      "path": "ui-modern-svg/02_AI聊天展开.png",
+      "bytes": 103556,
+      "sha256": "f2f4f4c8e2e0f20df4a30205227e6841515b903dae72266874a132f00db42d8e"
+    },
+    {
+      "path": "ui-modern-svg/02_AI聊天展开.svg",
+      "bytes": 37296,
+      "sha256": "eceb19e1fffc528c2cd35a0c90ddbbff98fdcd0e42a3c4658a6ca5b809c3491a"
+    },
+    {
+      "path": "ui-modern-svg/03_成员聊天展开.png",
+      "bytes": 97361,
+      "sha256": "2e38ad8c2bdd9f6e4e6660663aadc942325c5afc4bde828a1e912f55e2d1dfca"
+    },
+    {
+      "path": "ui-modern-svg/03_成员聊天展开.svg",
+      "bytes": 36861,
+      "sha256": "a50ee631297a72f39b4527360f516c7c6205cc18dad6a51275e6b1bb336ded5b"
+    },
+    {
+      "path": "ui-modern-svg/04_右键扩展操作.png",
+      "bytes": 111179,
+      "sha256": "8600495c711bd69daa5ceb8658a17b18c0359aa6d43a4e1855140040edc9331c"
+    },
+    {
+      "path": "ui-modern-svg/04_右键扩展操作.svg",
+      "bytes": 39655,
+      "sha256": "50de1e89afa8e922ee0b1226d41e637e9c2f55c2ab6e246dbc206ea1504e105f"
+    },
+    {
+      "path": "ui-modern-svg/05_Explorer传统菜单.png",
+      "bytes": 114981,
+      "sha256": "3d5047c65adc4eab5509b597b3a5614c4a1e501468a59e9ac7f3a1f3a2785481"
+    },
+    {
+      "path": "ui-modern-svg/05_Explorer传统菜单.svg",
+      "bytes": 41655,
+      "sha256": "f0a5a8be8c40445d9363cf59b132f01bb5b7b6085b20bb15ae352ba24d401c7c"
+    },
+    {
+      "path": "ui-modern-svg/06_文档即任务编辑.png",
+      "bytes": 116268,
+      "sha256": "94c195eb0d1b023f39ab844df5b34bbce0e0e8bf2622ea8d1e6e8b4ca3056382"
+    },
+    {
+      "path": "ui-modern-svg/06_文档即任务编辑.svg",
+      "bytes": 32643,
+      "sha256": "c4bb7a121f6e832aa5821e07e10bff793f99aefd1ee3c400a1fa7d48ad9edd0e"
+    },
+    {
+      "path": "ui-modern-svg/07_完整版本历史.png",
+      "bytes": 109333,
+      "sha256": "239a4f416dee544e995ebbe3139fcf7674084e488016231086a610caa0c90a7c"
+    },
+    {
+      "path": "ui-modern-svg/07_完整版本历史.svg",
+      "bytes": 32426,
+      "sha256": "2c424f11ccad93c1bd1627119b2c993df5f6c249163e61461afed73628ec6111"
+    },
+    {
+      "path": "ui-modern-svg/08_AI批量打标签.png",
+      "bytes": 105081,
+      "sha256": "47ea2ea3f7388322a07fd06f1c8eeb1531d0b453f6cfc57a523d56ec19a078c0"
+    },
+    {
+      "path": "ui-modern-svg/08_AI批量打标签.svg",
+      "bytes": 37450,
+      "sha256": "65cb6ec4d0985d8ad083054eb6b86b2dbe71ab94b1f91d1b36aecac05ed98a8f"
+    },
+    {
+      "path": "ui-modern-svg/09_账号与租户切换.png",
+      "bytes": 101311,
+      "sha256": "d51e75584e8a0b140d0783d0b471b442ec9cbc0303f76190f032d8dd75f6011d"
+    },
+    {
+      "path": "ui-modern-svg/09_账号与租户切换.svg",
+      "bytes": 38214,
+      "sha256": "8a0cc7cd7e193bfec8e11c7f95768367de238b70ec02a1ba3b6ee835e9893fc6"
+    },
+    {
+      "path": "ui-modern-svg/10_Google云盘与NAS.png",
+      "bytes": 97846,
+      "sha256": "c024090ba3d83d6aa05bc7365a6ad7c7fc8f93c629557943d37929612c41e643"
+    },
+    {
+      "path": "ui-modern-svg/10_Google云盘与NAS.svg",
+      "bytes": 32074,
+      "sha256": "6905f760afaff86c1191c299340f733aa32e644a0d910ce8102d9988bdc619ec"
+    },
+    {
+      "path": "ui-modern-svg/11_多Agent并行工作区.png",
+      "bytes": 100453,
+      "sha256": "537c09e201ceb8d545a379fbc642d33aae4f683ec935dd00dd35464cb52456e9"
+    },
+    {
+      "path": "ui-modern-svg/11_多Agent并行工作区.svg",
+      "bytes": 32678,
+      "sha256": "2586427aa3023189de312d1519c19b9f8dee3c4fa9e74cc139693f51e59fd7aa"
+    },
+    {
+      "path": "ui-modern-svg/12_LADON敏感文件排除.png",
+      "bytes": 95122,
+      "sha256": "6a54d0dcaf19b4494407cca6b021584523af7f364cb0083b31edc7bcd2a6dfa2"
+    },
+    {
+      "path": "ui-modern-svg/12_LADON敏感文件排除.svg",
+      "bytes": 33333,
+      "sha256": "6a6251e067f96d87db19e2fdf0c4bd20fbfbed39215f0abde715fd572314ddda"
+    },
+    {
+      "path": "ui-modern-svg/13_悬停与侧栏折叠.png",
+      "bytes": 76772,
+      "sha256": "c019ca8f0c1849fafd74584290db0357fc2d784c2d53844f8179c810bf95beba"
+    },
+    {
+      "path": "ui-modern-svg/13_悬停与侧栏折叠.svg",
+      "bytes": 35387,
+      "sha256": "274817de9d8cb0c8780f08e9f4ec3049b82d04f947475a0e04f222787003751d"
+    },
+    {
+      "path": "ui-modern-svg/14_Agent文件夹API.png",
+      "bytes": 106437,
+      "sha256": "886372b8d91fe5909adb2f9391a82bef8267e302035f75e66c41658992403bcc"
+    },
+    {
+      "path": "ui-modern-svg/14_Agent文件夹API.svg",
+      "bytes": 37171,
+      "sha256": "e21c62145735622f1fe0a0434ffc143e6ae54ec14650fa5301ce86864f38b47c"
+    },
+    {
+      "path": "ui-modern-svg/README.md",
+      "bytes": 970,
+      "sha256": "450894766886986ccc7947971e0eb3ad6daa6195f22e39f2c85f055e1da29212"
+    },
+    {
+      "path": "ui-modern-svg/index.html",
+      "bytes": 4220,
+      "sha256": "cdb52e2036d9871adc328dc632d18957300cc8d21016e29bfd64de0fa5c313f9"
+    },
+    {
+      "path": "ui-prototype/Cargo.toml",
+      "bytes": 221,
+      "sha256": "b7798c86268e6398ba0ccc390e607f2304a2c310be1d5c73e416266f09b5c5bf"
+    },
+    {
+      "path": "ui-prototype/src/main.rs",
+      "bytes": 2989,
+      "sha256": "242bdb00099f5829b033ca374c74deac98babd39b24f63e73c88c68c25d1db1c"
+    },
+    {
+      "path": "ui-reference-png/README.md",
+      "bytes": 345,
+      "sha256": "18b148f12d7f2c996518f12d1564e0cd125e83674442efb1becda38bb433d690"
+    },
+    {
+      "path": "ui-reference-png/ladon_explorer_ai智能标签工作台.png",
+      "bytes": 1680565,
+      "sha256": "aa84647a71394f4e439f54b018008461541add46ed08a5a4575e5672a370d29b"
+    },
+    {
+      "path": "ui-reference-png/ladon_explorer_多租户智能工作空间.png",
+      "bytes": 1744515,
+      "sha256": "12f7a5c1517558db962b52f78a662e49ae21984ce143d393d8f3ce4f7e4e4503"
+    },
+    {
+      "path": "ui-reference-png/ladon_explorer_工作空间界面.png",
+      "bytes": 1667638,
+      "sha256": "aad7a9ab7283c1affbacc3b79fe20122f4f2c9580f161208841bb52019ae9a16"
+    },
+    {
+      "path": "ui-reference-png/ladon_explorer_文件历史界面.png",
+      "bytes": 1779569,
+      "sha256": "a6990d3a26dd35631fd21a64d98703500df86f80d9885ac03c49d0e62e521fdd"
+    },
+    {
+      "path": "ui-reference-png/ladon_explorer_文件菜单界面.png",
+      "bytes": 1598602,
+      "sha256": "cb4e0cfd62e9e653bde33a6efa511bba69cb6ea09fceb667a973523d463e6d3d"
+    },
+    {
+      "path": "ui-reference-png/ladon_explorer_文档任务界面.png",
+      "bytes": 1676132,
+      "sha256": "e799b76c0a040eadfd4b76481cf5133f8b96b72e2a8df365c37436ac9a54e8d9"
+    },
+    {
+      "path": "ui-reference-png/ladon_explorer_文档任务编辑器.png",
+      "bytes": 1830855,
+      "sha256": "3db16b9251c93624e37fd2890c1ac0826fddd0ecce8a9eafa925d0326d647e85"
+    },
+    {
+      "path": "ui-reference-png/ladon_explorer双沟通工作台.png",
+      "bytes": 1748770,
+      "sha256": "c241c9c7d2e2caae196a716a657dc10c248f8acc099b6147b1031be670e5fd0e"
+    },
+    {
+      "path": "ui-v13-responsive/00_V1.3_6场景总览.png",
+      "bytes": 234051,
+      "sha256": "87d9e0e282c76dd69c75e2513f831cac62961e0db341246e26574a1bd2c419f0"
+    },
+    {
+      "path": "ui-v13-responsive/15_侧栏展开_默认底部Dock.png",
+      "bytes": 92906,
+      "sha256": "c14903524622baa29d31459633c17f252ac6545f56e459f167c11bb1a8466294"
+    },
+    {
+      "path": "ui-v13-responsive/15_侧栏展开_默认底部Dock.svg",
+      "bytes": 14081,
+      "sha256": "8f09256b57fcefd85fba475c661679d018eebdf2ac1b64ae1c5563cea897bc53"
+    },
+    {
+      "path": "ui-v13-responsive/16_侧栏折叠_文件区自适应.png",
+      "bytes": 84235,
+      "sha256": "239e698010ab9ad7b9fad6d381a97219d59a312a248ce1cd40a2a9ddf05f29c1"
+    },
+    {
+      "path": "ui-v13-responsive/16_侧栏折叠_文件区自适应.svg",
+      "bytes": 12826,
+      "sha256": "a8ec8361fdbc4268a07fe60f793a31b24b07e783a993c00743ed98810fba4704"
+    },
+    {
+      "path": "ui-v13-responsive/17_悬停浮层_不挤压内容.png",
+      "bytes": 90659,
+      "sha256": "c1b3dfcf2d906c1774cb13b0278fad04eda90efba74f67fd91eebe56b412226e"
+    },
+    {
+      "path": "ui-v13-responsive/17_悬停浮层_不挤压内容.svg",
+      "bytes": 13719,
+      "sha256": "8b8760852297fb0db7ceff21ed7ee9e8f8e64d45ab59c58ed9694cc7a664d1e2"
+    },
+    {
+      "path": "ui-v13-responsive/18_底部AI团队聊天展开.png",
+      "bytes": 101893,
+      "sha256": "0a0ae97c68e085573deda6a4edbc9327babfc63b08beb0bd404bd367f2d35c12"
+    },
+    {
+      "path": "ui-v13-responsive/18_底部AI团队聊天展开.svg",
+      "bytes": 14760,
+      "sha256": "2985fdd68c076827d927499e9518e035b06310b396e745efc9625fb4d4a71580"
+    },
+    {
+      "path": "ui-v13-responsive/19_低优先状态自动淡出.png",
+      "bytes": 82651,
+      "sha256": "44a0f1ab376fe344d523b36dda97dd357bb4d7918c87c9db87bbb9272f8e22a2"
+    },
+    {
+      "path": "ui-v13-responsive/19_低优先状态自动淡出.svg",
+      "bytes": 12659,
+      "sha256": "4fccc9faf30a6a266e980787838b8f1f6e8a4ed9bb9b69f0482614ad71af5a35"
+    },
+    {
+      "path": "ui-v13-responsive/20_多信号涌现任务建议.png",
+      "bytes": 107823,
+      "sha256": "3737fba5e72acef119ed0dab9845c50e509e3d9dc4e84eaa55261641de29538e"
+    },
+    {
+      "path": "ui-v13-responsive/20_多信号涌现任务建议.svg",
+      "bytes": 15025,
+      "sha256": "6cc333f403c3bd680d09972551ed40dfbb792d0a724ebbebb3e4caaa6ba09ddd"
+    },
+    {
+      "path": "ui-v13-responsive/README.md",
+      "bytes": 608,
+      "sha256": "b1d06065cd056f96efc14878c7de6308f2a2307d6b07a6d0d3893f0bfd7e969b"
+    },
+    {
+      "path": "ui-v13-responsive/interactive-preview.html",
+      "bytes": 14129,
+      "sha256": "3bafb5894715ae35cee23d1954ac082a025d13266af103e4eab7fa1be209c49f"
+    }
+  ]
+}

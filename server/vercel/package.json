@@ -1,0 +1,6 @@
+{
+  "name":"ladon-control-plane", "private":true, "version":"0.3.0",
+  "scripts":{"dev":"next dev","build":"next build","typecheck":"tsc --noEmit"},
+  "dependencies":{"@tursodatabase/serverless":"^1.4.1","jose":"^5.10.0","next":"^16.0.0","react":"^19.0.0","react-dom":"^19.0.0"},
+  "devDependencies":{"typescript":"^5.9.0","@types/node":"^22.0.0","@types/react":"^19.0.0"}
+}

@@ -1,0 +1,15 @@
+flowchart TB
+ HOOK[User Prompt / Doc Annotation] --> INDEX[Incremental REQ Candidate Index]
+ INDEX --> NEMA[.NEMA Node-Edge DAG]
+ NEMA --> A[FileSpace A Analysis]
+ NEMA --> B[FileSpace B Tests]
+ NEMA --> C[FileSpace C Security]
+ A --> PLAN[Proposed Diffs]
+ B --> PLAN
+ C --> PLAN
+ PLAN --> APPROVAL{Human Approval?}
+ APPROVAL -->|no| STOP[Reject]
+ APPROVAL -->|yes| VERSION{expected SHA matches?}
+ VERSION -->|no| CONFLICT[409 Conflict / Rebase]
+ VERSION -->|yes| COMMIT[Commit Coordinator]
+ COMMIT --> EVENTS[New Version + Event + Governance Log]

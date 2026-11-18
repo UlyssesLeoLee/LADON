@@ -1,0 +1,9 @@
+flowchart TD
+ R[FileRef / Version] --> CLASS[Classify sensitivity]
+ CLASS --> RULE[.LADONignore + Mandatory Deny]
+ RULE --> D{External transfer allowed?}
+ D -->|No| LOCAL[Local-only history and processing]
+ D -->|Yes| AUTH{User explicit storage authorization?}
+ AUTH -->|No| LOCAL
+ AUTH -->|Yes| ENC[AES-GCM + Zstd]
+ ENC --> OUT[Provider upload and verify]

@@ -1,0 +1,67 @@
+product:
+  name: LADON Explorer
+  mode: local_first
+  language: [zh, ja, en]
+  native_ui: slint_optional
+runtime:
+  ai_at_startup: false
+  browsing_priority: highest
+  worker_pool:
+    io: 4
+    search: 4
+    ai: 2
+history:
+  capture: stable_saved_file
+  initial_baseline: required
+  append_only_events: true
+  verify_chain: true
+  archive:
+    compression: zstd
+    encryption: aes256_gcm
+    cloud_key_env: LADON_ARCHIVE_KEY_HEX
+    remote_evict_only_after_readback: true
+sensitive:
+  filename: .LADONignore
+  external_transfer: deny_if_matched
+  rules_failure: deny_external_transfer
+storage:
+  database: turso_embedded
+  local_db_path: .ladon/meta.turso
+  archive_providers: [local, google_drive, nas]
+  cloud_auth: externally_provided_oauth_token_v0_1
+search:
+  exact: regex_local
+  target_future: [ide1_grep, bm25f, turso_vectors]
+concept_guard:
+  approved_requirements_exist: true
+  trigger: new_prompt_or_file_event
+  analyzer: affected_clauses_only
+nema:
+  supported_runtime_subset: directed_graph_and_section_fingerprints
+  full_codec: planned
+
+# V1.3: target policy, not all implemented by runtime
+cloud_archive_v13:
+  preferred: google_drive
+  personal_mode: personal_app_data # appDataFolder, cannot share
+  team_mode: team_drive_folder # ordinary Drive folder or Shared Drive
+  storage_rules: protocol/drive-layout-v1.yaml
+  immutable_objects: true
+  event_segments: {target_bytes: 4194304, device_scoped: true}
+  checkpoint: {required_for_cold_recovery: true}
+  local_outbox: {min_bytes: 536870912, fail_closed_when_full: true}
+  sync: {changes_cursor: true, periodic_reconciliation: true, append_only: true}
+  no_backend_personal_mode: true
+  multi_tenant_control_plane: vercel_optional_for_personal_required_for_team
+  chat_source_of_truth: encrypted_drive_segments
+  realtime_chat_relay: short_lived_vercel_ciphertext_optional
+  remote_sensitive_default: deny
+ui_v13:
+  modern_wabi_sabi: true
+  sidebar: {expanded_px: 236, collapsed_px: 60, hover_overlay: true, content_auto_fill: true}
+  bottom_chat: {dock_at_window_bottom: true, collapsed_px: 54, expand_upwards: true}
+  status: {fade_start_ms: 2300, fade_end_ms: 4000, critical_pinned: true}
+emergence:
+  minimum_independent_signal_types: 2
+  approvals_required_for_writes: true
+  model_on_startup: false

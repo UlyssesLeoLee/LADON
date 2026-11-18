@@ -1,0 +1,48 @@
+[package]
+name = "ladon-explorer"
+version = "0.3.0"
+edition = "2021"
+rust-version = "1.85"
+license = "MIT"
+description = "Event-driven file history and governance kernel for LADON Explorer"
+
+[[bin]]
+name = "ladon"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+aes-gcm = "0.10"
+async-trait = "0.1"
+chrono = { version = "0.4", features = ["serde"] }
+clap = { version = "4", features = ["derive", "env"] }
+hex = "0.4"
+ignore = "0.4"
+notify = "8"
+rand = "0.8"
+regex = "1"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "fs", "sync"] }
+turso = "=0.8.3"
+url = "2"
+uuid = { version = "1", features = ["v4", "serde"] }
+walkdir = "2"
+zstd = "0.13"
+
+similar = "2"
+
+[dev-dependencies]
+tempfile = "3"
+
+[workspace]
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true
+
+[build-dependencies]
+cc = "1"

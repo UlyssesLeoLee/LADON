@@ -1,0 +1,22 @@
+sequenceDiagram
+ participant OS as FileSystem
+ participant W as Watcher
+ participant E as Engine
+ participant CAS as CAS
+ participant DB as Turso
+ participant Cloud as StorageProvider
+ OS->>W: modify/path event
+ W->>E: stabilized candidate
+ E->>CAS: stream sha256+zstd
+ CAS-->>E: content hash
+ alt unchanged hash
+ E-->>W: no new version
+ else changed hash
+ E->>DB: BEGIN resource+version+event
+ DB-->>E: COMMIT
+ E->>Cloud: encrypt+upload if policy allows
+ Cloud-->>E: object locator
+ E->>Cloud: readback
+ E->>E: decrypt+sha256 verify
+ E->>DB: verified archive record
+ end

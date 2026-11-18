@@ -1,0 +1,27 @@
+erDiagram
+ RESOURCES ||--o{ VERSIONS : has
+ RESOURCES ||--o{ EVENTS : emits
+ VERSIONS ||--o{ EVENTS : references
+ VERSIONS }o--o{ ARCHIVE_OBJECTS : by_content_hash
+ RESOURCES ||--o{ FILE_TAGS : labeled
+ RESOURCES ||--o{ ANNOTATIONS : annotated
+ RESOURCES ||--o{ DOC_TASKS : tasks
+ RESOURCES ||--o{ GOVERNANCE_EVENTS : audit
+ RESOURCES {string id PK
+ string relative_path UK
+ string current_hash
+ int version_no}
+ VERSIONS {string id PK
+ string file_id FK
+ int number
+ string content_hash
+ int sensitive}
+ EVENTS {int seq PK
+ string id UK
+ string file_id FK
+ string version_id FK
+ string ledger_prev_hash
+ string ledger_hash}
+ ARCHIVE_OBJECTS {string content_hash PK
+ string provider PK
+ string locator}

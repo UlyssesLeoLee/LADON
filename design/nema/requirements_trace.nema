@@ -1,0 +1,14 @@
+ \>1 1
+REQ1 ApprovedRequirements
+DES1 BasicDesign
+DET1 DetailedDesign
+CODE1 RustCore
+UT1 UnitTests
+IT1 IntegrationTests
+ST1 SystemTests
+REQ1>E1>DES1 Traces
+DES1>E2>DET1 Refines
+DET1>E3>CODE1 Implements
+CODE1>E4>UT1 VerifiedBy
+DET1>E5>IT1 VerifiedBy
+REQ1>E6>ST1 AcceptedBy

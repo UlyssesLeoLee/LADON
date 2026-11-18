@@ -1,0 +1,10 @@
+flowchart LR
+ REQ[Approved Requirement] --> BASIC[Basic Design]
+ BASIC --> DETAIL[Detailed Design]
+ DETAIL --> CODE[Rust Code]
+ CODE --> UT[UT]
+ DETAIL --> IT[IT]
+ REQ --> ST[ST]
+ REQ --> TASK[Inline Document Task]
+ TASK --> CHANGE[Change Event]
+ CHANGE --> REQ

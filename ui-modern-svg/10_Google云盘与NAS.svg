@@ -1,0 +1,201 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-label="Google云盘与NAS">
+<defs><filter id="shadow" x="-20%" y="-20%" width="140%" height="160%"><feDropShadow dx="0" dy="12" stdDeviation="22" flood-color="#26362A" flood-opacity=".08"/></filter><filter id="popover" x="-40%" y="-40%" width="180%" height="200%"><feDropShadow dx="0" dy="12" stdDeviation="15" flood-color="#26362A" flood-opacity=".13"/></filter>
+<symbol id="i-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6.5a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+<symbol id="i-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h7l5 5v13H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M13 3v5h5"/><path d="M8 13h7M8 17h6"/></symbol>
+<symbol id="i-chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></symbol>
+<symbol id="i-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></symbol>
+<symbol id="i-chevron-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6"/></symbol>
+<symbol id="i-arrow-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/><path d="M8 12h12"/></symbol>
+<symbol id="i-arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m10 6 6 6-6 6"/><path d="M4 12h12"/></symbol>
+<symbol id="i-arrow-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 6-6 6 6"/><path d="M12 8v12"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
+<symbol id="i-more" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+<symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l4 2"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12 5 5L20 6"/></symbol>
+<symbol id="i-circle-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m7 12 3.5 3.5 6.5-7"/></symbol>
+<symbol id="i-cloud" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18h11a4 4 0 0 0 .2-8A7 7 0 0 0 5 9a4.5 4.5 0 0 0 2 9z"/></symbol>
+<symbol id="i-cloud-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18h11a4 4 0 0 0 0-8 7 7 0 0 0-13-1 4.5 4.5 0 0 0 2 9"/><path d="m9 15 3-3 3 3M12 12v9"/></symbol>
+<symbol id="i-bot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="13" rx="4"/><path d="M12 3v4M9 3h6"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/><path d="M9 17h6"/></symbol>
+<symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 19v-2a6 6 0 0 1 12 0v2"/><path d="M17 5a3 3 0 0 1 0 6M17 15a5 5 0 0 1 4 4"/></symbol>
+<symbol id="i-message" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-5 3v-5a2 2 0 0 1-1-2V7a2 2 0 0 1 2-2z"/></symbol>
+<symbol id="i-layout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></symbol>
+<symbol id="i-git" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="5" r="2"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="12" r="2"/><path d="M6 7v10M6 9c0 5 12-2 12 3"/></symbol>
+<symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 8 4v6c0 5-3 8-8 10-5-2-8-5-8-10V6z"/><path d="m8 12 3 3 5-6"/></symbol>
+<symbol id="i-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></symbol>
+<symbol id="i-tag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h9l9 9-8 8-10-10z"/><circle cx="8" cy="9" r="1"/></symbol>
+<symbol id="i-paperclip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m20 12-9 9a6 6 0 0 1-8-8l9-9a4 4 0 0 1 6 6l-9 9a2 2 0 0 1-3-3l9-9"/></symbol>
+<symbol id="i-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-9 20-3-8-8-3z"/><path d="M22 2 10 14"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16M4 12h16"/></symbol>
+<symbol id="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></symbol>
+<symbol id="i-pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m4 20 5-1 11-11-4-4L5 15z"/><path d="m14 6 4 4"/></symbol>
+<symbol id="i-archive" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="5" rx="1"/><rect x="5" y="9" width="14" height="12" rx="1"/><path d="M10 13h4"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6M14 11v6"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+<symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/></symbol>
+<symbol id="i-sparkles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 1.5 6.5L20 10l-6.5 1.5L12 18l-1.5-6.5L4 10l6.5-1.5zM20 18l.7 2.3L23 21l-2.3.7L20 24l-.7-2.3L17 21l2.3-.7z"/></symbol>
+<symbol id="i-history" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-7M3 3v6h6"/><path d="M12 7v5l4 2"/></symbol>
+<symbol id="i-share" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V3m0 0L7 8m5-5 5 5"/><path d="M4 14v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"/></symbol>
+<symbol id="i-columns" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/></symbol>
+<symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></symbol>
+<symbol id="i-external" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4h7v7M20 4l-10 10"/><path d="M20 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5"/></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 10 18H2z"/><path d="M12 9v5M12 17h.01"/></symbol>
+<symbol id="i-check-square" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="m7 12 3 3 7-7"/></symbol>
+<symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13m0 0 5-5m-5 5-5-5M4 17v4h16v-4"/></symbol>
+<symbol id="i-hard-drive" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 12h18M16 16h.01M19 16h.01"/></symbol>
+<symbol id="i-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h12M9 12h12M9 18h12"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+<symbol id="i-filter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h18l-7 8v8l-4-2v-6z"/></symbol>
+<symbol id="i-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m10 13 4-4M8 16H6a4 4 0 0 1 0-8h4M14 8h4a4 4 0 0 1 0 8h-4"/></symbol>
+<symbol id="i-chevrons" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m7 7 5 5-5 5m6-10 5 5-5 5"/></symbol>
+<symbol id="i-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18"/></symbol>
+<symbol id="i-key" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="13" r="5"/><path d="m12 10 9-7v5h-4v4h-4"/></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6v5h-5M4 18v-5h5"/><path d="M5 10a8 8 0 0 1 14-3l1 4M4 13l1 4a8 8 0 0 0 14-3"/></symbol>
+<symbol id="i-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></symbol>
+<symbol id="i-ellipsis" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></symbol>
+<symbol id="i-sliders" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="16" cy="17" r="3"/></symbol>
+</defs>
+<rect x="0" y="0" width="1600" height="1000" rx="0" fill="#EDEFEA"/>
+<circle cx="1517" cy="30" r="280" fill="#E7ECE6"/>
+<rect x="54" y="42" width="1492" height="910" rx="22" fill="#FFFFFF" filter="url(#shadow)"/>
+<rect x="55" y="43" width="1490" height="61" rx="21" fill="#FBFCFA"/>
+<rect x="55" y="80" width="1490" height="30" rx="0" fill="#FBFCFA"/>
+<line x1="55" y1="105" x2="1545" y2="105" stroke="#E5EAE4" stroke-width="1"/>
+<rect x="83" y="66" width="29" height="29" rx="8" fill="#718570"/>
+<path d="M91 87 103 73 103 86z" fill="#FFFFFF" opacity=".95"/>
+<text x="126" y="81" fill="#27312C" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="21" font-weight="650" text-anchor="start" dominant-baseline="middle" letter-spacing=".4">LADON</text>
+<text x="204" y="82" fill="#738078" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="11" font-weight="500" text-anchor="start" dominant-baseline="middle" letter-spacing="2">EXPLORER</text>
+<rect x="363" y="64" width="164" height="39" rx="10" fill="#FFFFFF" stroke="#E5EAE4" stroke-width="1"/>
+<use href="#i-folder" x="378" y="75" width="17" height="17" color="#4E684F" opacity="1"/>
+<text x="402" y="84" fill="#27312C" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="14" font-weight="550" text-anchor="start" dominant-baseline="middle">项目设计</text>
+<use href="#i-more" x="503" y="78" width="12" height="12" color="#9CA69E" opacity="1"/>
+<rect x="533" y="64" width="164" height="39" rx="0" fill="#FBFCFA"/>
+<use href="#i-check-square" x="548" y="75" width="17" height="17" color="#738078" opacity="1"/>
+<text x="572" y="84" fill="#738078" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="14" font-weight="400" text-anchor="start" dominant-baseline="middle">文档任务</text>
+<use href="#i-more" x="673" y="78" width="12" height="12" color="#9CA69E" opacity="1"/>
+<rect x="703" y="64" width="164" height="39" rx="0" fill="#FBFCFA"/>
+<use href="#i-git" x="718" y="75" width="17" height="17" color="#738078" opacity="1"/>
+<text x="742" y="84" fill="#738078" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="14" font-weight="400" text-anchor="start" dominant-baseline="middle">FileSpace</text>
+<use href="#i-plus" x="883" y="74" width="20" height="20" color="#738078" opacity="1"/>
+<rect x="1172" y="63" width="219" height="40" rx="12" fill="#FFFFFF" stroke="#E5EAE4" stroke-width="1"/>
+<circle cx="1193" cy="83" r="12" fill="#EAF0E7"/>
+<text x="1193" y="83" fill="#4E684F" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="13" font-weight="700" text-anchor="middle" dominant-baseline="middle">L</text>
+<text x="1213" y="83" fill="#27312C" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="13" font-weight="500" text-anchor="start" dominant-baseline="middle">LADON 株式会社</text>
+<use href="#i-chevron-down" x="1366" y="75" width="16" height="16" color="#738078" opacity="1"/>
+<use href="#i-settings" x="1412" y="73" width="20" height="20" color="#738078" opacity="1"/>
+<line x1="1457" y1="65" x2="1457" y2="94" stroke="#E5EAE4" stroke-width="1"/>
+<line x1="1485" y1="85" x2="1496" y2="85" stroke="#27312C" stroke-width="1.5"/>
+<rect x="1510" y="76" width="12" height="12" rx="2" fill="none" stroke="#27312C" stroke-width="1.3"/>
+<rect x="55" y="106" width="1490" height="71" rx="0" fill="#FFFFFF"/>
+<line x1="55" y1="176" x2="1544" y2="176" stroke="#E5EAE4" stroke-width="1"/>
+<use href="#i-arrow-left" x="88" y="125" width="21" height="21" color="#738078" opacity="1"/>
+<use href="#i-arrow-right" x="128" y="125" width="21" height="21" color="#9CA69E" opacity="1"/>
+<use href="#i-arrow-up" x="169" y="125" width="20" height="20" color="#738078" opacity="1"/>
+<line x1="207" y1="119" x2="207" y2="164" stroke="#E5EAE4" stroke-width="1"/>
+<rect x="229" y="118" width="776" height="46" rx="11" fill="#F8F9F6" stroke="#E5EAE4" stroke-width="1"/>
+<use href="#i-folder" x="245" y="131" width="18" height="18" color="#4E684F" opacity="1"/>
+<text x="276" y="141" fill="#738078" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="14" font-weight="400" text-anchor="start" dominant-baseline="middle">此电脑</text>
+<use href="#i-chevron-right" x="336" y="133" width="16" height="16" color="#9CA69E" opacity="1"/>
+<text x="348" y="141" fill="#738078" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="14" font-weight="400" text-anchor="start" dominant-baseline="middle">工作 (D:)</text>
+<use href="#i-chevron-right" x="431" y="133" width="16" height="16" color="#9CA69E" opacity="1"/>
+<text x="443" y="141" fill="#738078" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="14" font-weight="400" text-anchor="start" dominant-baseline="middle">Projects</text>
+<use href="#i-chevron-right" x="522" y="133" width="16" height="16" color="#9CA69E" opacity="1"/>
+<text x="534" y="141" fill="#738078" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="14" font-weight="400" text-anchor="start" dominant-baseline="middle">LADON</text>
+<use href="#i-chevron-right" x="597" y="133" width="16" height="16" color="#9CA69E" opacity="1"/>
+<text x="609" y="141" fill="#27312C" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="14" font-weight="500" text-anchor="start" dominant-baseline="middle">项目设计</text>
+<rect x="1027" y="118" width="407" height="46" rx="11" fill="#FFFFFF" stroke="#E5EAE4" stroke-width="1"/>
+<use href="#i-search" x="1044" y="130" width="20" height="20" color="#738078" opacity="1"/>
+<text x="1077" y="141" fill="#9CA69E" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="14" font-weight="400" text-anchor="start" dominant-baseline="middle">在 项目设计 中搜索</text>
+<use href="#i-sparkles" x="1398" y="130" width="20" height="20" color="#718570" opacity="1"/>
+<use href="#i-more" x="1480" y="131" width="21" height="21" color="#738078" opacity="1"/>
+<rect x="55" y="177" width="250" height="719" rx="0" fill="#F8F9F6"/>
+<line x1="304" y1="177" x2="304" y2="896" stroke="#E5EAE4" stroke-width="1"/>
+<text x="86" y="215" fill="#9CA69E" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="12" font-weight="550" text-anchor="start" dominant-baseline="middle" letter-spacing="1">工作空间</text>
+<use href="#i-home" x="91" y="252" width="21" height="21" color="#738078" opacity="1"/>
+<text x="126" y="263" fill="#738078" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="15" font-weight="400" text-anchor="start" dominant-baseline="middle">主页</text>
+<use href="#i-clock" x="91" y="309" width="21" height="21" color="#738078" opacity="1"/>
+<text x="126" y="320" fill="#738078" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="15" font-weight="400" text-anchor="start" dominant-baseline="middle">最近使用</text>
+<use href="#i-folder" x="91" y="366" width="21" height="21" color="#738078" opacity="1"/>
+<text x="126" y="377" fill="#738078" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="15" font-weight="400" text-anchor="start" dominant-baseline="middle">所有文件</text>
+<use href="#i-check-square" x="91" y="423" width="21" height="21" color="#738078" opacity="1"/>
+<text x="126" y="434" fill="#738078" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="15" font-weight="400" text-anchor="start" dominant-baseline="middle">文档任务</text>
+<circle cx="272" cy="434" r="3" fill="#B6A58E"/>
+<use href="#i-git" x="91" y="480" width="21" height="21" color="#738078" opacity="1"/>
+<text x="126" y="491" fill="#738078" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="15" font-weight="400" text-anchor="start" dominant-baseline="middle">FileSpace</text>
+<rect x="74" y="526" width="209" height="47" rx="11" fill="#EDF3E9"/>
+<use href="#i-cloud" x="91" y="537" width="21" height="21" color="#4E684F" opacity="1"/>
+<text x="126" y="548" fill="#27312C" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="15" font-weight="600" text-anchor="start" dominant-baseline="middle">云端存储</text>
+<text x="86" y="640" fill="#9CA69E" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="12" font-weight="550" text-anchor="start" dominant-baseline="middle" letter-spacing="1">已连接</text>
+<use href="#i-hard-drive" x="91" y="665" width="20" height="20" color="#738078" opacity="1"/>
+<text x="126" y="676" fill="#738078" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="14" font-weight="400" text-anchor="start" dominant-baseline="middle">本地磁盘 D:</text>
+<use href="#i-cloud" x="91" y="708" width="20" height="20" color="#718570" opacity="1"/>
+<text x="126" y="719" fill="#27312C" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="14" font-weight="400" text-anchor="start" dominant-baseline="middle">Google Drive</text>
+<circle cx="271" cy="719" r="4" fill="#718570"/>
+<line x1="79" y1="791" x2="278" y2="791" stroke="#E5EAE4" stroke-width="1"/>
+<circle cx="100" cy="827" r="16" fill="#EAF0E7"/>
+<text x="100" y="827" fill="#4E684F" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="12" font-weight="650" text-anchor="middle" dominant-baseline="middle">S</text>
+<text x="124" y="820" fill="#27312C" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="13" font-weight="500" text-anchor="start" dominant-baseline="middle">当前用户</text>
+<text x="124" y="839" fill="#9CA69E" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="11" font-weight="400" text-anchor="start" dominant-baseline="middle">个人偏好与安全</text>
+<use href="#i-settings" x="262" y="815" width="19" height="19" color="#738078" opacity="1"/>
+<line x1="55" y1="896" x2="1544" y2="896" stroke="#E5EAE4" stroke-width="1"/>
+<rect x="55" y="897" width="1490" height="55" rx="0" fill="#FCFDFC"/>
+<text x="82" y="924" fill="#738078" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="12" font-weight="400" text-anchor="start" dominant-baseline="middle">5 个项目</text>
+<circle cx="1365" cy="925" r="4" fill="#718570"/>
+<text x="1379" y="925" fill="#738078" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="12" font-weight="400" text-anchor="start" dominant-baseline="middle">已同步</text>
+<text x="1467" y="925" fill="#9CA69E" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="12" font-weight="400" text-anchor="start" dominant-baseline="middle">100%</text>
+<rect x="314" y="883" width="1215" height="64" rx="14" fill="#FFFFFF" stroke="#E5EAE4" stroke-width="1" filter="url(#popover)"/>
+<rect x="328" y="893" width="122" height="43" rx="10" fill="#F3F6F1"/>
+<use href="#i-sparkles" x="337" y="905" width="17" height="17" color="#4E684F" opacity="1"/>
+<text x="363" y="915" fill="#27312C" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="13" font-weight="600" text-anchor="start" dominant-baseline="middle">AI</text>
+<use href="#i-chevron-down" x="421" y="908" width="15" height="15" color="#738078" opacity="1"/>
+<rect x="459" y="893" width="122" height="43" rx="10" fill="#F3F6F1"/>
+<use href="#i-users" x="469" y="905" width="18" height="18" color="#4E684F" opacity="1"/>
+<text x="497" y="915" fill="#27312C" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="13" font-weight="600" text-anchor="start" dominant-baseline="middle">团队</text>
+<use href="#i-chevron-down" x="548" y="908" width="15" height="15" color="#738078" opacity="1"/>
+<line x1="592" y1="896" x2="592" y2="936" stroke="#E5EAE4" stroke-width="1"/>
+<text x="614" y="915" fill="#9CA69E" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="14" font-weight="400" text-anchor="start" dominant-baseline="middle">询问 AI 或给成员发送消息…</text>
+<use href="#i-paperclip" x="1406" y="906" width="19" height="19" color="#738078" opacity="1"/>
+<rect x="1451" y="892" width="62" height="46" rx="11" fill="#4E684F"/>
+<use href="#i-send" x="1471" y="904" width="22" height="22" color="#FFFFFF" opacity="1"/>
+<rect x="280" y="892" width="30" height="45" rx="10" fill="#EAF0E7"/>
+<use href="#i-chevron-up" x="285" y="905" width="20" height="20" color="#4E684F" opacity="1"/>
+<text x="338" y="232" fill="#27312C" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="23" font-weight="650" text-anchor="start" dominant-baseline="middle">存储中心</text>
+<text x="338" y="268" fill="#738078" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="13" font-weight="400" text-anchor="start" dominant-baseline="middle">工作空间存储设置 · 本地优先 · 云端归档可配置</text>
+<line x1="335" y1="295" x2="1494" y2="295" stroke="#E5EAE4" stroke-width="1"/>
+<rect x="335" y="319" width="371" height="172" rx="12" fill="#F8F9F6" stroke="#E5EAE4" stroke-width="1"/>
+<use href="#i-hard-drive" x="360" y="343" width="22" height="22" color="#4E684F" opacity="1"/>
+<text x="393" y="355" fill="#27312C" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="16" font-weight="600" text-anchor="start" dominant-baseline="middle">本地热数据</text>
+<text x="361" y="408" fill="#27312C" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="29" font-weight="650" text-anchor="start" dominant-baseline="middle">2.4 GB</text>
+<text x="361" y="454" fill="#738078" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="12" font-weight="400" text-anchor="start" dominant-baseline="middle">主要文件、Turso 索引与缓存</text>
+<rect x="727" y="319" width="371" height="172" rx="12" fill="#F8F9F6" stroke="#E5EAE4" stroke-width="1"/>
+<use href="#i-cloud" x="752" y="343" width="22" height="22" color="#4E684F" opacity="1"/>
+<text x="785" y="355" fill="#27312C" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="16" font-weight="600" text-anchor="start" dominant-baseline="middle">Google Drive</text>
+<text x="753" y="408" fill="#27312C" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="29" font-weight="650" text-anchor="start" dominant-baseline="middle">128.4 GB</text>
+<text x="753" y="454" fill="#738078" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="12" font-weight="400" text-anchor="start" dominant-baseline="middle">历史版本、加密归档、事件段</text>
+<rect x="1119" y="319" width="371" height="172" rx="12" fill="#F8F9F6" stroke="#E5EAE4" stroke-width="1"/>
+<use href="#i-folder" x="1144" y="343" width="22" height="22" color="#4E684F" opacity="1"/>
+<text x="1177" y="355" fill="#27312C" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="16" font-weight="600" text-anchor="start" dominant-baseline="middle">NAS · 未连接</text>
+<text x="1145" y="408" fill="#27312C" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="29" font-weight="650" text-anchor="start" dominant-baseline="middle">—</text>
+<text x="1145" y="454" fill="#738078" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="12" font-weight="400" text-anchor="start" dominant-baseline="middle">SMB / WebDAV 适配器已预留</text>
+<rect x="335" y="513" width="1155" height="268" rx="12" fill="#FFFFFF" stroke="#E5EAE4" stroke-width="1"/>
+<text x="362" y="550" fill="#27312C" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="18" font-weight="600" text-anchor="start" dominant-baseline="middle">历史归档队列</text>
+<rect x="1320" y="532" width="145" height="28" rx="10" fill="#EAF0E7"/>
+<text x="1392.5" y="546" fill="#4E684F" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="12" font-weight="500" text-anchor="middle" dominant-baseline="middle">同步正常</text>
+<use href="#i-file" x="362" y="581" width="22" height="22" color="#738078" opacity="1"/>
+<text x="398" y="588" fill="#27312C" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="14" font-weight="500" text-anchor="start" dominant-baseline="middle">要件定义.md · v12</text>
+<text x="398" y="611" fill="#738078" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="11" font-weight="400" text-anchor="start" dominant-baseline="middle">完整历史 · CAS</text>
+<use href="#i-circle-check" x="1313" y="582" width="18" height="18" color="#718570" opacity="1"/>
+<text x="1344" y="594" fill="#738078" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="12" font-weight="400" text-anchor="start" dominant-baseline="middle">已验证</text>
+<line x1="360" y1="633" x2="1467" y2="633" stroke="#E5EAE4" stroke-width="1"/>
+<use href="#i-file" x="362" y="648" width="22" height="22" color="#738078" opacity="1"/>
+<text x="398" y="655" fill="#27312C" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="14" font-weight="500" text-anchor="start" dominant-baseline="middle">基本设计.md · v08</text>
+<text x="398" y="678" fill="#738078" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="11" font-weight="400" text-anchor="start" dominant-baseline="middle">增量事件段 · 46 KB</text>
+<use href="#i-circle-check" x="1313" y="649" width="18" height="18" color="#718570" opacity="1"/>
+<text x="1344" y="661" fill="#738078" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="12" font-weight="400" text-anchor="start" dominant-baseline="middle">已验证</text>
+<line x1="360" y1="700" x2="1467" y2="700" stroke="#E5EAE4" stroke-width="1"/>
+<use href="#i-file" x="362" y="715" width="22" height="22" color="#738078" opacity="1"/>
+<text x="398" y="722" fill="#27312C" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="14" font-weight="500" text-anchor="start" dominant-baseline="middle">ST-014.xlsx · v05</text>
+<text x="398" y="745" fill="#738078" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="11" font-weight="400" text-anchor="start" dominant-baseline="middle">等待上传 · 128 KB</text>
+<use href="#i-clock" x="1313" y="716" width="18" height="18" color="#B6A58E" opacity="1"/>
+<text x="1344" y="728" fill="#738078" font-family="'Noto Sans CJK SC','Microsoft YaHei','Yu Gothic UI',sans-serif" font-size="12" font-weight="400" text-anchor="start" dominant-baseline="middle">待处理</text>
+<line x1="360" y1="767" x2="1467" y2="767" stroke="#E5EAE4" stroke-width="1"/>
+</svg>

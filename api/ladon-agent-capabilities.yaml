@@ -1,0 +1,48 @@
+api_version: 1.3.0
+implementation_note: Rust local algorithms exist; remote Drive OAuth, HTTP Agent API, realtime control plane are NOT production
+  verified.
+implemented_rust_core:
+- folders.list
+- files.read
+- files.grep
+- files.ref.resolve
+- files.history
+- files.ignore.check
+- storage.rules.route
+- storage.journal.seal_publish_verify
+- storage.journal.merge_detect
+- ui.layout.reflow
+- ui.status.fade
+- insights.propose_with_evidence
+implemented_cli_adapter:
+- files.diff
+- files.tags.list
+- files.tags.batch
+- files.ignore.add
+- docs.annotations
+- docs.tasks
+- files.restore.plan
+- files.restore.commit
+- shell.classic.single_item
+not_implemented:
+- http.openapi.listener
+- mcp.server
+- auth.oidc.verification
+- tenants.remote_enforced
+- chat.send
+- filespace.transaction_commit
+- events.subscribe
+- shell.modern.iexplorercommand
+- shell.multiselect
+- shell.blank_area
+- storage.cloud_migration
+- google.oauth_pkce
+- nas.native_smb_webdav
+- storage.drive.index_rebuild
+- storage.drive.multi_user_prod
+- auth.device_key_distribution
+- vercel.production_oidc_ui
+- vercel.production_chat_realtime
+- provider.nas_capability_negotiation
+- ui.native_reflow_st
+- ui.native_chat_dock_st

@@ -1,0 +1,14 @@
+flowchart TB
+ UI[Slint Native Explorer] --> CMD[Rust Command Bus]
+ CMD --> POL[LADON Policy Gate]
+ CMD --> RUNTIME[File Runtime + FileRef]
+ CMD --> GOV[Document Governance Engine]
+ CMD --> FS[FileSpace Agent Pool]
+ GOV --> TURSO[(Turso Local)]
+ GOV --> NEMA[.NEMA Graph + Diff]
+ RUNTIME --> CAS[(CAS Zstd)]
+ POL --> PROVIDER[Provider Adapters]
+ PROVIDER --> GDRIVE[(Google Drive)]
+ PROVIDER --> NAS[(NAS Mounted/SMB)]
+ FS --> CMD
+ RUNTIME --> GOV

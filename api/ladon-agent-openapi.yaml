@@ -1,0 +1,2358 @@
+openapi: 3.1.0
+info:
+  title: LADON Agent Folder and Collaboration API
+  version: 1.3.0
+  description: 'Target contract: local Rust + optional Vercel control plane + Drive/NAS archive. HTTP Agent server is not
+    production-ready; check capabilities.'
+servers:
+- url: https://control-plane.example.invalid
+  description: Placeholder; configure Vercel environment. No live endpoint supplied.
+security:
+- OIDC: []
+tags:
+- name: Folder
+- name: File
+- name: Search
+- name: History
+- name: Task
+- name: Agent
+- name: Storage
+- name: Chat
+- name: Tenant
+- name: Shell
+paths:
+  /v1/workspaces:
+    get:
+      operationId: v1_workspaces_get
+      summary: GET /v1/workspaces
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: X-LADON-Workspace
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+    post:
+      operationId: v1_workspaces_post
+      summary: POST /v1/workspaces
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: X-LADON-Workspace
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                request_id:
+                  type: string
+                idempotency_key:
+                  type: string
+                expected_hash:
+                  type: string
+                approval_token:
+                  type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/workspaces/{workspace_id}/members:
+    get:
+      operationId: v1_workspaces_workspace_id_members_get
+      summary: GET /v1/workspaces/{workspace_id}/members
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: workspace_id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+    post:
+      operationId: v1_workspaces_workspace_id_members_post
+      summary: POST /v1/workspaces/{workspace_id}/members
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: workspace_id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                request_id:
+                  type: string
+                idempotency_key:
+                  type: string
+                expected_hash:
+                  type: string
+                approval_token:
+                  type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/folders/{folder_ref}/children:
+    get:
+      operationId: v1_folders_folder_ref_children_get
+      summary: GET /v1/folders/{folder_ref}/children
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: folder_ref
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/folders/{folder_ref}/tree:
+    get:
+      operationId: v1_folders_folder_ref_tree_get
+      summary: GET /v1/folders/{folder_ref}/tree
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: folder_ref
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/folders/{folder_ref}/stat:
+    get:
+      operationId: v1_folders_folder_ref_stat_get
+      summary: GET /v1/folders/{folder_ref}/stat
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: folder_ref
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/folders/{folder_ref}/operations/plan:
+    post:
+      operationId: v1_folders_folder_ref_operations_plan_post
+      summary: POST /v1/folders/{folder_ref}/operations/plan
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: folder_ref
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                request_id:
+                  type: string
+                idempotency_key:
+                  type: string
+                expected_hash:
+                  type: string
+                approval_token:
+                  type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/folders/{folder_ref}/operations/commit:
+    post:
+      operationId: v1_folders_folder_ref_operations_commit_post
+      summary: POST /v1/folders/{folder_ref}/operations/commit
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: folder_ref
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                request_id:
+                  type: string
+                idempotency_key:
+                  type: string
+                expected_hash:
+                  type: string
+                approval_token:
+                  type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/files/resolve:
+    post:
+      operationId: v1_files_resolve_post
+      summary: POST /v1/files/resolve
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: X-LADON-Workspace
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                request_id:
+                  type: string
+                idempotency_key:
+                  type: string
+                expected_hash:
+                  type: string
+                approval_token:
+                  type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/files/{file_ref}:
+    get:
+      operationId: v1_files_file_ref_get
+      summary: GET /v1/files/{file_ref}
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: file_ref
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/files/{file_ref}/read:
+    get:
+      operationId: v1_files_file_ref_read_get
+      summary: GET /v1/files/{file_ref}/read
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: file_ref
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/files/{file_ref}/hash:
+    get:
+      operationId: v1_files_file_ref_hash_get
+      summary: GET /v1/files/{file_ref}/hash
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: file_ref
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/files/{file_ref}/history:
+    get:
+      operationId: v1_files_file_ref_history_get
+      summary: GET /v1/files/{file_ref}/history
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: file_ref
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/files/{file_ref}/tags:
+    get:
+      operationId: v1_files_file_ref_tags_get
+      summary: GET /v1/files/{file_ref}/tags
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: file_ref
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+    post:
+      operationId: v1_files_file_ref_tags_post
+      summary: POST /v1/files/{file_ref}/tags
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: file_ref
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                request_id:
+                  type: string
+                idempotency_key:
+                  type: string
+                expected_hash:
+                  type: string
+                approval_token:
+                  type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/files/{file_ref}/comments:
+    get:
+      operationId: v1_files_file_ref_comments_get
+      summary: GET /v1/files/{file_ref}/comments
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: file_ref
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+    post:
+      operationId: v1_files_file_ref_comments_post
+      summary: POST /v1/files/{file_ref}/comments
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: file_ref
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                request_id:
+                  type: string
+                idempotency_key:
+                  type: string
+                expected_hash:
+                  type: string
+                approval_token:
+                  type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/files/{file_ref}/tasks:
+    get:
+      operationId: v1_files_file_ref_tasks_get
+      summary: GET /v1/files/{file_ref}/tasks
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: file_ref
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+    post:
+      operationId: v1_files_file_ref_tasks_post
+      summary: POST /v1/files/{file_ref}/tasks
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: file_ref
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                request_id:
+                  type: string
+                idempotency_key:
+                  type: string
+                expected_hash:
+                  type: string
+                approval_token:
+                  type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/files/{file_ref}/ignore/check:
+    get:
+      operationId: v1_files_file_ref_ignore_check_get
+      summary: GET /v1/files/{file_ref}/ignore/check
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: file_ref
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/files/{file_ref}/ignore/add:
+    post:
+      operationId: v1_files_file_ref_ignore_add_post
+      summary: POST /v1/files/{file_ref}/ignore/add
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: file_ref
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                request_id:
+                  type: string
+                idempotency_key:
+                  type: string
+                expected_hash:
+                  type: string
+                approval_token:
+                  type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/files/{file_ref}/operations/plan:
+    post:
+      operationId: v1_files_file_ref_operations_plan_post
+      summary: POST /v1/files/{file_ref}/operations/plan
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: file_ref
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                request_id:
+                  type: string
+                idempotency_key:
+                  type: string
+                expected_hash:
+                  type: string
+                approval_token:
+                  type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/files/{file_ref}/operations/commit:
+    post:
+      operationId: v1_files_file_ref_operations_commit_post
+      summary: POST /v1/files/{file_ref}/operations/commit
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: file_ref
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                request_id:
+                  type: string
+                idempotency_key:
+                  type: string
+                expected_hash:
+                  type: string
+                approval_token:
+                  type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/search/grep:
+    post:
+      operationId: v1_search_grep_post
+      summary: POST /v1/search/grep
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: X-LADON-Workspace
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                request_id:
+                  type: string
+                idempotency_key:
+                  type: string
+                expected_hash:
+                  type: string
+                approval_token:
+                  type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/search/hybrid:
+    post:
+      operationId: v1_search_hybrid_post
+      summary: POST /v1/search/hybrid
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: X-LADON-Workspace
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                request_id:
+                  type: string
+                idempotency_key:
+                  type: string
+                expected_hash:
+                  type: string
+                approval_token:
+                  type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/folders/{folder_ref}/tagging/preview:
+    post:
+      operationId: v1_folders_folder_ref_tagging_preview_post
+      summary: POST /v1/folders/{folder_ref}/tagging/preview
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: folder_ref
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                request_id:
+                  type: string
+                idempotency_key:
+                  type: string
+                expected_hash:
+                  type: string
+                approval_token:
+                  type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/folders/{folder_ref}/tagging/apply:
+    post:
+      operationId: v1_folders_folder_ref_tagging_apply_post
+      summary: POST /v1/folders/{folder_ref}/tagging/apply
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: folder_ref
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                request_id:
+                  type: string
+                idempotency_key:
+                  type: string
+                expected_hash:
+                  type: string
+                approval_token:
+                  type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/versions/{version_id}:
+    get:
+      operationId: v1_versions_version_id_get
+      summary: GET /v1/versions/{version_id}
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/versions/{version_id}/diff:
+    get:
+      operationId: v1_versions_version_id_diff_get
+      summary: GET /v1/versions/{version_id}/diff
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/versions/{version_id}/content:
+    get:
+      operationId: v1_versions_version_id_content_get
+      summary: GET /v1/versions/{version_id}/content
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/versions/{version_id}/restore-plan:
+    post:
+      operationId: v1_versions_version_id_restore_plan_post
+      summary: POST /v1/versions/{version_id}/restore-plan
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                request_id:
+                  type: string
+                idempotency_key:
+                  type: string
+                expected_hash:
+                  type: string
+                approval_token:
+                  type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/restore-plans/{plan_id}/commit:
+    post:
+      operationId: v1_restore_plans_plan_id_commit_post
+      summary: POST /v1/restore-plans/{plan_id}/commit
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: plan_id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                request_id:
+                  type: string
+                idempotency_key:
+                  type: string
+                expected_hash:
+                  type: string
+                approval_token:
+                  type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/filespaces:
+    get:
+      operationId: v1_filespaces_get
+      summary: GET /v1/filespaces
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: X-LADON-Workspace
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+    post:
+      operationId: v1_filespaces_post
+      summary: POST /v1/filespaces
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: X-LADON-Workspace
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                request_id:
+                  type: string
+                idempotency_key:
+                  type: string
+                expected_hash:
+                  type: string
+                approval_token:
+                  type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/filespaces/{filespace_id}/snapshot:
+    get:
+      operationId: v1_filespaces_filespace_id_snapshot_get
+      summary: GET /v1/filespaces/{filespace_id}/snapshot
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: filespace_id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/filespaces/{filespace_id}/delta:
+    get:
+      operationId: v1_filespaces_filespace_id_delta_get
+      summary: GET /v1/filespaces/{filespace_id}/delta
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: filespace_id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/filespaces/{filespace_id}/release:
+    post:
+      operationId: v1_filespaces_filespace_id_release_post
+      summary: POST /v1/filespaces/{filespace_id}/release
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: filespace_id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                request_id:
+                  type: string
+                idempotency_key:
+                  type: string
+                expected_hash:
+                  type: string
+                approval_token:
+                  type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/events/subscribe:
+    get:
+      operationId: v1_events_subscribe_get
+      summary: GET /v1/events/subscribe
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: X-LADON-Workspace
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/events/ack:
+    post:
+      operationId: v1_events_ack_post
+      summary: POST /v1/events/ack
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: X-LADON-Workspace
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                request_id:
+                  type: string
+                idempotency_key:
+                  type: string
+                expected_hash:
+                  type: string
+                approval_token:
+                  type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/archives:
+    get:
+      operationId: v1_archives_get
+      summary: GET /v1/archives
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: X-LADON-Workspace
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/archives/{archive_id}/verify:
+    post:
+      operationId: v1_archives_archive_id_verify_post
+      summary: POST /v1/archives/{archive_id}/verify
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: archive_id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                request_id:
+                  type: string
+                idempotency_key:
+                  type: string
+                expected_hash:
+                  type: string
+                approval_token:
+                  type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/storage/providers:
+    get:
+      operationId: v1_storage_providers_get
+      summary: GET /v1/storage/providers
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: X-LADON-Workspace
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+    post:
+      operationId: v1_storage_providers_post
+      summary: POST /v1/storage/providers
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: X-LADON-Workspace
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                request_id:
+                  type: string
+                idempotency_key:
+                  type: string
+                expected_hash:
+                  type: string
+                approval_token:
+                  type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/storage/providers/{provider_id}/capabilities:
+    get:
+      operationId: v1_storage_providers_provider_id_capabilities_get
+      summary: GET /v1/storage/providers/{provider_id}/capabilities
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: provider_id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/storage/migrations:
+    post:
+      operationId: v1_storage_migrations_post
+      summary: POST /v1/storage/migrations
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: X-LADON-Workspace
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                request_id:
+                  type: string
+                idempotency_key:
+                  type: string
+                expected_hash:
+                  type: string
+                approval_token:
+                  type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/conversations:
+    get:
+      operationId: v1_conversations_get
+      summary: GET /v1/conversations
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: X-LADON-Workspace
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+    post:
+      operationId: v1_conversations_post
+      summary: POST /v1/conversations
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: X-LADON-Workspace
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                request_id:
+                  type: string
+                idempotency_key:
+                  type: string
+                expected_hash:
+                  type: string
+                approval_token:
+                  type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/conversations/{conversation_id}/messages:
+    get:
+      operationId: v1_conversations_conversation_id_messages_get
+      summary: GET /v1/conversations/{conversation_id}/messages
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: conversation_id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+    post:
+      operationId: v1_conversations_conversation_id_messages_post
+      summary: POST /v1/conversations/{conversation_id}/messages
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: conversation_id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                request_id:
+                  type: string
+                idempotency_key:
+                  type: string
+                expected_hash:
+                  type: string
+                approval_token:
+                  type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/conversations/{conversation_id}/tasks:
+    post:
+      operationId: v1_conversations_conversation_id_tasks_post
+      summary: POST /v1/conversations/{conversation_id}/tasks
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: conversation_id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                request_id:
+                  type: string
+                idempotency_key:
+                  type: string
+                expected_hash:
+                  type: string
+                approval_token:
+                  type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/devices:
+    get:
+      operationId: v1_devices_get
+      summary: GET /v1/devices
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: X-LADON-Workspace
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/devices/{device_id}/revoke:
+    post:
+      operationId: v1_devices_device_id_revoke_post
+      summary: POST /v1/devices/{device_id}/revoke
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: device_id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                request_id:
+                  type: string
+                idempotency_key:
+                  type: string
+                expected_hash:
+                  type: string
+                approval_token:
+                  type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/shell/menu:
+    post:
+      operationId: v1_shell_menu_post
+      summary: POST /v1/shell/menu
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: X-LADON-Workspace
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                request_id:
+                  type: string
+                idempotency_key:
+                  type: string
+                expected_hash:
+                  type: string
+                approval_token:
+                  type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/capabilities:
+    get:
+      operationId: v1_capabilities_get
+      summary: GET /v1/capabilities
+      description: 'Authorized tenant/workspace-scoped operation. Actual implementation status is in api/ladon-agent-capabilities.yaml.
+
+        '
+      parameters:
+      - name: X-LADON-Workspace
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result or cursor-based page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Unauthorized or blocked by LADON Ignore
+        '409':
+          description: Conflict or expected version mismatch
+  /v1/storage/rules:
+    get:
+      operationId: v13_v1_storage_rules_get
+      summary: P0 control / archive /v1/storage/rules
+      description: 'DESIGN ONLY: context authenticated, tenant-scoped, sensitive policy evaluated, idempotency key for writes.'
+      parameters:
+      - name: X-LADON-Workspace
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: X-LADON-Tenant
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result, pending, or cursor page
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden
+        '409':
+          description: Version conflict
+  /v1/storage/rules/evaluate:
+    post:
+      operationId: v13_v1_storage_rules_evaluate_post
+      summary: P0 control / archive /v1/storage/rules/evaluate
+      description: 'DESIGN ONLY: context authenticated, tenant-scoped, sensitive policy evaluated, idempotency key for writes.'
+      parameters:
+      - name: X-LADON-Workspace
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: X-LADON-Tenant
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result, pending, or cursor page
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden
+        '409':
+          description: Version conflict
+  /v1/storage/journals:
+    get:
+      operationId: v13_v1_storage_journals_get
+      summary: P0 control / archive /v1/storage/journals
+      description: 'DESIGN ONLY: context authenticated, tenant-scoped, sensitive policy evaluated, idempotency key for writes.'
+      parameters:
+      - name: X-LADON-Workspace
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: X-LADON-Tenant
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result, pending, or cursor page
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden
+        '409':
+          description: Version conflict
+  /v1/storage/journals/{segment_id}:
+    get:
+      operationId: v13_v1_storage_journals_segment_id_get
+      summary: P0 control / archive /v1/storage/journals/{segment_id}
+      description: 'DESIGN ONLY: context authenticated, tenant-scoped, sensitive policy evaluated, idempotency key for writes.'
+      parameters:
+      - name: X-LADON-Workspace
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: X-LADON-Tenant
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result, pending, or cursor page
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden
+        '409':
+          description: Version conflict
+  /v1/storage/checkpoints:
+    get:
+      operationId: v13_v1_storage_checkpoints_get
+      summary: P0 control / archive /v1/storage/checkpoints
+      description: 'DESIGN ONLY: context authenticated, tenant-scoped, sensitive policy evaluated, idempotency key for writes.'
+      parameters:
+      - name: X-LADON-Workspace
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: X-LADON-Tenant
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result, pending, or cursor page
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden
+        '409':
+          description: Version conflict
+  /v1/storage/checkpoints/rebuild:
+    post:
+      operationId: v13_v1_storage_checkpoints_rebuild_post
+      summary: P0 control / archive /v1/storage/checkpoints/rebuild
+      description: 'DESIGN ONLY: context authenticated, tenant-scoped, sensitive policy evaluated, idempotency key for writes.'
+      parameters:
+      - name: X-LADON-Workspace
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: X-LADON-Tenant
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result, pending, or cursor page
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden
+        '409':
+          description: Version conflict
+  /v1/storage/cursors:
+    get:
+      operationId: v13_v1_storage_cursors_get
+      summary: P0 control / archive /v1/storage/cursors
+      description: 'DESIGN ONLY: context authenticated, tenant-scoped, sensitive policy evaluated, idempotency key for writes.'
+      parameters:
+      - name: X-LADON-Workspace
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: X-LADON-Tenant
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result, pending, or cursor page
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden
+        '409':
+          description: Version conflict
+  /v1/storage/outbox:
+    get:
+      operationId: v13_v1_storage_outbox_get
+      summary: P0 control / archive /v1/storage/outbox
+      description: 'DESIGN ONLY: context authenticated, tenant-scoped, sensitive policy evaluated, idempotency key for writes.'
+      parameters:
+      - name: X-LADON-Workspace
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: X-LADON-Tenant
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result, pending, or cursor page
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden
+        '409':
+          description: Version conflict
+  /v1/storage/conflicts:
+    get:
+      operationId: v13_v1_storage_conflicts_get
+      summary: P0 control / archive /v1/storage/conflicts
+      description: 'DESIGN ONLY: context authenticated, tenant-scoped, sensitive policy evaluated, idempotency key for writes.'
+      parameters:
+      - name: X-LADON-Workspace
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: X-LADON-Tenant
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result, pending, or cursor page
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden
+        '409':
+          description: Version conflict
+  /v1/storage/conflicts/{conflict_id}/resolve:
+    post:
+      operationId: v13_v1_storage_conflicts_conflict_id_resolve_post
+      summary: P0 control / archive /v1/storage/conflicts/{conflict_id}/resolve
+      description: 'DESIGN ONLY: context authenticated, tenant-scoped, sensitive policy evaluated, idempotency key for writes.'
+      parameters:
+      - name: X-LADON-Workspace
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: X-LADON-Tenant
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result, pending, or cursor page
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden
+        '409':
+          description: Version conflict
+  /v1/tenants/{tenant_id}/membership:
+    get:
+      operationId: v13_v1_tenants_tenant_id_membership_get
+      summary: P0 control / archive /v1/tenants/{tenant_id}/membership
+      description: 'DESIGN ONLY: context authenticated, tenant-scoped, sensitive policy evaluated, idempotency key for writes.'
+      parameters:
+      - name: X-LADON-Workspace
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: X-LADON-Tenant
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result, pending, or cursor page
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden
+        '409':
+          description: Version conflict
+  /v1/tenants/{tenant_id}/devices:
+    get:
+      operationId: v13_v1_tenants_tenant_id_devices_get
+      summary: P0 control / archive /v1/tenants/{tenant_id}/devices
+      description: 'DESIGN ONLY: context authenticated, tenant-scoped, sensitive policy evaluated, idempotency key for writes.'
+      parameters:
+      - name: X-LADON-Workspace
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: X-LADON-Tenant
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result, pending, or cursor page
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden
+        '409':
+          description: Version conflict
+  /v1/ui/layout:
+    get:
+      operationId: v13_v1_ui_layout_get
+      summary: P0 control / archive /v1/ui/layout
+      description: 'DESIGN ONLY: context authenticated, tenant-scoped, sensitive policy evaluated, idempotency key for writes.'
+      parameters:
+      - name: X-LADON-Workspace
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: X-LADON-Tenant
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result, pending, or cursor page
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden
+        '409':
+          description: Version conflict
+  /v1/ui/chat-dock:
+    get:
+      operationId: v13_v1_ui_chat-dock_get
+      summary: P0 control / archive /v1/ui/chat-dock
+      description: 'DESIGN ONLY: context authenticated, tenant-scoped, sensitive policy evaluated, idempotency key for writes.'
+      parameters:
+      - name: X-LADON-Workspace
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: X-LADON-Tenant
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result, pending, or cursor page
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden
+        '409':
+          description: Version conflict
+  /v1/ui/status:
+    get:
+      operationId: v13_v1_ui_status_get
+      summary: P0 control / archive /v1/ui/status
+      description: 'DESIGN ONLY: context authenticated, tenant-scoped, sensitive policy evaluated, idempotency key for writes.'
+      parameters:
+      - name: X-LADON-Workspace
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: X-LADON-Tenant
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result, pending, or cursor page
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden
+        '409':
+          description: Version conflict
+  /v1/insights/suggestions:
+    get:
+      operationId: v13_v1_insights_suggestions_get
+      summary: P0 control / archive /v1/insights/suggestions
+      description: 'DESIGN ONLY: context authenticated, tenant-scoped, sensitive policy evaluated, idempotency key for writes.'
+      parameters:
+      - name: X-LADON-Workspace
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: X-LADON-Tenant
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result, pending, or cursor page
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden
+        '409':
+          description: Version conflict
+  /v1/insights/suggestions/{suggestion_id}/approve:
+    post:
+      operationId: v13_v1_insights_suggestions_suggestion_id_approve_post
+      summary: P0 control / archive /v1/insights/suggestions/{suggestion_id}/approve
+      description: 'DESIGN ONLY: context authenticated, tenant-scoped, sensitive policy evaluated, idempotency key for writes.'
+      parameters:
+      - name: X-LADON-Workspace
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: X-LADON-Tenant
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Result, pending, or cursor page
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden
+        '409':
+          description: Version conflict
+components:
+  securitySchemes:
+    OIDC:
+      type: openIdConnect
+      openIdConnectUrl: https://example.invalid/.well-known/openid-configuration
+  schemas:
+    ApiResponse:
+      type: object
+      required:
+      - request_id
+      - status
+      properties:
+        request_id:
+          type: string
+        status:
+          type: string
+        result:
+          description: Operation-specific payload; see detailed design
+        audit_event_id:
+          type: string
+        next_cursor:
+          type: string
+        error:
+          $ref: '#/components/schemas/ApiError'
+    ApiError:
+      type: object
+      properties:
+        code:
+          type: string
+          enum:
+          - NOT_FOUND
+          - PERMISSION_DENIED
+          - SENSITIVE_BLOCKED
+          - CONFLICT
+          - APPROVAL_REQUIRED
+          - CURSOR_EXPIRED
+          - RESOURCE_BUSY
+          - RATE_LIMITED
+          - ARCHIVE_UNVERIFIED
+        message:
+          type: string

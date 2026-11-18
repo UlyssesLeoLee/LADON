@@ -1,0 +1,1252 @@
+{
+  "UT": [
+    [
+      "UT-001",
+      "Crypto Roundtrip",
+      "src/crypto.rs",
+      "ut_crypto_01_roundtrip",
+      "AES-GCM + Zstd 解密与 SHA 一致",
+      "Implemented"
+    ],
+    [
+      "UT-002",
+      "Crypto Tamper",
+      "src/crypto.rs",
+      "ut_crypto_02_tamper_is_rejected",
+      "密文篡改拒绝解密",
+      "Implemented"
+    ],
+    [
+      "UT-003",
+      "Digest Validation",
+      "src/crypto.rs",
+      "ut_crypto_03_digest_validation",
+      "不合法路径式哈希拒绝",
+      "Implemented"
+    ],
+    [
+      "UT-004",
+      "CAS Dedup",
+      "src/archive.rs",
+      "ut_cas_01_dedup_and_reload",
+      "重复内容只有一个 CAS 对象",
+      "Implemented"
+    ],
+    [
+      "UT-005",
+      "CAS Unsafe Hash",
+      "src/archive.rs",
+      "ut_cas_02_traversal",
+      "非法 hash 引用拒绝",
+      "Implemented"
+    ],
+    [
+      "UT-006",
+      "CAS Load Limit",
+      "src/archive.rs",
+      "ut_cas_03_limit",
+      "超过上限拒绝内存加载",
+      "Implemented"
+    ],
+    [
+      "UT-007",
+      "Section Change Markdown",
+      "src/diff.rs",
+      "ut_diff_01_section_change_only",
+      "仅变化章节影响",
+      "Implemented"
+    ],
+    [
+      "UT-008",
+      "Section Change NEMA",
+      "src/diff.rs",
+      "ut_diff_02_nema_domain_change_only",
+      "只计算变化域",
+      "Implemented"
+    ],
+    [
+      "UT-009",
+      "Section Unchanged",
+      "src/diff.rs",
+      "ut_diff_03_no_change",
+      "零变化章节",
+      "Implemented"
+    ],
+    [
+      "UT-010",
+      "Ignore Patterns",
+      "src/policy.rs",
+      "ut_policy_01_ignore_and_allow",
+      "*.pem 与 private/ 被排除",
+      "Implemented"
+    ],
+    [
+      "UT-011",
+      "Ignore Protects Rule",
+      "src/policy.rs",
+      "ut_policy_02_rule_is_ignored",
+      "规则文件自身不得外传",
+      "Implemented"
+    ],
+    [
+      "UT-012",
+      "Ignore Root Scope",
+      "src/policy.rs",
+      "ut_policy_03_outside_workspace",
+      "工作区之外拒绝匹配操作",
+      "Implemented"
+    ],
+    [
+      "UT-013",
+      "NEMA Edge and Topology",
+      "src/nema.rs",
+      "ut_nema_01_graph",
+      "顺序三节点正确解析",
+      "Implemented"
+    ],
+    [
+      "UT-014",
+      "NEMA Parallel Batch",
+      "src/nema.rs",
+      "ut_nema_02_parallel",
+      "独立任务可并行分层",
+      "Implemented"
+    ],
+    [
+      "UT-015",
+      "NEMA Cycle",
+      "src/nema.rs",
+      "ut_nema_03_cycle_reject",
+      "依赖环被拒绝",
+      "Implemented"
+    ],
+    [
+      "UT-016",
+      "NEMA Tab Invalid",
+      "src/nema.rs",
+      "ut_nema_04_tab_reject",
+      "Tab 非法",
+      "Implemented"
+    ],
+    [
+      "UT-017",
+      "Tagging Heuristic",
+      "src/tagging.rs",
+      "ut_tag_01_heuristic",
+      "需求文件识别要件标签",
+      "Implemented"
+    ],
+    [
+      "UT-018",
+      "Tag Endpoint Local",
+      "src/tagging.rs",
+      "ut_tag_02_localhost",
+      "loopback 识别与远端区别",
+      "Implemented"
+    ],
+    [
+      "UT-019",
+      "Local Provider Object",
+      "src/provider.rs",
+      "ut_provider_01_local_roundtrip",
+      "本地 Provider 存取一致",
+      "Implemented"
+    ],
+    [
+      "UT-020",
+      "Drive ID Validation",
+      "src/provider.rs",
+      "ut_provider_02_id_validation",
+      "禁止路径注入 ID",
+      "Implemented"
+    ],
+    [
+      "UT-021",
+      "Local Grep",
+      "src/search.rs",
+      "ut_search_01_finds_lines",
+      "匹配正确文件行号",
+      "Implemented"
+    ],
+    [
+      "UT-022",
+      "Grep Bad Pattern",
+      "src/search.rs",
+      "ut_search_02_bad_regex",
+      "非法正则拒绝",
+      "Implemented"
+    ],
+    [
+      "UT-023",
+      "FileSpace Conflict",
+      "src/workspace.rs",
+      "ut_space_01_conflict",
+      "快照后变更触发冲突",
+      "Implemented"
+    ],
+    [
+      "UT-024",
+      "Sensitive fail-closed",
+      "src/policy.rs",
+      "(future)",
+      "规则加载失败阻断外传",
+      "Design"
+    ],
+    [
+      "UT-025",
+      "Concurrent write CAS",
+      "src/workspace.rs",
+      "(future)",
+      "并发提交同文件只允许一次成功",
+      "Design"
+    ],
+    [
+      "UT-026",
+      "Windows symlink/reparse",
+      "src/archive.rs",
+      "(future)",
+      "Win32 reparse 路径不越权",
+      "Design"
+    ],
+    [
+      "UT-027",
+      "Turso Tx rollback",
+      "src/store.rs",
+      "(future)",
+      "故障中途无部分事务",
+      "Design"
+    ],
+    [
+      "UT-028",
+      "Provider Retry",
+      "src/provider.rs",
+      "(future)",
+      "断点/429/5xx 可幂等重试",
+      "Design"
+    ],
+    [
+      "UT-029",
+      "Full NEMA Grammar",
+      "src/nema.rs",
+      "(future)",
+      "全 139 例按最终编解码规范执行",
+      "Design"
+    ],
+    [
+      "UT-030",
+      "右键敏感规则写入",
+      "src/policy.rs",
+      "ut_policy_04_add_sensitive",
+      "根锚定的规则写入后，LadonPolicy 命中",
+      "Implemented"
+    ],
+    [
+      "UT-031",
+      "Shell 响应状态区分",
+      "src/shell.rs",
+      "ut_shell_result_distinct",
+      "敏感与历史命令 ID 不冲突",
+      "Implemented"
+    ],
+    [
+      "UT-032",
+      "Agent API 能力清单",
+      "src/agent_api.rs",
+      "ut_agent_capability_status",
+      "未实现接口明确设计状态",
+      "Implemented"
+    ],
+    [
+      "UT-033",
+      "跨租户访问拒绝",
+      "src/auth.rs",
+      "ut_auth_cross_tenant",
+      "不同租户无法读取工作区资源",
+      "Implemented"
+    ],
+    [
+      "UT-034",
+      "角色权限矩阵",
+      "src/auth.rs",
+      "ut_auth_reviewer_no_write",
+      "Reviewer 拒绝写入",
+      "Implemented"
+    ],
+    [
+      "UT-035",
+      "Viewer 敏感文件拒绝",
+      "src/auth.rs",
+      "ut_auth_viewer_sensitive",
+      "Viewer 无权读取敏感文件",
+      "Implemented"
+    ],
+    [
+      "UT-036",
+      "Agent 作用域",
+      "src/auth.rs",
+      "ut_auth_agent_scoped",
+      "作用域外写入拒绝",
+      "Implemented"
+    ],
+    [
+      "UT-037",
+      "Shell COM 转发",
+      "native/shell_menu.cpp",
+      "(future)",
+      "WM_MENUCHAR / DRAWITEM / QueryContextMenu 组合正确",
+      "Design"
+    ],
+    [
+      "UT-038",
+      "忽略规则并发写",
+      "src/policy.rs",
+      "(future)",
+      "并发更新不丢规则，保留注释和格式",
+      "Design"
+    ],
+    [
+      "UT-039",
+      "Turso 迁移可重入",
+      "src/store.rs",
+      "(future)",
+      "从 001 升级 002 反复 init 安全",
+      "Design"
+    ],
+    [
+      "UT-040",
+      "Auth 真实 Token 校验",
+      "future",
+      "(future)",
+      "令牌伪造、过期、改租户均拒绝",
+      "Design"
+    ],
+    [
+      "UT-041",
+      "Storage Rules Sensitive",
+      "src/storage_rules.rs",
+      "ut_rules_sensitive_stays_local",
+      "敏感对象不进入远端路由",
+      "Implemented"
+    ],
+    [
+      "UT-042",
+      "Storage Rules Stable",
+      "src/storage_rules.rs",
+      "ut_rules_key_is_stable",
+      "相同作用域/内容生成稳定逻辑键",
+      "Implemented"
+    ],
+    [
+      "UT-043",
+      "Storage Rules Tenant",
+      "src/storage_rules.rs",
+      "ut_rules_separate_tenant_keys",
+      "不同租户逻辑对象键分离",
+      "Implemented"
+    ],
+    [
+      "UT-044",
+      "Storage Rules Invalid",
+      "src/storage_rules.rs",
+      "ut_rules_reject_bad_inputs",
+      "非法摘要、非法配额拒绝",
+      "Implemented"
+    ],
+    [
+      "UT-045",
+      "Journal Gaps",
+      "src/cloud_journal.rs",
+      "ut_journal_reject_gaps",
+      "连续 seq 校验",
+      "Implemented"
+    ],
+    [
+      "UT-046",
+      "Journal Conflict",
+      "src/cloud_journal.rs",
+      "ut_journal_detect_conflicting_edit",
+      "同基线跨设备冲突提示",
+      "Implemented"
+    ],
+    [
+      "UT-047",
+      "Journal Scope",
+      "src/cloud_journal.rs",
+      "ut_journal_reject_tenant_merge",
+      "跨租户日志拒绝合并",
+      "Implemented"
+    ],
+    [
+      "UT-048",
+      "Journal Encrypted Verify",
+      "src/cloud_journal.rs",
+      "ut_journal_real_encrypted_roundtrip",
+      "密文写入及读回校验",
+      "Implemented"
+    ],
+    [
+      "UT-049",
+      "Sidebar Reflow",
+      "src/ui_layout.rs",
+      "ut_ui_reflow_fills_space",
+      "折叠侧栏腾出宽度供文件区使用",
+      "Implemented"
+    ],
+    [
+      "UT-050",
+      "Hover No Reflow",
+      "src/ui_layout.rs",
+      "ut_ui_hover_does_not_resize",
+      "Hover 浮层不挤压内容",
+      "Implemented"
+    ],
+    [
+      "UT-051",
+      "Chat Bottom Layout",
+      "src/ui_layout.rs",
+      "ut_ui_chat_bottom_height",
+      "聊天展开向上占用区域",
+      "Implemented"
+    ],
+    [
+      "UT-052",
+      "Status Fade Alerts",
+      "src/ui_layout.rs",
+      "ut_ui_status_warning_stays",
+      "Critical 状态不透明",
+      "Implemented"
+    ],
+    [
+      "UT-053",
+      "Emergence Threshold",
+      "src/emergence.rs",
+      "ut_emergence_requires_multiple_signals",
+      "两个独立信号方可建议",
+      "Implemented"
+    ],
+    [
+      "UT-054",
+      "Emergence Approval",
+      "src/emergence.rs",
+      "ut_emergence_never_auto_approves",
+      "建议不自动审批",
+      "Implemented"
+    ],
+    [
+      "UT-055",
+      "Sensitive Journal Publication",
+      "src/cloud_journal.rs",
+      "ut_journal_sensitive_denied",
+      "敏感事件段不得远程发布",
+      "Implemented"
+    ]
+  ],
+  "IT": [
+    [
+      "IT-001",
+      "file capture+Turso+event chain",
+      "tests/it_history.rs::it_01_capture_history_reuse_identity_and_chain",
+      "建立 req.md、捕获两版、重复保存",
+      "文件 ID 相同、事件 2 个、Hash 链完整",
+      "Automated"
+    ],
+    [
+      "IT-002",
+      "ignore+archive deny",
+      "tests/it_history.rs::it_02_sensitive_prevents_archive",
+      "创建 secret.pem 并尝试远端存档",
+      "应拒绝，不建立 archive_record",
+      "Automated"
+    ],
+    [
+      "IT-003",
+      "history restore",
+      "tests/it_history.rs::it_03_archive_restore_with_verification",
+      "将文档从 v1 改为 v2 并恢复 v1",
+      "恢复产生第三版，未审批拒绝",
+      "Automated"
+    ],
+    [
+      "IT-004",
+      "delete reconciliation",
+      "tests/it_history.rs::it_04_detect_delete_and_keep_history",
+      "删除受管文件后执行扫描",
+      "标记 Deleted、历史和 FileRef 不丢",
+      "Automated"
+    ],
+    [
+      "IT-005",
+      "annotation and task on version",
+      "tests/it_nema_task.rs::it_05_task_annotation_bind_approved_version",
+      "创建要件并添批注、任务",
+      "批注/任务引用批准版本 ID",
+      "Automated"
+    ],
+    [
+      "IT-006",
+      "NEMA DAG orchestration",
+      "tests/it_nema_task.rs::it_06_nema_dag_parallel_and_cycle",
+      "构造 1→2 个并行下游任务",
+      "第一批 REQ，第二批 DES/TEST",
+      "Automated"
+    ],
+    [
+      "IT-007",
+      "Archive Google/NAS provider",
+      "future",
+      "配置 NAS 或 Drive，上传恢复、断网重试",
+      "读回 SHA 相同，失败不清理本地",
+      "Manual/Future"
+    ],
+    [
+      "IT-008",
+      "cloud encryption + no sensitive",
+      "future",
+      "真实云令牌＋敏感规则＋流量审计",
+      "敏感内容/路径/日志零外传",
+      "Manual/Future"
+    ],
+    [
+      "IT-009",
+      "Worktree freeze & restore",
+      "future",
+      "含 uncommitted/untracked 的 Worktree",
+      "恢复工作区完整无缺",
+      "Manual/Future"
+    ],
+    [
+      "IT-010",
+      "event backlog restart",
+      "future",
+      "离线写文件、重启、网络恢复",
+      "待上传持久化与幂等恢复",
+      "Manual/Future"
+    ],
+    [
+      "IT-011",
+      "multi-agent commit",
+      "future",
+      "并行两个 Agent 改相同文件",
+      "仅一个成功、一个冲突待审批",
+      "Manual/Future"
+    ],
+    [
+      "IT-012",
+      "OCR/vector tag pipeline",
+      "future",
+      "扫描 PDF 与图片，生成向量标签",
+      "语义查询可返回且保留证据",
+      "Manual/Future"
+    ],
+    [
+      "IT-013",
+      "Concept Guard Hook",
+      "future",
+      "输入新需求与已批准要件冲突",
+      "仅相关条款进入 LLM，上下文有来源",
+      "Manual/Future"
+    ],
+    [
+      "IT-014",
+      "Turso cloud DLP",
+      "future",
+      "配置云同步同时含敏感事件",
+      "远端 DB 不出现敏感数据",
+      "Manual/Future"
+    ],
+    [
+      "IT-015",
+      "Agent 本地文件夹到历史",
+      "tests/it_agent_folder.rs",
+      "目录创建+capture+list+history",
+      "FileRef 和历史均可见",
+      "Implemented"
+    ],
+    [
+      "IT-016",
+      "Shell 扩展宿主隔离",
+      "scripts/st_windows_shell_matrix.ps1",
+      "恶意扩展/子进程退出注入",
+      "主 GUI 不崩溃，回退 Explorer",
+      "Manual/Future"
+    ],
+    [
+      "IT-017",
+      "端到端历史外传与审计",
+      "future",
+      "Google Drive 完整版本读取、Diff、恢复",
+      "每版本对象可校验，敏感不上传",
+      "Manual/Future"
+    ],
+    [
+      "IT-018",
+      "跨租户访问与消息",
+      "future",
+      "跨租户会话、workspace、Provider 探测",
+      "所有 HTTP、聊天均拒绝越权",
+      "Manual/Future"
+    ],
+    [
+      "IT-019",
+      "聊天引用文档任务",
+      "future",
+      "消息引用 REQ 且触发 Agent 分析",
+      "任务、来源、审批、提交事件可追溯",
+      "Manual/Future"
+    ],
+    [
+      "IT-020",
+      "Agent 并发 CAS",
+      "future",
+      "双 Agent 同文件准备提交",
+      "一成功一冲突，审计完整",
+      "Manual/Future"
+    ],
+    [
+      "IT-021",
+      "Drive journal local provider E2E",
+      "测试脚本/本地临时代替 Drive",
+      "integration scenario",
+      "加密事件段写入与读回，真实 Drive 尚未执行",
+      "Design"
+    ],
+    [
+      "IT-022",
+      "Offline Outbox Replay",
+      "Rust+Turso+Provider",
+      "integration scenario",
+      "断网批量恢复上传序号连续",
+      "Design"
+    ],
+    [
+      "IT-023",
+      "Device Merge Conflict",
+      "Rust+Turso",
+      "integration scenario",
+      "两个设备同基线冲突不可覆盖",
+      "Design"
+    ],
+    [
+      "IT-024",
+      "Vercel Membership Check",
+      "Vercel+Turso",
+      "integration scenario",
+      "未授权用户无法写聊天",
+      "Design"
+    ],
+    [
+      "IT-025",
+      "Personal vs Team Drive",
+      "Drive API",
+      "integration scenario",
+      "appData 与团队目录能力分离",
+      "Design"
+    ],
+    [
+      "IT-026",
+      "Cloud Key Rotation",
+      "租户+设备+密钥",
+      "integration scenario",
+      "撤销后新密文无法由被撤销用户读取",
+      "Design"
+    ],
+    [
+      "IT-027",
+      "Workspace Index Rebuild",
+      "Drive+本地Turso",
+      "integration scenario",
+      "新终端重建文件历史索引",
+      "Design"
+    ],
+    [
+      "IT-028",
+      "LADONignore Remote Block",
+      "Policy+CloudJournal",
+      "integration scenario",
+      "敏感事件/附件/内容外传为零",
+      "Design"
+    ],
+    [
+      "IT-029",
+      "Agent Authorization",
+      "AgentAPI+Vercel",
+      "integration scenario",
+      "无权限的 Agent 查询/写入均拒绝",
+      "Design"
+    ],
+    [
+      "IT-030",
+      "Side UI State Integration",
+      "Slint+Rust layout",
+      "integration scenario",
+      "三态侧栏与 ChatDock 一致",
+      "Design"
+    ]
+  ],
+  "ST": [
+    [
+      "ST-001",
+      "离线打开10万文件目录",
+      "Windows 11 / 100k 文件",
+      "断网关模型后打开目录",
+      "窗口可操作并渐进加载，记录首帧延迟",
+      "REQ-001"
+    ],
+    [
+      "ST-002",
+      "基础 Explorer 操作",
+      "NTFS, USB, 网络共享",
+      "多选拖放、重命名、回收站和撤销",
+      "数据无损且语义符合 Windows 预期",
+      "REQ-002"
+    ],
+    [
+      "ST-003",
+      "并行浏览不阻塞",
+      "100k 文件 + 搜索中",
+      "滚动、切目录、取消旧任务",
+      "UI 不卡死，任务取消可见",
+      "REQ-003"
+    ],
+    [
+      "ST-004",
+      "监控乱序/丢事件",
+      "快速保存/移动/监控服务重启",
+      "故障期间随机保存，重启补扫",
+      "最末稳定版本被捕获，断档显式标注",
+      "REQ-006"
+    ],
+    [
+      "ST-005",
+      "历史结构差异",
+      "多章 Markdown + .NEMA",
+      "只修改一个条款并查看历史",
+      "只高亮相关条款，旧新内容可展开",
+      "REQ-010"
+    ],
+    [
+      "ST-006",
+      "Google Drive 真实上传恢复",
+      "有效 OAuth/有容量",
+      "归档 3 文件，冷删除，再恢复",
+      "读回 Hash 全部一致，服务端版本独立",
+      "REQ-017"
+    ],
+    [
+      "ST-007",
+      "断网重启可靠队列",
+      "长时间离线/限额",
+      "离线修改后重启并联网",
+      "未上传事件不丢，完成后可清理",
+      "REQ-019"
+    ],
+    [
+      "ST-008",
+      "CAS 仅在可恢复后驱逐",
+      "网络抖动/存储失效",
+      "归档中断并请求清理本地",
+      "拒绝清理，恢复源仍在",
+      "REQ-020"
+    ],
+    [
+      "ST-009",
+      "敏感 Turso Cloud DLP",
+      "含私有信息的元数据库",
+      "启用远程 DB 同步",
+      "远端不出现敏感版本/元数据",
+      "REQ-022"
+    ],
+    [
+      "ST-010",
+      "已批准要件筛选",
+      "项目完整 REQ 与设计链",
+      "提交有限的新要求",
+      "仅用相关批准 REQ 提示 Agent",
+      "REQ-023"
+    ],
+    [
+      "ST-011",
+      "要件冲突建议",
+      "批准 REQ + 反向需求",
+      "提交互斥需求",
+      "报告相关条款和至少两种处理选项",
+      "REQ-026"
+    ],
+    [
+      "ST-012",
+      "两个 Agent 并发写同文件",
+      "2 FileSpace 一文件",
+      "同时提交两个不同 Diff",
+      "至少一方冲突，原件完整",
+      "REQ-030"
+    ],
+    [
+      "ST-013",
+      "统一命令审计",
+      "GUI/CLI/MCP/Agent",
+      "交替操作同一文件",
+      "所有变更追溯到 actor/session",
+      "REQ-031"
+    ],
+    [
+      "ST-014",
+      "批量 AI 标签",
+      "1000 文档、多语言与敏感路径",
+      "勾选 IPA 阶段、输入描述、批量执行",
+      "敏感排除且结果可审核/持久化",
+      "REQ-032"
+    ],
+    [
+      "ST-015",
+      "标签增量更新",
+      "已生成标签与部分改变文件",
+      "修改一个文档并重执行",
+      "只变更受影响项且手工锁定不动",
+      "REQ-033"
+    ],
+    [
+      "ST-016",
+      "混合向量检索",
+      "相近语义、无共同关键字的文档",
+      "自然语言检索跨格式文件",
+      "返回合理相关候选且有证据",
+      "REQ-035"
+    ],
+    [
+      "ST-017",
+      "重复 Worktree 向量去重",
+      "同仓库 5 Worktree",
+      "相同文档多次索引",
+      "相同 Hash/Model 共用向量",
+      "REQ-036"
+    ],
+    [
+      "ST-018",
+      "OCR/Office处理隔离",
+      "损坏 PDF/Office、巨型文件",
+      "并发提取内容",
+      "Worker 失败 GUI 不退出",
+      "REQ-037"
+    ],
+    [
+      "ST-019",
+      "Worktree 归档恢复",
+      "dirty/未跟踪/LFS/子模块",
+      "冻结、删除、重新拉取恢复",
+      "恢复后所有必要内容完整",
+      "REQ-038"
+    ],
+    [
+      "ST-020",
+      "资源压力下交互",
+      "外部 HDD + 扫描 + Agent",
+      "后台最大负载时操作 Explorer",
+      "UI 优先，后台限流",
+      "REQ-039"
+    ],
+    [
+      "ST-021",
+      "真冷启动性能",
+      "Win11 目标机，30 次冷启动",
+      "完全退出进程后测首交互",
+      "目标 ≤150ms，记录 P50/P95",
+      "REQ-040"
+    ],
+    [
+      "ST-022",
+      "LSP 按需启动",
+      "Rust + TS 代码项目",
+      "打开两个 Rust 文件",
+      "仅起一个 rust-analyzer 进程",
+      "REQ-041"
+    ],
+    [
+      "ST-023",
+      "条款内联编辑+任务",
+      "批准要件 Markdown",
+      "选段落添注释+Agent 改变",
+      "保留批准基线、审批后有新事件",
+      "REQ-042"
+    ],
+    [
+      "ST-024",
+      "移动后文件附属笔记",
+      "带备注文件",
+      "多次重命名/移动",
+      "同一 FileRef 备注不丢",
+      "REQ-043"
+    ],
+    [
+      "ST-025",
+      "事件全量追溯",
+      "多进程用户/Agent操作",
+      "按 FileRef 查询全部事件",
+      "关联任务、原因、版本全部可见",
+      "REQ-044"
+    ],
+    [
+      "ST-026",
+      "插件权限隔离",
+      "恶意 WASM 插件",
+      "尝试读取 `.LADONignore` 排除文件",
+      "访问拒绝、有审计记录",
+      "REQ-045"
+    ],
+    [
+      "ST-027",
+      "三语言 UX",
+      "中/日/英 UI",
+      "覆盖所有菜单、对话框、错误",
+      "重要流程无未翻译文案",
+      "REQ-046"
+    ],
+    [
+      "ST-028",
+      "外部历史导入",
+      "预先存在 Git 提交",
+      "导入历史并对比时间线",
+      "标明来源与无法回溯范围",
+      "REQ-047"
+    ],
+    [
+      "ST-029",
+      "换云盘迁移",
+      "Google Drive→NAS",
+      "迁移途中断开 NAS",
+      "旧归档可恢复，新端数据一致",
+      "REQ-049"
+    ],
+    [
+      "ST-030",
+      "安全上云端到端",
+      "混合敏感/非敏感资料",
+      "启用所有外传适配器",
+      "敏感原件、历史、元数据零泄露",
+      "REQ-050"
+    ],
+    [
+      "ST-031",
+      "Google Drive 个人隐藏归档",
+      "Win11 / Drive / Vercel ST",
+      "appDataFolder 权限和本地解密恢复",
+      "Not Run"
+    ],
+    [
+      "ST-032",
+      "Drive 团队目录协作",
+      "Win11 / Drive / Vercel ST",
+      "独立账号在有 Drive ACL 时读取版本",
+      "Not Run"
+    ],
+    [
+      "ST-033",
+      "Drive appData 不分享",
+      "Win11 / Drive / Vercel ST",
+      "测试权限 API 返回不支持",
+      "Not Run"
+    ],
+    [
+      "ST-034",
+      "Drive API 限流断点",
+      "Win11 / Drive / Vercel ST",
+      "429/403/传输中断可恢复",
+      "Not Run"
+    ],
+    [
+      "ST-035",
+      "断网期间记录并追平",
+      "Win11 / Drive / Vercel ST",
+      "WAL不丢，上传后按游标对齐",
+      "Not Run"
+    ],
+    [
+      "ST-036",
+      "本地磁盘满不丢历史",
+      "Win11 / Drive / Vercel ST",
+      "配额溢出禁止误删",
+      "Not Run"
+    ],
+    [
+      "ST-037",
+      "云端不可变对象恢复",
+      "Win11 / Drive / Vercel ST",
+      "删本地缓存后逐文件还原",
+      "Not Run"
+    ],
+    [
+      "ST-038",
+      "新设备完整历史重建",
+      "Win11 / Drive / Vercel ST",
+      "同一 FileRef 索引恢复无缺口",
+      "Not Run"
+    ],
+    [
+      "ST-039",
+      "多终端同文件冲突",
+      "Win11 / Drive / Vercel ST",
+      "展示双分支且不得覆盖",
+      "Not Run"
+    ],
+    [
+      "ST-040",
+      "多租户伪造空间",
+      "Win11 / Drive / Vercel ST",
+      "服务端 403",
+      "Not Run"
+    ],
+    [
+      "ST-041",
+      "Google OIDC 错误 token",
+      "Win11 / Drive / Vercel ST",
+      "过期及错误 audience 401",
+      "Not Run"
+    ],
+    [
+      "ST-042",
+      "移除成员权限",
+      "Win11 / Drive / Vercel ST",
+      "服务端即时拒绝，新密钥不再发放",
+      "Not Run"
+    ],
+    [
+      "ST-043",
+      "侧栏展开折叠自适应",
+      "Win11 / Drive / Vercel ST",
+      "内容宽度填满，无白边死区",
+      "Not Run"
+    ],
+    [
+      "ST-044",
+      "侧栏悬停 Overlay",
+      "Win11 / Drive / Vercel ST",
+      "与手动折叠宽度逻辑区分",
+      "Not Run"
+    ],
+    [
+      "ST-045",
+      "聊天 Dock 全底部",
+      "Win11 / Drive / Vercel ST",
+      "所有窗口状态固定最底",
+      "Not Run"
+    ],
+    [
+      "ST-046",
+      "状态信息渐隐",
+      "Win11 / Drive / Vercel ST",
+      "安全/备份失败警告常显",
+      "Not Run"
+    ],
+    [
+      "ST-047",
+      "键盘无 Hover 替代",
+      "Win11 / Drive / Vercel ST",
+      "Tab/ShiftF10 可触达全部动作",
+      "Not Run"
+    ],
+    [
+      "ST-048",
+      "复合事件建议与审阅",
+      "Win11 / Drive / Vercel ST",
+      "低证据不提示，高证据仅建议",
+      "Not Run"
+    ],
+    [
+      "ST-049",
+      "NAS Provider 能力协商",
+      "Win11 / Drive / Vercel ST",
+      "不依赖Drive专有属性",
+      "Not Run"
+    ],
+    [
+      "ST-050",
+      "Google OAuth 撤销",
+      "Win11 / Drive / Vercel ST",
+      "撤销后云端操作失败且不阻断文件浏览",
+      "Not Run"
+    ],
+    [
+      "ST-051",
+      "Windows Shell 单文件扩展",
+      "TortoiseGit+7-Zip 已安装",
+      "右键 Git 仓库单文件",
+      "原生 Git/7-Zip 命令可调用或有 Explorer 回退",
+      "REQ-051"
+    ],
+    [
+      "ST-052",
+      "Windows 11 现代扩展",
+      "Windows11 注册现代命令",
+      "右键文件执行现代扩展",
+      "可直接使用或有真实 Explorer 兼容入口",
+      "REQ-052"
+    ],
+    [
+      "ST-053",
+      "文件夹/空白区/多选菜单",
+      "不同路径与多选文件",
+      "调用系统右键菜单",
+      "一一对照 Explorer 矩阵、失败项有回退",
+      "REQ-053"
+    ],
+    [
+      "ST-054",
+      "底部聊天无历史",
+      "窗口任意大小",
+      "展开/隐藏聊天记录",
+      "输入始终最底部且不覆盖主要浏览",
+      "REQ-055"
+    ],
+    [
+      "ST-055",
+      "AI／团队通信隔离",
+      "创建 AI 和团队会话",
+      "切换、提及、引用文件",
+      "未经授权的成员消息不作为 AI 上下文",
+      "REQ-056"
+    ],
+    [
+      "ST-056",
+      "账号与租户",
+      "OIDC 实验身份/两个租户",
+      "登录、退出、切换、读取",
+      "权限由服务端校验",
+      "REQ-057"
+    ],
+    [
+      "ST-057",
+      "跨设备离线同步",
+      "设备 A、B、短期断网",
+      "更新聊天和文件历史后重连",
+      "不丢版本、无重复、冲突可见",
+      "REQ-059"
+    ],
+    [
+      "ST-058",
+      "Agent 写入计划审批",
+      "Agent 准备修改文档",
+      "无审批/旧 hash 提交",
+      "均被拒绝且原文件无变化",
+      "REQ-061"
+    ],
+    [
+      "ST-059",
+      "事件订阅游标",
+      "多 Agent 订阅与断联",
+      "订阅、ACK、过期恢复",
+      "不静默丢失已确认事件",
+      "REQ-062"
+    ],
+    [
+      "ST-060",
+      "悬停折叠键盘",
+      "Windows 缩放 100~150%",
+      "hover、键盘 Tab/Shift-F10、Esc",
+      "无功能仅靠 hover，可通过键盘操作",
+      "REQ-063"
+    ],
+    [
+      "ST-061",
+      "Modern Wabi-Sabi UI",
+      "12+场景",
+      "色彩、层次、响应式复核",
+      "Explorer 风格简洁与无障碍验收通过",
+      "REQ-064"
+    ],
+    [
+      "ST-062",
+      "历史权限与敏感路径",
+      "敏感文件/已撤权成员",
+      "查版本时间线/附件/分享 URL",
+      "跨端不得泄露内容和元数据",
+      "REQ-066"
+    ],
+    [
+      "ST-063",
+      "云盘租户绑定",
+      "两个租户各自 Google Drive",
+      "切换租户读取备份",
+      "不允许跨租户恢复和操作",
+      "REQ-068"
+    ],
+    [
+      "ST-064",
+      "聊天消息到文档任务",
+      "带条款引用的成员消息",
+      "创建任务/Agent 处理/审批",
+      "消息与版本链双向可追踪",
+      "REQ-069"
+    ],
+    [
+      "ST-065",
+      "Explorer 标准命令",
+      "已安装第三方 Shell 扩展",
+      "文件/目录/多选右键、快捷键",
+      "兼容清单所有用例有通过或系统回退",
+      "REQ-071"
+    ],
+    [
+      "ST-066",
+      "文档即任务侧栏",
+      "REQ 条款含批注与 UT/ST",
+      "切换条款和收起面板",
+      "关联准确、可键盘访问且不遮挡底栏",
+      "REQ-072"
+    ],
+    [
+      "ST-067",
+      "聊天密文边界",
+      "Win11 / Drive / Vercel ST",
+      "服务器及归档无明文",
+      "Not Run"
+    ],
+    [
+      "ST-068",
+      "跨终端多设备聊天历史",
+      "Win11 / Drive / Vercel ST",
+      "幂等补齐且客户端解密",
+      "Not Run"
+    ],
+    [
+      "ST-069",
+      "右键敏感文件与云同步",
+      "Win11 / Drive / Vercel ST",
+      "敏感加入规则后禁止后续外传",
+      "Not Run"
+    ],
+    [
+      "ST-070",
+      "状态栏 + 聊天栏融合",
+      "Win11 / Drive / Vercel ST",
+      "普通状态不出现重复的两条底栏",
+      "Not Run"
+    ],
+    [
+      "ST-071",
+      "历史索引不透明路径",
+      "Windows + Drive + Agent",
+      "云端没有原始文件路径",
+      "Not Run"
+    ],
+    [
+      "ST-072",
+      "Agent 接口跨租户",
+      "Windows + Drive + Agent",
+      "不授权无法浏览/恢复",
+      "Not Run"
+    ],
+    [
+      "ST-073",
+      "本地个人纯离线",
+      "Windows + Drive + Agent",
+      "未登录情况下完成 init/capture/history",
+      "Not Run"
+    ],
+    [
+      "ST-074",
+      "聊天消息文档任务关联",
+      "Windows + Drive + Agent",
+      "移动文件路径后 FileRef 稳定",
+      "Not Run"
+    ]
+  ]
+}

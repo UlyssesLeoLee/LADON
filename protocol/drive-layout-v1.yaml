@@ -1,0 +1,45 @@
+protocol: LADON-DRIVE-1
+source_of_truth: encrypted_immutable_objects
+notes: "Keys below are logical. Drive files are located by ID and appProperties; not a POSIX filesystem."
+modes:
+  personal_private:
+    drive_space: appDataFolder
+    scope: "https://www.googleapis.com/auth/drive.appdata"
+    limits: [cannot_share, cannot_move_between_spaces, hidden_in_drive_ui]
+  team_shared:
+    drive_space: drive
+    scope: "https://www.googleapis.com/auth/drive.file"
+    access: "Drive ACL PLUS LADON Vercel tenant authorization; do not equate them"
+  local_only: {drive_space: none}
+logical_layout:
+  root: LADON/v1
+  scope: "hash(tenant_id)/hash(workspace_id)"
+  objects: "content/<sha256>.ldn"
+  events: "events/<opaque_device_id>/<sha256>.ldn"
+  index_pages: "indexes/<sha256>.ldn"
+  checkpoints: "checkpoints/<sha256>.ldn"
+  chat: "chats/<opaque_device_id>/<sha256>.ldn"
+  tombstones: "events/<opaque_device_id>/<sha256>.ldn"
+metadata_on_drive:
+  appProperties: [ladon_format, opaque_workspace_id, object_kind, ciphertext_sha256, sequence_range]
+  prohibited: [raw_file_path, original_filename, secrets, plaintext_event_reason, chat_text]
+  minimum_fields: [id, name, appProperties, mimeType, modifiedTime]
+publication:
+  - local_outbox_fsync
+  - policy_gate_and_DLP
+  - content_serialize_zstd_aes256gcm
+  - immutable_resumable_upload
+  - readback_authentication_and_plaintext_digest
+  - local_receipt_commit
+  - checkpoint_or_index_publish
+  - safe_cache_eviction_if_redundancy_guaranteed
+sync:
+  discovery: [changes_getStartPageToken, changes_list_with_pagination, periodic_index_rebuild]
+  device_stream: "monotonic, append-only, independently sequenced"
+  conflict: "same FileRef and base_version -> branch + review, NEVER last-write-wins"
+  notification: best_effort_only
+  queue_limit_policy: "halt eviction and show durable warning, never drop outbox"
+  tenant_keys: "per tenant/workspace encryption keys; key rotation and distribution require secure control plane"
+provider_fallbacks:
+  nas: "SMB/WebDAV: no Drive appProperties, use manifest companion object"
+  s3: "bucket/prefix and conditional-put if supported; do not assume Drive semantics"

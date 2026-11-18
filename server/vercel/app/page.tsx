@@ -1,0 +1,1 @@
+export default function Home(){return <main style={{fontFamily:'sans-serif',padding:40}}><h1>LADON Control Plane</h1><p>Serverless tenant membership / encrypted chat relay. This is not the native Explorer UI.</p></main>}

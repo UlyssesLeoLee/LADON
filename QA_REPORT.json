@@ -1,0 +1,58 @@
+{
+  "baseline": "LADON V1.3",
+  "date": "2026-11-18",
+  "checks": {
+    "requirements_and_traces": {
+      "status": "pass",
+      "detail": {
+        "functional": 100,
+        "nfr": 43,
+        "ut": 55,
+        "it": 30,
+        "st": 74
+      }
+    },
+    "sql_sqlite_compatibility": {
+      "status": "pass",
+      "detail": {
+        "tables": 34,
+        "migrations": 3
+      }
+    },
+    "contracts_and_storage_protocol": {
+      "status": "pass",
+      "detail": {
+        "openapi_paths": 63,
+        "storage_modes": [
+          "personal_private",
+          "team_shared",
+          "local_only"
+        ]
+      }
+    },
+    "svg_xml_and_ui_assets": {
+      "status": "pass",
+      "detail": {
+        "legacy_svg": 14,
+        "new_svg": 6,
+        "interactive_html": true
+      }
+    },
+    "code_presence_security_spot_checks": {
+      "status": "pass",
+      "detail": "source files present; content spot-check only (not compilation)"
+    },
+    "xlsx_zip_structure": {
+      "status": "pass",
+      "detail": {
+        "bytes": 58697,
+        "sheets": 11
+      }
+    }
+  },
+  "executed_test_level": "Static-only",
+  "rust_compile": "Not Run: cargo unavailable",
+  "remote_oauth": "Not Run",
+  "windows_shell": "Not Run",
+  "overall_static": "PASS"
+}

@@ -1,0 +1,1002 @@
+[
+  {
+    "id": "REQ-001",
+    "name": "原生文件浏览",
+    "description": "桌面文件浏览独立于模型、网络及云端初始化；目录展示和多标签设计。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "src/main.rs;ui-prototype/src/main.rs",
+    "main_test": "ST-001",
+    "acceptance": "AI 全部不可用时仍可读取本地目录、列文件。"
+  },
+  {
+    "id": "REQ-002",
+    "name": "多栏与标准文件操作",
+    "description": "支持双栏、拖放、复制、移动、重命名、删除进回收站、撤销。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/02_basic_design/21_UI基本设计.md",
+    "main_test": "ST-002",
+    "acceptance": "移动、复制、撤销可正确处理冲突与跨卷失败。"
+  },
+  {
+    "id": "REQ-003",
+    "name": "异步文件浏览",
+    "description": "后台异步枚举大目录；UI 不等待磁盘、索引或模型。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "ui-prototype/src/main.rs",
+    "main_test": "ST-003",
+    "acceptance": "10 万项目录加载期间界面仍响应操作。"
+  },
+  {
+    "id": "REQ-004",
+    "name": "文件身份FileRef",
+    "description": "逻辑文件 ID 与路径分离；重命名和跨 Worktree 关联。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "src/model.rs;src/store.rs",
+    "main_test": "IT-001",
+    "acceptance": "受控移动保持同一 ID；不明确重命名必须标注不确定性。"
+  },
+  {
+    "id": "REQ-005",
+    "name": "文件事件监听",
+    "description": "监听创建、修改、删除、移动、重命名并建立完整基线。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "src/main.rs;src/engine.rs",
+    "main_test": "IT-004",
+    "acceptance": "稳定保存后生成版本，完整扫描能补偿删除。"
+  },
+  {
+    "id": "REQ-006",
+    "name": "事件合并与补偿",
+    "description": "连续保存去重、稳定窗口、溢出/离线日志补扫。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "src/main.rs;src/engine.rs",
+    "main_test": "ST-004",
+    "acceptance": "连续修改不丢最终状态；事件丢失后能发现差异。"
+  },
+  {
+    "id": "REQ-007",
+    "name": "事件链防篡改",
+    "description": "事件按资源形成前后哈希链，可检验断裂。",
+    "priority": "P0",
+    "implementation_status": "Implemented",
+    "implementation": "src/store.rs",
+    "main_test": "IT-001",
+    "acceptance": "篡改任何事件字段后校验失败。"
+  },
+  {
+    "id": "REQ-008",
+    "name": "文件内容指纹",
+    "description": "SHA-256 与分级章节/条款指纹，重复保存不创建无效版本。",
+    "priority": "P0",
+    "implementation_status": "Implemented",
+    "implementation": "src/crypto.rs;src/diff.rs;src/engine.rs",
+    "main_test": "IT-001",
+    "acceptance": "不变文件零新版本；变更只显示受影响章节。"
+  },
+  {
+    "id": "REQ-009",
+    "name": "全文件历史",
+    "description": "每个纳管文件具有版本时间线、操作者、原因、哈希与事件。",
+    "priority": "P0",
+    "implementation_status": "Implemented",
+    "implementation": "src/store.rs;src/main.rs",
+    "main_test": "IT-001",
+    "acceptance": "两个版本返回两条版本及事件且可完整读取。"
+  },
+  {
+    "id": "REQ-010",
+    "name": "版本差异对照",
+    "description": "文本行级 Diff 及 Markdown/.NEMA 结构化影响范围。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "src/diff.rs;src/main.rs",
+    "main_test": "ST-005",
+    "acceptance": "仅单章改变时只标记该章节且可查看文本差异。"
+  },
+  {
+    "id": "REQ-011",
+    "name": "历史恢复",
+    "description": "恢复历史版本前预览、审批、校验当前版本，恢复即新版本。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "src/engine.rs",
+    "main_test": "IT-003",
+    "acceptance": "拒绝未授权或过期恢复；历史链保留原版本。"
+  },
+  {
+    "id": "REQ-012",
+    "name": "CAS去重与压缩",
+    "description": "历史内容按 SHA-256 寻址、Zstd 压缩，多处引用复用。",
+    "priority": "P0",
+    "implementation_status": "Implemented",
+    "implementation": "src/archive.rs",
+    "main_test": "UT-004",
+    "acceptance": "相同内容只存一个对象、读取后 Hash 一致。"
+  },
+  {
+    "id": "REQ-013",
+    "name": "LADONignore",
+    "description": "标准文件名 `.LADONignore`；Gitignore 匹配；界面可创建/检测。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "src/policy.rs;ui-prototype/src/main.rs",
+    "main_test": "UT-010",
+    "acceptance": "命中敏感规则禁止任何外部数据传输。"
+  },
+  {
+    "id": "REQ-014",
+    "name": "敏感数据守卫",
+    "description": "远端 AI、Embedding、日志、历史、插件和同步统一执行策略。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "src/policy.rs;src/engine.rs;src/main.rs",
+    "main_test": "IT-002",
+    "acceptance": "排除文件绝不能通过已实现上传/远程 AI 路径流出。"
+  },
+  {
+    "id": "REQ-015",
+    "name": "加密归档",
+    "description": "非敏感历史压缩后使用 AES-256-GCM 加密，密钥不写 DB。",
+    "priority": "P0",
+    "implementation_status": "Implemented",
+    "implementation": "src/crypto.rs;src/engine.rs",
+    "main_test": "UT-002",
+    "acceptance": "密文篡改导致认证失败；密钥缺失拒绝上传。"
+  },
+  {
+    "id": "REQ-016",
+    "name": "远程存储统一接口",
+    "description": "Local、Google Drive、NAS 使用同一异步 Provider 契约。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "src/provider.rs",
+    "main_test": "IT-007",
+    "acceptance": "相同对象经不同 Provider 能读回且校验一致。"
+  },
+  {
+    "id": "REQ-017",
+    "name": "Google Drive 备份",
+    "description": "通过 OAuth 访问令牌、resumable upload、读取校验、失败可重试。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "src/provider.rs;src/engine.rs",
+    "main_test": "ST-006",
+    "acceptance": "真实账号授权后上传、读取、恢复成功；失败不删本地。"
+  },
+  {
+    "id": "REQ-018",
+    "name": "NAS备份",
+    "description": "NAS 作为挂载目录实现 Provider；将来支持 SMB/WebDAV 协议专用适配器。",
+    "priority": "P1",
+    "implementation_status": "Partial",
+    "implementation": "src/provider.rs",
+    "main_test": "IT-007",
+    "acceptance": "挂载 NAS 数据回读成功，断联不丢本地版本。"
+  },
+  {
+    "id": "REQ-019",
+    "name": "离线可靠队列",
+    "description": "断网时按上限保留持久化待上传队列，重启可继续。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "sql/001_initial.sql;docs/03_detailed_design/32_存储与接口详细设计.md",
+    "main_test": "ST-007",
+    "acceptance": "断网重启不丢待上传任务。"
+  },
+  {
+    "id": "REQ-020",
+    "name": "存储配额与冷热层",
+    "description": "本地热索引、远端冷快照、读回验证后才释放本地空间。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "src/engine.rs",
+    "main_test": "ST-008",
+    "acceptance": "云端不可用时不允许清理唯一恢复副本。"
+  },
+  {
+    "id": "REQ-021",
+    "name": "Turso本地数据库",
+    "description": "默认嵌入式数据库保存元数据、版本、审计与关联；不依赖云端。",
+    "priority": "P0",
+    "implementation_status": "Implemented",
+    "implementation": "src/store.rs;sql/001_initial.sql",
+    "main_test": "IT-001",
+    "acceptance": "断网依然可以创建版本与查询历史。"
+  },
+  {
+    "id": "REQ-022",
+    "name": "数据库云同步隔离",
+    "description": "Turso Cloud 同步可选，敏感字段不因数据库同步而外泄。",
+    "priority": "P1",
+    "implementation_status": "Design",
+    "implementation": "docs/02_basic_design/23_数据存储基本设计.md",
+    "main_test": "ST-009",
+    "acceptance": "未授权同步时无敏感数据外发。"
+  },
+  {
+    "id": "REQ-023",
+    "name": "已批准要件锚点",
+    "description": "默认项目已有被批准的要件定义，增量匹配且不重建。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/01_requirements/11_文档治理业务要件.md",
+    "main_test": "ST-010",
+    "acceptance": "需求提交仅关联批准条款与相关文件。"
+  },
+  {
+    "id": "REQ-024",
+    "name": "文档即任务",
+    "description": "绑定 FileRef、条款 ID、基准版本的注释与任务。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "src/store.rs;src/main.rs",
+    "main_test": "IT-005",
+    "acceptance": "创建注释/任务与对应批准版本关联，状态可追踪。"
+  },
+  {
+    "id": "REQ-025",
+    "name": "条款关联图谱",
+    "description": "要件、设计、代码、UT、IT、ST 双向影响关系。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "src/nema.rs;sql/001_initial.sql",
+    "main_test": "IT-006",
+    "acceptance": "跨层次关系可追踪，非法悬空边被拒绝。"
+  },
+  {
+    "id": "REQ-026",
+    "name": "新需求冲突守卫",
+    "description": "UserPromptSubmit 等 Hook 自动增量筛选要件并建议处置。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/01_requirements/11_文档治理业务要件.md",
+    "main_test": "ST-011",
+    "acceptance": "冲突提示包含条款、来源、可选方案。"
+  },
+  {
+    "id": "REQ-027",
+    "name": ".NEMA格式支持",
+    "description": "Table、5W1H、Node–Edge，严格空格 U+0020、规范解析。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "src/nema.rs;design/nema",
+    "main_test": "UT-013",
+    "acceptance": "现有子集可解析并拒绝非法输入；全语法有回归规范。"
+  },
+  {
+    "id": "REQ-028",
+    "name": "关系图并行调度",
+    "description": "Node–Edge DAG 划分可并行批次，冲突与环必须阻断。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "src/nema.rs;src/main.rs",
+    "main_test": "IT-006",
+    "acceptance": "互不依赖任务同批次，环路任务拒绝。"
+  },
+  {
+    "id": "REQ-029",
+    "name": "FileSpace隔离",
+    "description": "Agent 独立空间快照、最小访问范围、租约与取消。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "src/workspace.rs",
+    "main_test": "UT-023",
+    "acceptance": "写入前版本校验，读取不需要额外全文复制。"
+  },
+  {
+    "id": "REQ-030",
+    "name": "Agent写入协调",
+    "description": "独立写入准备，统一检查当前版本、审批后提交，避免并行覆盖。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/03_detailed_design/33_并行与任务详细设计.md",
+    "main_test": "ST-012",
+    "acceptance": "并发写同一文件一个冲突被拒绝。"
+  },
+  {
+    "id": "REQ-031",
+    "name": "CLI/MCP/Skills命令",
+    "description": "统一 Rust Command Bus，GUI、CLI、MCP、Skills 无旁路。",
+    "priority": "P1",
+    "implementation_status": "Partial",
+    "implementation": "src/main.rs;docs/02_basic_design/24_外部接口与UI基本设计.md",
+    "main_test": "ST-013",
+    "acceptance": "所有写入通过审计且可定位操作者。"
+  },
+  {
+    "id": "REQ-032",
+    "name": "文件夹批量AI标签",
+    "description": "预设维度与自然语言指令，支持当前文件夹与子文件夹。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "src/tagging.rs;src/main.rs",
+    "main_test": "ST-014",
+    "acceptance": "标签附带来源与规则版本，敏感文件不会发至远程。"
+  },
+  {
+    "id": "REQ-033",
+    "name": "标签增量与人工保护",
+    "description": "内容/规则未变化复用标记、人工标签可锁定覆盖。",
+    "priority": "P1",
+    "implementation_status": "Design",
+    "implementation": "docs/02_basic_design/24_外部接口与UI基本设计.md",
+    "main_test": "ST-015",
+    "acceptance": "仅受影响标签更新，用户锁定标签不被自动重写。"
+  },
+  {
+    "id": "REQ-034",
+    "name": "Grep精确搜索",
+    "description": "复用 IDE1.0 的 memchr/regex/多编码 Grep；独立本地查询。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "src/search.rs",
+    "main_test": "UT-021",
+    "acceptance": "能够精确检索并受限返回，IDE1.0 优化移植另验收。"
+  },
+  {
+    "id": "REQ-035",
+    "name": "混合语义检索",
+    "description": "BM25F、Embedding、标签、结构化关系融合。",
+    "priority": "P1",
+    "implementation_status": "Design",
+    "implementation": "docs/02_basic_design/23_数据存储基本设计.md",
+    "main_test": "ST-016",
+    "acceptance": "相同语义不同措辞检索有效且可回溯依据。"
+  },
+  {
+    "id": "REQ-036",
+    "name": "向量去重与回收",
+    "description": "内容块+模型版本索引、相同内容共享向量、冷索引可重建。",
+    "priority": "P1",
+    "implementation_status": "Design",
+    "implementation": "sql/001_initial.sql",
+    "main_test": "ST-017",
+    "acceptance": "重复 Worktree 不增加重复向量数据。"
+  },
+  {
+    "id": "REQ-037",
+    "name": "跨格式提取",
+    "description": "PDF、Office、OCR 图片、代码、附件安全分析。",
+    "priority": "P1",
+    "implementation_status": "Design",
+    "implementation": "docs/02_basic_design/22_模块架构基本设计.md",
+    "main_test": "ST-018",
+    "acceptance": "无法解析文件不影响主 GUI，超时可取消。"
+  },
+  {
+    "id": "REQ-038",
+    "name": "Git Worktree管理",
+    "description": "Worktree 池化、冻结、归档、恢复、审批清理。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/02_basic_design/23_数据存储基本设计.md",
+    "main_test": "ST-019",
+    "acceptance": "未提交和未跟踪文件经验证归档前不可清理。"
+  },
+  {
+    "id": "REQ-039",
+    "name": "后台Worker池",
+    "description": "枚举、Grep、OCR、Embedding、Agent 分池限速。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "ui-prototype/src/main.rs;docs/03_detailed_design/33_并行与任务详细设计.md",
+    "main_test": "ST-020",
+    "acceptance": "后台批量工作不中断本地交互。"
+  },
+  {
+    "id": "REQ-040",
+    "name": "本地极速启动",
+    "description": "冷启动目标<150ms（验收目标）、无AI/云依赖，支持单 EXE。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "ui-prototype/src/main.rs",
+    "main_test": "ST-021",
+    "acceptance": "目标 Win11 上多轮测首帧与首次交互，不将热启动冒充冷启动。"
+  },
+  {
+    "id": "REQ-041",
+    "name": "LSP按需池化",
+    "description": "语言服务器按需启动，多个文档共享，不重复占资源。",
+    "priority": "P1",
+    "implementation_status": "Design",
+    "implementation": "docs/02_basic_design/24_外部接口与UI基本设计.md",
+    "main_test": "ST-022",
+    "acceptance": "关闭所有文档后服务按策略闲置回收。"
+  },
+  {
+    "id": "REQ-042",
+    "name": "原生文档内联编辑",
+    "description": "文档段落批注、Diff、修改原因关联任务与版本事件。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "src/store.rs;ui-prototype/src/main.rs",
+    "main_test": "ST-023",
+    "acceptance": "点击条款可绑定任务/批注，提交修改产生版本记录。"
+  },
+  {
+    "id": "REQ-043",
+    "name": "文件附属知识笔记",
+    "description": "备注独立存储于 Turso，以 FileRef 绑定，移动仍保持。",
+    "priority": "P1",
+    "implementation_status": "Partial",
+    "implementation": "src/store.rs",
+    "main_test": "ST-024",
+    "acceptance": "目录变化后备注不会暴露或丢失。"
+  },
+  {
+    "id": "REQ-044",
+    "name": "统一操作审计",
+    "description": "无论来自 UI、CLI、Agent 或规则，变更均有审计入口。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "src/store.rs;src/main.rs",
+    "main_test": "ST-025",
+    "acceptance": "每条正式捕获事件含时间、身份和来源。"
+  },
+  {
+    "id": "REQ-045",
+    "name": "插件与扩展",
+    "description": "WASM 运行时、资源配额、最小权限、热加载，后续外部 SDK。",
+    "priority": "P2",
+    "implementation_status": "Design",
+    "implementation": "docs/02_basic_design/22_模块架构基本设计.md",
+    "main_test": "ST-026",
+    "acceptance": "非法插件访问敏感资源被拒绝。"
+  },
+  {
+    "id": "REQ-046",
+    "name": "i18n本地化",
+    "description": "简体中文、日语、英语；错误和状态翻译。",
+    "priority": "P1",
+    "implementation_status": "Design",
+    "implementation": "docs/02_basic_design/24_外部接口与UI基本设计.md",
+    "main_test": "ST-027",
+    "acceptance": "三语言同等覆盖所有重要交互。"
+  },
+  {
+    "id": "REQ-047",
+    "name": "外部历史导入",
+    "description": "Git/其他系统旧版本可导入，并标记不可补全的历史。",
+    "priority": "P1",
+    "implementation_status": "Design",
+    "implementation": "docs/01_requirements/10_总体要件定义.md",
+    "main_test": "ST-028",
+    "acceptance": "不能将未导入历史显示为已知事实。"
+  },
+  {
+    "id": "REQ-048",
+    "name": "恢复校验与故障演练",
+    "description": "云端 Hash+解密验证、恢复测试、断网与损坏演练。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "src/crypto.rs;src/engine.rs",
+    "main_test": "IT-003",
+    "acceptance": "上传后读回验证才允许安全驱逐本地对象。"
+  },
+  {
+    "id": "REQ-049",
+    "name": "存储迁移API",
+    "description": "变更 Google Drive/NAS 后复制、验证、切换、旧端清理。",
+    "priority": "P1",
+    "implementation_status": "Design",
+    "implementation": "docs/03_detailed_design/32_存储与接口详细设计.md",
+    "main_test": "ST-029",
+    "acceptance": "迁移失败仍可用原存储恢复。"
+  },
+  {
+    "id": "REQ-050",
+    "name": "隐私与安全",
+    "description": "敏感规则失效关闭远程传输、OAuth 最小权限、密钥分离。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "src/policy.rs;src/provider.rs",
+    "main_test": "ST-030",
+    "acceptance": "未授权无敏感数据外流，凭据不写日志。"
+  },
+  {
+    "id": "REQ-051",
+    "name": "Windows Shell 原生菜单兼容",
+    "description": "使用 Windows Shell IContextMenu/IContextMenu2/IContextMenu3 获取已注册第三方经典菜单命令，支持 invoke、消息转发与失败回退。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "native/shell_menu.cpp;src/shell.rs",
+    "main_test": "ST-051",
+    "acceptance": "在安装 TortoiseGit 和 7-Zip 的 Windows 11 设备上，其经典 Shell 命令可从 LADON 调用；失败能打开 Explorer。"
+  },
+  {
+    "id": "REQ-052",
+    "name": "Windows 11 现代右键扩展",
+    "description": "识别 IExplorerCommand 生态差异，优先复用可用命令，无法托管时提供 Explorer 原生菜单回退；不得承诺逐像素同构。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/03_detailed_design/40_WindowsShell菜单与隔离.md",
+    "main_test": "ST-052",
+    "acceptance": "现代命令缺失时能明确进入 Windows Explorer 对应路径。"
+  },
+  {
+    "id": "REQ-053",
+    "name": "系统右键上下文覆盖",
+    "description": "分别覆盖文件、文件夹、空白区域、多选、网络路径、外接磁盘及第三方菜单子项。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/03_detailed_design/40_WindowsShell菜单与隔离.md",
+    "main_test": "ST-053",
+    "acceptance": "按兼容性矩阵逐项验证，不支持项明确显示回退。"
+  },
+  {
+    "id": "REQ-054",
+    "name": "右键添加敏感文件",
+    "description": "文件和目录右键菜单提供「添加为敏感文件」，写入 .LADONignore 并热重载，同时阻止未授权远端处理。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "src/policy.rs;native/shell_menu.cpp;src/main.rs",
+    "main_test": "UT-030",
+    "acceptance": "按钮操作后规则正确命中该资源，已上传历史触发复核任务。"
+  },
+  {
+    "id": "REQ-055",
+    "name": "底部常驻通信输入栏",
+    "description": "窗口最底边固定单行输入栏；上方聊天历史可展开、收起且不得挤压默认文件浏览。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/02_basic_design/26_现代侘寂UI与聊天基本设计.md",
+    "main_test": "ST-054",
+    "acceptance": "默认历史隐藏、输入栏始终在窗口底部；切换文件夹不改变位置。"
+  },
+  {
+    "id": "REQ-056",
+    "name": "AI／团队会话切换",
+    "description": "同一底部输入支持 AI 与成员消息、@提及、附件、引用文件/条款、消息历史筛选。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/03_detailed_design/41_租户聊天与同步.md",
+    "main_test": "ST-055",
+    "acceptance": "会话隔离，成员消息不会自动传入 AI，敏感文件附件受策略约束。"
+  },
+  {
+    "id": "REQ-057",
+    "name": "账号及工作空间",
+    "description": "使用外部身份提供者登录，个人/团队空间切换、设备会话和角色管理。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/03_detailed_design/41_租户聊天与同步.md",
+    "main_test": "ST-056",
+    "acceptance": "登录、退出、重入后权限生效；未登录可访问已允许的纯本地文件。"
+  },
+  {
+    "id": "REQ-058",
+    "name": "多租户数据隔离",
+    "description": "Turso 所有租户数据按 tenant_id/workspace_id 分区，服务端强制鉴权，禁止由客户端自报租户 ID 决定权限。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "src/auth.rs;sql/002_collaboration_shell_agent.sql",
+    "main_test": "UT-033",
+    "acceptance": "跨租户读取和写入均拒绝，任何列表/搜索不泄漏其他租户元数据。"
+  },
+  {
+    "id": "REQ-059",
+    "name": "跨终端历史与聊天同步",
+    "description": "设备同步增量事件、账号工作空间会话；敏感文件和 Ignore 规则按最小披露策略过滤。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/03_detailed_design/41_租户聊天与同步.md",
+    "main_test": "ST-057",
+    "acceptance": "两设备断网重连后版本/聊天去重且冲突显式提示。"
+  },
+  {
+    "id": "REQ-060",
+    "name": "Agent 文件夹操作协议",
+    "description": "提供目录枚举、FileRef 解析、文件读取、Grep、标签、指纹、版本、Diff、任务、订阅等统一 Agent API。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "src/agent_api.rs;api/ladon-agent-openapi.yaml",
+    "main_test": "IT-015",
+    "acceptance": "相同 API 权限控制可被 UI、CLI、Agent 使用且返回稳定结构。"
+  },
+  {
+    "id": "REQ-061",
+    "name": "Agent 安全写入与恢复接口",
+    "description": "所有 Agent 写操作先生成计划，验证版本戳、访问许可和人工审批，再执行受控提交。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/03_detailed_design/42_AgentFolderAPI详细设计.md",
+    "main_test": "ST-058",
+    "acceptance": "无审批或基准版本变更均禁止覆盖。"
+  },
+  {
+    "id": "REQ-062",
+    "name": "Agent 事件订阅与增量快照",
+    "description": "支持 subscribe/change_cursor/ack、FileSpace snapshot 与 Delta；提供背压、过期与断点续读语义。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/03_detailed_design/42_AgentFolderAPI详细设计.md",
+    "main_test": "ST-059",
+    "acceptance": "多 Agent 高并发时不得丢已确认事件，过期游标要求重建快照。"
+  },
+  {
+    "id": "REQ-063",
+    "name": "UI 悬停与渐进披露",
+    "description": "仅鼠标悬停展示行级快捷操作、Tooltip；侧栏图标模式/折叠子菜单；多功能以选项卡/更多菜单隐藏。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/02_basic_design/26_现代侘寂UI与聊天基本设计.md",
+    "main_test": "ST-060",
+    "acceptance": "键盘与屏幕阅读器亦能使用隐藏操作，默认浏览不出现多余面板。"
+  },
+  {
+    "id": "REQ-064",
+    "name": "现代侘寂设计系统",
+    "description": "不使用仿古纸纹/水墨装饰；采用暖白雾灰苔绿、现代字体和 Explorer 同级操作信息密度。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "ui-modern-svg/",
+    "main_test": "ST-061",
+    "acceptance": "12 场景一致性及明暗/键盘焦点/缩放验收。"
+  },
+  {
+    "id": "REQ-065",
+    "name": "右键菜单执行隔离",
+    "description": "Windows Shell COM 扩展在独立子进程执行；异常崩溃不会终止 Explorer 主界面。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "src/shell.rs;native/shell_menu.cpp",
+    "main_test": "IT-016",
+    "acceptance": "第三方扩展异常退出只影响 Shell Host，不影响主窗口。"
+  },
+  {
+    "id": "REQ-066",
+    "name": "历史跨端元数据安全",
+    "description": "云端事件目录/历史分享需授权及脱敏；回收或迁移不得丢失审计链。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/03_detailed_design/41_租户聊天与同步.md",
+    "main_test": "ST-062",
+    "acceptance": "被撤销成员无法读取历史 URL、对象定位和敏感路径。"
+  },
+  {
+    "id": "REQ-067",
+    "name": "成员角色与分享",
+    "description": "Owner/Admin/Editor/Reviewer/Viewer/Agent 角色和资源级权限、分享链接到期、审计。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "src/auth.rs;sql/002_collaboration_shell_agent.sql",
+    "main_test": "UT-034",
+    "acceptance": "Reviewer 不可修改文件，Viewer 不可读取敏感资源，Agent 仅限定作用域。"
+  },
+  {
+    "id": "REQ-068",
+    "name": "云盘按租户绑定",
+    "description": "每个租户/工作空间可绑定多个云盘；凭据归属及对象 Manifest 不跨租户共享。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/03_detailed_design/43_云盘Provider多租户归档.md",
+    "main_test": "ST-063",
+    "acceptance": "A 租户的 Google Drive 不能被 B 租户看到或写入。"
+  },
+  {
+    "id": "REQ-069",
+    "name": "聊天到文档任务转换",
+    "description": "引用对话消息生成绑定 FileRef/条款/基准版本的文档任务，关联 Agent 执行审计。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/03_detailed_design/41_租户聊天与同步.md",
+    "main_test": "ST-064",
+    "acceptance": "原消息、条款、任务、审批和提交事件可双向追踪。"
+  },
+  {
+    "id": "REQ-070",
+    "name": "完整历史外部审计",
+    "description": "包括文件变动、Shell/AI/成员操作来源、历史分段对象校验、云盘状态和恢复证据。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "src/store.rs;docs/03_detailed_design/43_云盘Provider多租户归档.md",
+    "main_test": "IT-017",
+    "acceptance": "每版本都能解释差异、来源和归档状态；未知来源必须标注为未知。"
+  },
+  {
+    "id": "REQ-071",
+    "name": "Explorer 键盘与系统集成",
+    "description": "保留 Windows 打开方式、属性、发送到、文件关联、上下文快捷键和标准剪贴板语义。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/03_detailed_design/40_WindowsShell菜单与隔离.md",
+    "main_test": "ST-065",
+    "acceptance": "Windows Explorer 对照功能矩阵记录通过/差异/回退。"
+  },
+  {
+    "id": "REQ-072",
+    "name": "文档即任务实时侧栏",
+    "description": "条款选中时显示可折叠任务/评论、关联设计代码UT/IT/ST、审批状态及版本 diff。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/02_basic_design/26_现代侘寂UI与聊天基本设计.md",
+    "main_test": "ST-066",
+    "acceptance": "切换编辑条款时关联准确，隐藏侧栏后仍可通过快捷键访问。"
+  },
+  {
+    "id": "REQ-073",
+    "name": "Google Drive 个人隐私归档",
+    "description": "默认个人模式使用 appDataFolder；允许普通 Drive 用户目录模式，明确它们不是同一种分享能力。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "src/storage_rules.rs;docs/03_detailed_design/44_Drive无后端归档协议.md",
+    "main_test": "ST-031",
+    "acceptance": "个人账户授权后历史对象可上传、恢复；appDataFolder 不共享。"
+  },
+  {
+    "id": "REQ-074",
+    "name": "Google Drive 团队归档",
+    "description": "团队通过普通 Drive 文件夹或 Shared Drive；不使用 appDataFolder 承载协作。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "src/storage_rules.rs;docs/03_detailed_design/44_Drive无后端归档协议.md",
+    "main_test": "ST-032",
+    "acceptance": "两个用户在各自有 Drive 权限前提下可访问团队归档。"
+  },
+  {
+    "id": "REQ-075",
+    "name": "云端不可变对象协议",
+    "description": "每个内容/日志对象独立寻址、加密、校验；Manifest 仅作索引提示。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "src/cloud_journal.rs;protocol/drive-layout-v1.yaml",
+    "main_test": "ST-033",
+    "acceptance": "并发上传不覆盖同名 latest 清单；索引可重建。"
+  },
+  {
+    "id": "REQ-076",
+    "name": "按设备事件序列",
+    "description": "每个设备有唯一流标识、连续 seq 与前驱哈希；多设备增量合并。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "src/cloud_journal.rs;sql/003_drive_rules_control_plane.sql",
+    "main_test": "ST-034",
+    "acceptance": "检测缺失事件段、设备序号冲突。"
+  },
+  {
+    "id": "REQ-077",
+    "name": "Drive 增量同步游标",
+    "description": "使用 Drive changes token + 后备扫描重建，不依赖 push 通知保证完整性。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/03_detailed_design/44_Drive无后端归档协议.md",
+    "main_test": "ST-035",
+    "acceptance": "漏通知后仍可找回完整归档索引。"
+  },
+  {
+    "id": "REQ-078",
+    "name": "本地离线队列与配额",
+    "description": "断网/WAL 无声丢失为阻断缺陷；配额满明确阻止不安全清理。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "src/storage_rules.rs;docs/03_detailed_design/45_事件同步与冲突恢复.md",
+    "main_test": "ST-036",
+    "acceptance": "模拟断网、磁盘满，不把未确认数据标已归档。"
+  },
+  {
+    "id": "REQ-079",
+    "name": "强校验后空间回收",
+    "description": "云端对象下载、解密、校验成功且满足副本策略才释放历史本地内容。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "src/cloud_journal.rs;src/engine.rs",
+    "main_test": "ST-037",
+    "acceptance": "归档成功但无法读回时禁止释放。"
+  },
+  {
+    "id": "REQ-080",
+    "name": "Drive 限流与费用预算",
+    "description": "重试、指数退避、分段打包、列表分页、成本/请求统计。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/03_detailed_design/44_Drive无后端归档协议.md",
+    "main_test": "ST-038",
+    "acceptance": "429/403 错误按类型限流；不在 GUI 临界路径请求。"
+  },
+  {
+    "id": "REQ-081",
+    "name": "最小 Vercel 控制面",
+    "description": "服务器仅维护身份、成员、设备、存储绑定与必要聊天元数据；内容仍优先云盘。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "server/vercel;docs/02_basic_design/27_本地优先与最小后端.md",
+    "main_test": "ST-039",
+    "acceptance": "个人离线无需 Vercel；团队权限通过服务端检查。"
+  },
+  {
+    "id": "REQ-082",
+    "name": "OIDC 身份校验",
+    "description": "Google OIDC issuer/audience/expiry/sub 验证；注册流程后置审批。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "server/vercel/lib/auth.ts",
+    "main_test": "ST-040",
+    "acceptance": "拒绝错误 audience/过期 token，不信任客户端填写角色。"
+  },
+  {
+    "id": "REQ-083",
+    "name": "多租户授权隔离",
+    "description": "每次受保护 API 服务端从租户工作空间成员表校验权限，不仅用客户端过滤。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "server/vercel/lib/auth.ts;server/vercel/app/api/v1/workspaces/route.ts",
+    "main_test": "ST-041",
+    "acceptance": "跨租户 ID 或未授权账号请求 403。"
+  },
+  {
+    "id": "REQ-084",
+    "name": "团队加密密钥治理",
+    "description": "内容/历史端到端加密；成员变更、密钥轮转/撤销纳入设计。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/03_detailed_design/46_租户与零知识边界.md",
+    "main_test": "ST-042",
+    "acceptance": "撤销不能消除已下载明文；新轮次密钥不发已撤销成员。"
+  },
+  {
+    "id": "REQ-085",
+    "name": "跨终端恢复索引",
+    "description": "新设备依据加密 checkpoint + 设备事件段补齐历史，支持断点重建。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "protocol/drive-layout-v1.yaml;docs/03_detailed_design/45_事件同步与冲突恢复.md",
+    "main_test": "ST-043",
+    "acceptance": "从空数据库恢复同一逻辑文件历史且不丢身份。"
+  },
+  {
+    "id": "REQ-086",
+    "name": "聊天与档案分层",
+    "description": "团队聊天以密文消息记录，可归档 Drive；实时通知为 Vercel 可选层。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "server/vercel/app/api/v1/chat/route.ts;docs/03_detailed_design/47_通信Dock与信息渐隐.md",
+    "main_test": "ST-044",
+    "acceptance": "关闭实时服务时历史仍可按游标补齐。"
+  },
+  {
+    "id": "REQ-087",
+    "name": "侧栏折叠宽度回流",
+    "description": "侧栏折叠后文档/文件区真正填满释放空间，持续重新计算列宽。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "src/ui_layout.rs;ui-v13-responsive",
+    "main_test": "ST-045",
+    "acceptance": "折叠从 236px 到 60px，主内容宽度增加 176px。"
+  },
+  {
+    "id": "REQ-088",
+    "name": "悬停只触发浮层",
+    "description": "侧栏及行操作 Hover 使用 Overlay，不挤压数据区或造成布局抖动。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "src/ui_layout.rs;ui-v13-responsive",
+    "main_test": "ST-046",
+    "acceptance": "Hover 显示/消失不导致内容宽度变化。"
+  },
+  {
+    "id": "REQ-089",
+    "name": "底部通信与状态融合",
+    "description": "聊天输入固定窗口物理最下端；Explorer 状态和提示共享 Dock，记录可向上展开。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "src/ui_layout.rs;ui-v13-responsive",
+    "main_test": "ST-047",
+    "acceptance": "切换聊天状态不留多余底栏，历史向上展开。"
+  },
+  {
+    "id": "REQ-090",
+    "name": "动态淡出与紧急保留",
+    "description": "非关键底部状态闲置渐隐，错误、敏感拦截、备份失败等保持可见。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "src/ui_layout.rs;docs/03_detailed_design/47_通信Dock与信息渐隐.md",
+    "main_test": "ST-048",
+    "acceptance": "普通状态 4s 归零；Critical 状态持续显示。"
+  },
+  {
+    "id": "REQ-091",
+    "name": "渐进披露可访问性",
+    "description": "悬停操作必须有键盘焦点/上下文菜单等替代入口。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/02_basic_design/28_自适应现代侘寂UI.md",
+    "main_test": "ST-049",
+    "acceptance": "仅用键盘也可查版本、添加敏感文件、打开聊天。"
+  },
+  {
+    "id": "REQ-092",
+    "name": "敏感数据云端最小披露",
+    "description": "外传策略包含内容、路径、索引、标签、聊天附件、事件理由。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "src/storage_rules.rs;docs/03_detailed_design/46_租户与零知识边界.md",
+    "main_test": "ST-050",
+    "acceptance": "命中 .LADONignore 的云端对象与元数据上传为零。"
+  },
+  {
+    "id": "REQ-093",
+    "name": "云存储适配能力协商",
+    "description": "Drive、NAS、S3 可声明列表/范围下载/续传/配额/一致性差异，调用方降级。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "docs/03_detailed_design/48_Provider能力协商与迁移.md",
+    "main_test": "ST-067",
+    "acceptance": "NAS/S3 不因缺 Drive 专属语义而造成错误。"
+  },
+  {
+    "id": "REQ-094",
+    "name": "多信号涌现式建议",
+    "description": "融合文件变化、要件关系、测试失败等事件，仅给证据充分的建议。",
+    "priority": "P0",
+    "implementation_status": "Partial",
+    "implementation": "src/emergence.rs;docs/03_detailed_design/49_涌现式设计与AI节流.md",
+    "main_test": "ST-068",
+    "acceptance": "单一弱信号不生成任务，至少两类独立证据。"
+  },
+  {
+    "id": "REQ-095",
+    "name": "执行与审批强分离",
+    "description": "涌现建议不得自动覆写文档；Agent 提交仍走 FileSpace 审批和版本校验。",
+    "priority": "P1",
+    "implementation_status": "Design",
+    "implementation": "src/emergence.rs;docs/03_detailed_design/49_涌现式设计与AI节流.md",
+    "main_test": "ST-069",
+    "acceptance": "没有审批时文件哈希不改变。"
+  },
+  {
+    "id": "REQ-096",
+    "name": "云端目录信息安全",
+    "description": "Drive appProperties 只放不含密文内容的最少索引；采用不可逆化 ID。",
+    "priority": "P1",
+    "implementation_status": "Design",
+    "implementation": "src/storage_rules.rs;protocol/drive-layout-v1.yaml",
+    "main_test": "ST-070",
+    "acceptance": "远端文件名与属性不包含真实敏感文件路径。"
+  },
+  {
+    "id": "REQ-097",
+    "name": "Agent 文件夹能力租户限制",
+    "description": "所有 Folder API 调用带身份授权、工作区范围、敏感策略、幂等与审计。",
+    "priority": "P1",
+    "implementation_status": "Design",
+    "implementation": "api/ladon-agent-openapi.yaml;server/vercel/lib/auth.ts",
+    "main_test": "ST-071",
+    "acceptance": "未授予权限的 Agent 无法使用恢复/写入接口。"
+  },
+  {
+    "id": "REQ-098",
+    "name": "个人本地模式独立运行",
+    "description": "断网、未登录、未接 Vercel 仍可用全部基本文件浏览与本地版本能力。",
+    "priority": "P1",
+    "implementation_status": "Design",
+    "implementation": "src/engine.rs;docs/02_basic_design/27_本地优先与最小后端.md",
+    "main_test": "ST-072",
+    "acceptance": "关闭网络与后台服务仍可 init/capture/history。"
+  },
+  {
+    "id": "REQ-099",
+    "name": "双向文件/任务历史关联",
+    "description": "在底部聊天引用 FileRef、要件条款后绑定任务事件；支持追溯聊天源证据。",
+    "priority": "P1",
+    "implementation_status": "Design",
+    "implementation": "docs/03_detailed_design/47_通信Dock与信息渐隐.md",
+    "main_test": "ST-073",
+    "acceptance": "引用同名不同版本文件仍能精确定位。"
+  },
+  {
+    "id": "REQ-100",
+    "name": "跨设备冲突不覆盖",
+    "description": "同一 FileRef 分支更改进入 Review/CommitCoordinator，不使用 last-write-wins。",
+    "priority": "P1",
+    "implementation_status": "Design",
+    "implementation": "src/cloud_journal.rs;sql/003_drive_rules_control_plane.sql",
+    "main_test": "ST-074",
+    "acceptance": "同基线的不同设备写入必显示人工审核提示。"
+  }
+]

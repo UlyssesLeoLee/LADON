@@ -1,0 +1,11 @@
+/target/
+/ui-prototype/target/
+/.ladon/
+**/.ladon/
+*.sqlite
+*.db
+.env
+.env.*
+*.pem
+*.key
+*.p12

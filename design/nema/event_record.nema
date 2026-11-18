@@ -1,0 +1,4 @@
+ \1 1
+\# event_id file_ref version operation occurred_at actor hash
+EV001 FILE001 V1 created 2026-11-18T09:00:00+09:00 human SHA256
+EV002 FILE001 V2 modified 2026-11-18T09:05:00+09:00 agent SHA256
