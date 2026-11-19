@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "source": "src/tagging.rs",
+  "baseline_source_sha256": "a2ecffcde1f39870957499e594297273fc6129c71bd3e03630b74801b82ae786",
+  "prepared_branch": "fix/compile-errors",
+  "technical_design": ".quality/docs/src/tagging.rs.md",
+  "test_design": ".quality/test-design/src/tagging.rs.test.md",
+  "prepared_technical_design_sha256": "a1b769c720ef7c39896d0325d125609575f8e330512205041624533c03846f03",
+  "prepared_test_design_sha256": "18293fe88d23ab4196da40e95f36f88c4319be92c241b8d375366adb08ca9c65",
+  "prepared_related_design_sha256": {}
+}

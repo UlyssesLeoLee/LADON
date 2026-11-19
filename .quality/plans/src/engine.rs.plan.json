@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "source": "src/engine.rs",
+  "baseline_source_sha256": "ce17acec1c217daf29a58d57ca6762b7a2e219cc2cf9c34ae8a29ae81f6a0b42",
+  "prepared_branch": "fix/compile-errors",
+  "technical_design": ".quality/docs/src/engine.rs.md",
+  "test_design": ".quality/test-design/src/engine.rs.test.md",
+  "prepared_technical_design_sha256": "b7c834f6feddc42df00971f10b8cd54b32b99420d81f7e52e6c9d6ad89b3e8fa",
+  "prepared_test_design_sha256": "b926e7c62624db5b716cfe1dd52659db3a2b3baf35e32cc3a834fe11f7f3471a",
+  "prepared_related_design_sha256": {}
+}
