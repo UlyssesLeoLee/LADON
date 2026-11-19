@@ -101,15 +101,15 @@ impl Store {
         let vid=Uuid::new_v4().to_string(); let eid=Uuid::new_v4().to_string();
         let kind=if number==1 {"created"}else if was_deleted{"restored"}else{"modified"};
         tx.execute("INSERT INTO resources(id,relative_path,current_hash,version_no,sensitive,deleted,updated_at) VALUES(?1,?2,?3,?4,?5,0,?6) ON CONFLICT(relative_path) DO UPDATE SET current_hash=excluded.current_hash,version_no=excluded.version_no,sensitive=excluded.sensitive,deleted=0,updated_at=excluded.updated_at",
-            params![&file_id,&p.path,&p.hash,number,if p.sensitive{1i64}else{0i64},&now]).await?;
+            params![file_id.as_str(),p.path.as_str(),p.hash.as_str(),number,if p.sensitive{1i64}else{0i64},now.as_str()]).await?;
         let sections_json=serde_json::to_string(&p.sections)?;
         tx.execute("INSERT INTO versions(id,file_id,number,content_hash,byte_size,sensitive,changed_sections_json,actor,reason,created_at) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10)",
-            params![&vid,&file_id,number,&p.hash,p.size,if p.sensitive{1i64}else{0i64},&sections_json,&p.actor,&p.reason,&now]).await?;
+            params![vid.as_str(),file_id.as_str(),number,p.hash.as_str(),p.size,if p.sensitive{1i64}else{0i64},sections_json.as_str(),p.actor.as_str(),p.reason.as_str(),now.as_str()]).await?;
         let mut prev_row=tx.query("SELECT ledger_hash FROM events WHERE file_id=?1 ORDER BY seq DESC LIMIT 1",[file_id.as_str()]).await?;
         let chain_prev=if let Some(row)=prev_row.next().await?{row.get::<String>(0)?}else{String::new()};drop(prev_row);
         let chain_hash=event_hash(&chain_prev,&eid,&file_id,&vid,kind,&p.path,&p.path,&now,&p.actor,&p.reason,&previous,&p.hash);
         tx.execute("INSERT INTO events(id,file_id,version_id,kind,old_path,new_path,timestamp,actor,reason,previous_hash,current_hash,ledger_prev_hash,ledger_hash) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13)",
-            params![&eid,&file_id,&vid,kind,&p.path,&p.path,&now,&p.actor,&p.reason,&previous,&p.hash,&chain_prev,&chain_hash]).await?;
+            params![eid.as_str(),file_id.as_str(),vid.as_str(),kind,p.path.as_str(),p.path.as_str(),now.as_str(),p.actor.as_str(),p.reason.as_str(),previous.as_str(),p.hash.as_str(),chain_prev.as_str(),chain_hash.as_str()]).await?;
         tx.commit().await?;
         Ok((file_id,vid,eid))
     }
@@ -122,15 +122,15 @@ impl Store {
         let mut r=tx.query("SELECT ledger_hash FROM events WHERE file_id=?1 ORDER BY seq DESC LIMIT 1",[file.id.as_str()]).await?;
         let prev=if let Some(row)=r.next().await?{row.get::<String>(0)?}else{String::new()};drop(r);
         let next=event_hash(&prev,&eid,&file.id,&vid,"deleted",&file.relative_path,"",&now,actor,reason,&file.current_hash,"");
-        tx.execute("UPDATE resources SET deleted=1,updated_at=?1 WHERE id=?2",params![&now,&file.id]).await?;
+        tx.execute("UPDATE resources SET deleted=1,updated_at=?1 WHERE id=?2",params![now.as_str(),file.id.as_str()]).await?;
         tx.execute("INSERT INTO events(id,file_id,version_id,kind,old_path,new_path,timestamp,actor,reason,previous_hash,current_hash,ledger_prev_hash,ledger_hash) VALUES(?1,?2,?3,'deleted',?4,'',?5,?6,?7,?8,'',?9,?10)",
-            params![&eid,&file.id,&vid,&file.relative_path,&now,actor,reason,&file.current_hash,&prev,&next]).await?;
+            params![eid.as_str(),file.id.as_str(),vid.as_str(),file.relative_path.as_str(),now.as_str(),actor,reason,file.current_hash.as_str(),prev.as_str(),next.as_str()]).await?;
         tx.commit().await?;Ok(())
     }
     pub async fn archive_record(&self,o:&StorageObject)->Result<()> {
         let conn=self.connect().await?;
         conn.execute("INSERT INTO archive_objects(content_hash,provider,provider_locator,encrypted,verified_at) VALUES(?1,?2,?3,?4,?5) ON CONFLICT(content_hash,provider) DO UPDATE SET provider_locator=excluded.provider_locator,encrypted=excluded.encrypted,verified_at=excluded.verified_at",
-            params![&o.content_hash,&o.provider,&o.provider_locator,if o.encrypted{1i64}else{0i64},&o.verified_at]).await?;
+            params![o.content_hash.as_str(),o.provider.as_str(),o.provider_locator.as_str(),if o.encrypted{1i64}else{0i64},o.verified_at.as_str()]).await?;
         Ok(())
     }
     pub async fn archives(&self,hash:&str)->Result<Vec<StorageObject>> {
@@ -149,7 +149,7 @@ impl Store {
         for tag in tags {
             let clean=tag.trim();if clean.is_empty()||clean.len()>80 {continue;}
             tx.execute("INSERT INTO file_tags(file_id,tag,source,rule_version,created_at) VALUES(?1,?2,?3,?4,?5) ON CONFLICT(file_id,tag) DO UPDATE SET source=excluded.source,rule_version=excluded.rule_version",
-                params![file_id,clean,source,rule_version,&now]).await?;
+                params![file_id,clean,source,rule_version,now.as_str()]).await?;
         }
         tx.commit().await?;Ok(())
     }
@@ -159,17 +159,17 @@ impl Store {
     }
     pub async fn add_annotation(&self,file_id:&str,section:&str,vid:&str,text:&str)->Result<String>{
         let id=Uuid::new_v4().to_string();let now=Utc::now().to_rfc3339();let conn=self.connect().await?;
-        conn.execute("INSERT INTO annotations(id,file_id,section_key,base_version_id,text,created_at) VALUES(?1,?2,?3,?4,?5,?6)",params![&id,file_id,section,vid,text,&now]).await?;
+        conn.execute("INSERT INTO annotations(id,file_id,section_key,base_version_id,text,created_at) VALUES(?1,?2,?3,?4,?5,?6)",params![id.as_str(),file_id,section,vid,text,now.as_str()]).await?;
         self.add_governance_event(file_id,"annotation.created",&id,text,"human").await?;Ok(id)
     }
     pub async fn create_task(&self,file_id:&str,section:&str,vid:&str,title:&str,description:&str)->Result<String>{
         let id=Uuid::new_v4().to_string();let now=Utc::now().to_rfc3339();let conn=self.connect().await?;
-        conn.execute("INSERT INTO doc_tasks(id,file_id,anchor_section,base_version_id,title,status,description,created_at) VALUES(?1,?2,?3,?4,?5,'open',?6,?7)",params![&id,file_id,section,vid,title,description,&now]).await?;
+        conn.execute("INSERT INTO doc_tasks(id,file_id,anchor_section,base_version_id,title,status,description,created_at) VALUES(?1,?2,?3,?4,?5,'open',?6,?7)",params![id.as_str(),file_id,section,vid,title,description,now.as_str()]).await?;
         self.add_governance_event(file_id,"task.created",&id,title,"human").await?;Ok(id)
     }
     pub async fn add_governance_event(&self,file_id:&str,kind:&str,subject_id:&str,payload:&str,actor:&str)->Result<String>{
         let id=Uuid::new_v4().to_string();let now=Utc::now().to_rfc3339();let conn=self.connect().await?;
-        conn.execute("INSERT INTO governance_events(id,file_id,kind,subject_id,payload,actor,timestamp) VALUES(?1,?2,?3,?4,?5,?6,?7)",params![&id,file_id,kind,subject_id,payload,actor,&now]).await?;
+        conn.execute("INSERT INTO governance_events(id,file_id,kind,subject_id,payload,actor,timestamp) VALUES(?1,?2,?3,?4,?5,?6,?7)",params![id.as_str(),file_id,kind,subject_id,payload,actor,now.as_str()]).await?;
         Ok(id)
     }
     pub async fn governance_events(&self,file_id:&str)->Result<Vec<serde_json::Value>>{

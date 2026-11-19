@@ -2,7 +2,7 @@
 
 Source: `src/agent_api.rs`
 
-Source-SHA256: `dbd88e2485d27caff9aec253311bfc18c63402f6c51fccc294c6de0d9b3398bb`
+Source-SHA256: `20b7d5f52db5aa6b29c7e20bcb4158e7126996f0122be8d96dc28192ee18a48a`
 
 ## Responsibility
 

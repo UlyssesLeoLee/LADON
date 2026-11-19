@@ -131,7 +131,7 @@ impl Engine {
         let v=self.store.version(version_id).await?.ok_or_else(||anyhow!("unknown version"))?;
         let file=self.store.list_files().await?.into_iter().find(|x|x.id==v.file_id).ok_or_else(||anyhow!("unknown resource"))?;
         Ok(format!("RESTORE PLAN: {} version {} ({}) -> {}\nTarget exists: {}\nAction: require --approve, create new version and preserve current history.\nHistorical bytes: read from verified local CAS/cloud archive.",
-            file.id,v.number,&v.content_hash,file.relative_path,self.root.join(file.relative_path).exists()))
+            file.id,v.number,&v.content_hash,file.relative_path,self.root.join(&file.relative_path).exists()))
     }
     pub async fn restore(&self,version_id:&str,approve:bool,provider:Option<&dyn StorageProvider>)->Result<CaptureResult>{
         if !approve {bail!("restore requires explicit --approve");}

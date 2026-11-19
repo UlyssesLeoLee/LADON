@@ -5,14 +5,14 @@ use url::Url;
 
 pub fn heuristic_tags(path:&str,text:&str)->Vec<String>{
     let q=format!("{} {}",path,text).to_lowercase();
-    let rules=[("requirements",["要件定義","requirement","requirements","需求"]),
-        ("basic-design",["基本設計","architecture","基本设计","概要设计"]),
-        ("detailed-design",["詳細設計","detailed design","详细设计","仕様"]),
-        ("unit-test",["単体テスト","unit test","ut-","単体"]),
-        ("integration-test",["結合テスト","integration test","it-"]),
-        ("system-test",["システムテスト","system test","st-"]),
-        ("rust",[".rs","rust","cargo"]),
-        ("nema",[".nema","node-edge","5w1h","nema"]),
+    let rules:[(&str,&[&str]);8]=[("requirements",&["要件定義","requirement","requirements","需求"]),
+        ("basic-design",&["基本設計","architecture","基本设计","概要设计"]),
+        ("detailed-design",&["詳細設計","detailed design","详细设计","仕様"]),
+        ("unit-test",&["単体テスト","unit test","ut-","単体"]),
+        ("integration-test",&["結合テスト","integration test","it-"]),
+        ("system-test",&["システムテスト","system test","st-"]),
+        ("rust",&[".rs","rust","cargo"]),
+        ("nema",&[".nema","node-edge","5w1h","nema"]),
     ];
     let mut out=Vec::new();
     for (label,keys) in rules {if keys.iter().any(|k|q.contains(k)){out.push(label.to_string());}}

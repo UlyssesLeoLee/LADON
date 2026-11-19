@@ -50,7 +50,7 @@ impl<'a> AgentApi<'a>{
         if !path.is_dir(){bail!("not a directory");}
         let mut out=Vec::new();
         for entry in fs::read_dir(&path)?{
-            let e=entry?;let md=e.symlink_metadata()?;
+            let e=entry?;let md=e.metadata()?;
             if md.file_type().is_symlink() {continue;}
             let rel=e.path().strip_prefix(&self.engine.root)?.to_string_lossy().replace('\\',"/");
             if rel.starts_with(".ladon") || rel.starts_with(".git") || rel==".LADONignore" {continue;}

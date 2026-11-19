@@ -2,7 +2,7 @@
 
 Source: `src/tagging.rs`
 
-Source-SHA256: `a2ecffcde1f39870957499e594297273fc6129c71bd3e03630b74801b82ae786`
+Source-SHA256: `ff15537fb063c1e1e90e47c37880b21648f9e566e1b25b3308c8b9ac31f21cda`
 
 ## Test Strategy
 

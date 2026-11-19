@@ -2,7 +2,7 @@
 
 Source: `src/agent_api.rs`
 
-Source-SHA256: `dbd88e2485d27caff9aec253311bfc18c63402f6c51fccc294c6de0d9b3398bb`
+Source-SHA256: `20b7d5f52db5aa6b29c7e20bcb4158e7126996f0122be8d96dc28192ee18a48a`
 
 ## Test Strategy
 
@@ -14,7 +14,7 @@ Integration tests build a real `Engine` over a `tempfile::tempdir` and call `Age
 | --- | --- | --- | --- |
 | TC-401 | Workspace with b.md, tracked a.md, directory sub, .git and the default .LADONignore; list_folder on the root | Names are a.md, b.md, sub in that order; kinds file, file, directory; a.md has a tracked reference and the right byte size; b.md has none; internal entries hidden | tests/it_agent_folder.rs::tc401_list_folder_filters_internal_entries_and_sorts |
 | TC-402 | limit 0, limit 1001, and limit 2 over three entries | Both invalid limits fail with limit must be 1..=1000; the third call returns exactly two entries | tests/it_agent_folder.rs::tc402_list_folder_limit_bounds |
-| TC-403 | list_folder on a regular file, on the parent directory, and on a missing folder | Errors not a directory, folder escapes workspace and an error for the missing folder | tests/it_agent_folder.rs::tc403_list_folder_rejects_file_escape_and_missing |
+| TC-403 | list_folder on a regular file, on a parent reference, and on a missing folder | Error not a directory for the file; an error for the parent reference and for the missing folder, and nothing outside the workspace is listed | tests/it_agent_folder.rs::tc403_list_folder_rejects_file_escape_and_missing |
 | TC-404 | A symbolic link to a.md inside the workspace | The link does not appear in the listing; the test returns early when links cannot be created | tests/it_agent_folder.rs::tc404_list_folder_skips_symlink_entries |
 | TC-405 | read_file_local with max_bytes 0, above 8 MiB, below the file size, and a sufficient limit; also a path outside the workspace | Errors read limit must be 1..8MiB twice, file exceeds caller limit, then the exact bytes for the sufficient limit; the outside path fails | tests/it_agent_folder.rs::tc405_read_file_local_limits |
 | TC-406 | history for an untracked name; grep_local for a pattern present on two lines with limit 1 | History fails with file not found in ledger; grep returns one hit with the right line number | tests/it_agent_folder.rs::tc406_history_unknown_and_grep_limit |
