@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "source": "src/policy.rs",
+  "baseline_source_sha256": "e0eecd499ed2901d0c88b9340c3de348088b6a2a88598ee76a4ace3a00b9c21a",
+  "prepared_branch": "fix/compile-errors",
+  "technical_design": ".quality/docs/src/policy.rs.md",
+  "test_design": ".quality/test-design/src/policy.rs.test.md",
+  "prepared_technical_design_sha256": "b620a67eeeaeab8b6c54dbffcaaf9f0cb567d4c172214c2bb025566dbae065ba",
+  "prepared_test_design_sha256": "af49cfc9b4fc04578bdfb29735c3086199005f2cd0a4ddb178181c49de1cef3a",
+  "prepared_related_design_sha256": {}
+}
