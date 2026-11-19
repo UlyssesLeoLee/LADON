@@ -27,6 +27,34 @@ fn kinds(events: &[ladon_explorer::model::EventRecord]) -> Vec<&str> {
     events.iter().map(|e| e.kind.as_str()).collect()
 }
 
+/// A separate raw connection, used to observe or change what the Store API does not expose.
+/// Every Store method drops its own connection before returning, so this never overlaps one.
+async fn raw_connection(store: &Store) -> turso::Connection {
+    let db = turso::Builder::new_local(&store.path.to_string_lossy()).build().await.unwrap();
+    db.connect().unwrap()
+}
+
+async fn tag_meta(store: &Store, file_id: &str, tag: &str) -> (String, String) {
+    let conn = raw_connection(store).await;
+    let mut rows = conn
+        .query(
+            "SELECT source, rule_version FROM file_tags WHERE file_id=?1 AND tag=?2",
+            turso::params![file_id, tag],
+        )
+        .await
+        .unwrap();
+    let row = rows.next().await.unwrap().unwrap();
+    (row.get::<String>(0).unwrap(), row.get::<String>(1).unwrap())
+}
+
+async fn table_exists(store: &Store, table: &str) -> bool {
+    let conn = raw_connection(store).await;
+    match conn.query(&format!("SELECT COUNT(*) FROM {table}"), ()).await {
+        Err(_) => false,
+        Ok(mut rows) => rows.next().await.is_ok(),
+    }
+}
+
 #[tokio::test]
 async fn tc101_append_version_round_trip() {
     let (_tmp, store) = fixture().await;
@@ -136,22 +164,26 @@ async fn tc105_append_after_delete_is_restored_event() {
 #[tokio::test]
 async fn tc106_archive_record_upsert() {
     let (_tmp, store) = fixture().await;
-    let object = |provider: &str, locator: &str| StorageObject {
+    let object = |provider: &str, locator: &str, encrypted: bool, verified_at: &str| StorageObject {
         content_hash: "h1".into(),
         provider: provider.into(),
         provider_locator: locator.into(),
-        encrypted: true,
-        verified_at: "2026-11-19T00:00:00Z".into(),
+        encrypted,
+        verified_at: verified_at.into(),
     };
-    store.archive_record(&object("nas", "loc1")).await.unwrap();
-    store.archive_record(&object("nas", "loc2")).await.unwrap();
+    store.archive_record(&object("nas", "loc1", true, "2026-11-19T00:00:00Z")).await.unwrap();
+    store.archive_record(&object("nas", "loc2", false, "2026-11-20T00:00:00Z")).await.unwrap();
     let records = store.archives("h1").await.unwrap();
     assert_eq!(records.len(), 1);
     assert_eq!(records[0].provider_locator, "loc2");
-    assert!(records[0].encrypted);
+    assert!(!records[0].encrypted);
+    assert_eq!(records[0].verified_at, "2026-11-20T00:00:00Z");
 
-    store.archive_record(&object("s3", "locx")).await.unwrap();
-    assert_eq!(store.archives("h1").await.unwrap().len(), 2);
+    store.archive_record(&object("s3", "locx", true, "2026-11-21T00:00:00Z")).await.unwrap();
+    let records = store.archives("h1").await.unwrap();
+    let providers: Vec<&str> = records.iter().map(|r| r.provider.as_str()).collect();
+    assert_eq!(providers, vec!["s3", "nas"], "newest verified_at first");
+    assert!(records[0].encrypted);
 }
 
 #[tokio::test]
@@ -164,8 +196,12 @@ async fn tc107_set_tags_filters_and_sorts() {
     store.set_tags(&file_id, &tags, "rule", "v1").await.unwrap();
     assert_eq!(store.tags(&file_id).await.unwrap(), vec!["a".to_string(), "b".to_string(), exactly_80.clone()]);
 
+    assert_eq!(tag_meta(&store, &file_id, "a").await, ("rule".to_string(), "v1".to_string()));
+
     store.set_tags(&file_id, &["a".to_string()], "ai", "v2").await.unwrap();
     assert_eq!(store.tags(&file_id).await.unwrap().len(), 3);
+    assert_eq!(tag_meta(&store, &file_id, "a").await, ("ai".to_string(), "v2".to_string()));
+    assert_eq!(tag_meta(&store, &file_id, "b").await, ("rule".to_string(), "v1".to_string()));
 }
 
 #[tokio::test]
@@ -239,7 +275,18 @@ async fn tc111_special_characters_bound_verbatim() {
 async fn tc112_init_is_idempotent() {
     let (_tmp, store) = fixture().await;
     store.append_version(pending("a.md", "h1", false)).await.unwrap();
+    // The first init applied migration 2, which creates agent_grants.
+    assert!(table_exists(&store, "agent_grants").await);
+
+    // Remove one table of migration 2. A further init must not run migration 2 again,
+    // because the migration is recorded as applied, so the table stays absent.
+    let conn = raw_connection(&store).await;
+    conn.execute("DROP TABLE agent_grants", ()).await.unwrap();
+    drop(conn);
+    assert!(!table_exists(&store, "agent_grants").await);
+
     store.init().await.unwrap();
     store.init().await.unwrap();
+    assert!(!table_exists(&store, "agent_grants").await);
     assert!(store.find_path("a.md").await.unwrap().is_some());
 }

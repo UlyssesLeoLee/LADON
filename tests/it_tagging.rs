@@ -11,8 +11,13 @@ fn find(haystack: &[u8], needle: &[u8]) -> Option<usize> {
     haystack.windows(needle.len()).position(|w| w == needle)
 }
 
+static NO_PROXY_INIT: std::sync::Once = std::sync::Once::new();
+
 /// Serves exactly one HTTP/1.1 response on a loopback port and returns the endpoint URL.
+/// Loopback traffic must never go through a developer's proxy, so NO_PROXY is set once
+/// before the first HTTP client of this test binary is built.
 fn serve_once(status: u16, body: String) -> String {
+    NO_PROXY_INIT.call_once(|| std::env::set_var("NO_PROXY", "127.0.0.1,localhost,::1"));
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let port = listener.local_addr().unwrap().port();
     thread::spawn(move || {
@@ -104,12 +109,17 @@ async fn tc207_ai_tags_accepts_fenced_json() {
     let url = serve_once(200, chat_body("```json\n[\"alpha\"]\n```"));
     let tags = ai_tags(&url, "model", "rule", "a.md", "preview").await.unwrap();
     assert_eq!(tags, vec!["alpha".to_string()]);
+
+    let url = serve_once(200, chat_body("```\n[\"beta\"]\n```"));
+    let tags = ai_tags(&url, "model", "rule", "a.md", "preview").await.unwrap();
+    assert_eq!(tags, vec!["beta".to_string()]);
 }
 
 #[tokio::test]
 async fn tc208_ai_tags_filters_and_caps_results() {
     let exactly_80 = "e".repeat(80);
-    let mut list = vec![String::new(), "x".repeat(81), exactly_80.clone()];
+    // Dropped: empty, whitespace only, 81 bytes, and 41 characters that occupy 82 bytes.
+    let mut list = vec![String::new(), "   ".to_string(), "x".repeat(81), "é".repeat(41), exactly_80.clone()];
     list.extend((1..=9).map(|n| format!("t{n}")));
     let url = serve_once(200, chat_body(&serde_json::to_string(&list).unwrap()));
     let tags = ai_tags(&url, "model", "rule", "a.md", "preview").await.unwrap();
@@ -138,8 +148,10 @@ async fn tc210_ai_tags_rejects_remote_http_endpoint() {
 
 #[tokio::test]
 async fn tc211_ai_tags_http_error_status_fails() {
-    let url = serve_once(500, "{}".to_string());
-    assert!(ai_tags(&url, "model", "rule", "a.md", "preview").await.is_err());
+    // A valid body behind a 500 status proves the failure comes from the status check.
+    let url = serve_once(500, chat_body("[\"alpha\"]"));
+    let err = ai_tags(&url, "model", "rule", "a.md", "preview").await.unwrap_err();
+    assert!(err.to_string().contains("HTTP status server error"), "{err}");
 }
 
 #[test]

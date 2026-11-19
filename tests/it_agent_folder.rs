@@ -26,7 +26,9 @@ async fn workspace()->(tempfile::TempDir,Engine){
 async fn tc401_list_folder_filters_internal_entries_and_sorts(){
     let (tmp,engine)=workspace().await;
     let root=tmp.path();
-    fs::write(root.join("b.md"),"bb").unwrap();
+    // B.md sorts before a.md bytewise, whereas NTFS enumerates a.md before B.md,
+    // so only a real sort by name produces the expected order on Windows.
+    fs::write(root.join("B.md"),"bb").unwrap();
     fs::write(root.join("a.md"),"aaaa").unwrap();
     fs::create_dir(root.join("sub")).unwrap();
     fs::create_dir_all(root.join(".git")).unwrap();
@@ -35,13 +37,15 @@ async fn tc401_list_folder_filters_internal_entries_and_sorts(){
     let api=AgentApi{engine:&engine};
     let list=api.list_folder(Path::new("."),100).await.unwrap();
     let names:Vec<&str>=list.iter().map(|x|x.name.as_str()).collect();
-    assert_eq!(names,vec!["a.md","b.md","sub"]);
-    let kinds:Vec<&str>=list.iter().map(|x|x.kind.as_str()).collect();
-    assert_eq!(kinds,vec!["file","file","directory"]);
-    assert_eq!(list[0].bytes,4);
-    assert_eq!(list[0].relative_path,"a.md");
-    assert!(list[0].tracked_file_ref.is_some());
-    assert!(list[1].tracked_file_ref.is_none());
+    assert_eq!(names,vec!["B.md","a.md","sub"]);
+    let a=list.iter().find(|x|x.name=="a.md").unwrap();
+    assert_eq!((a.kind.as_str(),a.bytes,a.relative_path.as_str()),("file",4,"a.md"));
+    assert!(a.tracked_file_ref.is_some());
+    let b=list.iter().find(|x|x.name=="B.md").unwrap();
+    assert_eq!((b.kind.as_str(),b.bytes),("file",2));
+    assert!(b.tracked_file_ref.is_none());
+    let sub=list.iter().find(|x|x.name=="sub").unwrap();
+    assert_eq!(sub.kind,"directory");
 }
 
 #[tokio::test]
@@ -65,8 +69,16 @@ async fn tc403_list_folder_rejects_file_escape_and_missing(){
     let api=AgentApi{engine:&engine};
     let err=api.list_folder(Path::new("a.md"),10).await.unwrap_err();
     assert!(err.to_string().contains("not a directory"),"{err}");
+    // A parent reference must never list anything outside the workspace. The exact error depends
+    // on how the platform resolves ".." below an extended-length root, so only failure is asserted.
     assert!(api.list_folder(Path::new(".."),10).await.is_err());
     assert!(api.list_folder(Path::new("missing"),10).await.is_err());
+
+    // An absolute path replaces the root in Path::join and resolves outside the workspace:
+    // an existing, empty folder there would list successfully if the containment guard were absent.
+    let outside=tempfile::tempdir().unwrap();
+    let err=api.list_folder(outside.path(),10).await.unwrap_err();
+    assert!(err.to_string().contains("folder escapes workspace"),"{err}");
 }
 
 #[cfg(unix)]
@@ -76,19 +88,32 @@ fn make_link(target:&Path,link:&Path)->bool{std::os::windows::fs::symlink_file(t
 #[cfg(not(any(unix,windows)))]
 fn make_link(_target:&Path,_link:&Path)->bool{false}
 
+/// Directory junctions need no special privilege on Windows, unlike symbolic links.
+#[cfg(windows)]
+fn make_dir_junction(target:&Path,link:&Path)->bool{
+    std::process::Command::new("cmd").args(["/C","mklink","/J"]).arg(link).arg(target)
+        .output().map(|o|o.status.success()).unwrap_or(false)
+}
+#[cfg(not(windows))]
+fn make_dir_junction(_target:&Path,_link:&Path)->bool{false}
+
 #[tokio::test]
 async fn tc404_list_folder_skips_symlink_entries(){
     let (tmp,engine)=workspace().await;
     let root=tmp.path();
     fs::write(root.join("a.md"),"x").unwrap();
-    if !make_link(&root.join("a.md"),&root.join("link.md")){
-        eprintln!("symbolic links unavailable on this host; skipping assertions");
+    fs::create_dir(root.join("sub")).unwrap();
+    let file_link=make_link(&root.join("a.md"),&root.join("link.md"));
+    let dir_link=make_dir_junction(&root.join("sub"),&root.join("jct"));
+    if !file_link && !dir_link {
+        assert!(std::env::var_os("LADON_REQUIRE_LINK_TESTS").is_none(),"link creation is required but unavailable on this host");
+        eprintln!("neither symbolic links nor junctions can be created here; skipping assertions");
         return;
     }
     let api=AgentApi{engine:&engine};
     let list=api.list_folder(Path::new("."),100).await.unwrap();
     let names:Vec<&str>=list.iter().map(|x|x.name.as_str()).collect();
-    assert_eq!(names,vec!["a.md"]);
+    assert_eq!(names,vec!["a.md","sub"],"link entries must be skipped");
 }
 
 #[tokio::test]

@@ -39,6 +39,10 @@ async fn tc303_restore_plan_nested_path_and_missing_target() {
     let cap = e.capture(&file, "human", "init").await.unwrap();
     let version_id = cap.version_id.unwrap();
 
+    let plan = e.restore_plan(&version_id).await.unwrap();
+    assert!(plan.contains("-> docs/a.md\n"), "{plan}");
+    assert!(plan.contains("Target exists: true"), "{plan}");
+
     fs::remove_file(&file).unwrap();
     let plan = e.restore_plan(&version_id).await.unwrap();
     assert!(plan.contains("-> docs/a.md\n"), "{plan}");
@@ -86,9 +90,14 @@ async fn tc306_resolve_rejects_internal_and_outside_paths() {
     let err = e.resolve(Path::new(".git/config")).unwrap_err();
     assert!(err.to_string().contains("internal file cannot be tracked"), "{err}");
 
+    fs::write(tmp.path().join(".ladon").join("probe.txt"), "x").unwrap();
+    let err = e.resolve(Path::new(".ladon/probe.txt")).unwrap_err();
+    assert!(err.to_string().contains("internal file cannot be tracked"), "{err}");
+
     let outside = tempfile::tempdir().unwrap();
     fs::write(outside.path().join("x.txt"), "x").unwrap();
-    assert!(e.resolve(&outside.path().join("x.txt")).is_err());
+    let err = e.resolve(&outside.path().join("x.txt")).unwrap_err();
+    assert!(err.to_string().contains("escapes the workspace"), "{err}");
 }
 
 #[tokio::test]
@@ -141,6 +150,22 @@ async fn tc309_scan_skips_internal_directories() {
     let mut paths: Vec<String> = e.store.list_files().await.unwrap().into_iter().map(|f| f.relative_path).collect();
     paths.sort();
     assert_eq!(paths, vec!["docs/x.md".to_string(), "y.md".to_string()]);
+}
+
+#[tokio::test]
+async fn tc314_archive_blocks_hash_shared_with_sensitive_file() {
+    // The block happens before any key lookup, so no archive key is needed here.
+    let (tmp, e) = workspace().await;
+    let remote = tempfile::tempdir().unwrap();
+    let provider = ladon_explorer::provider::FilesystemProvider::new("nas", remote.path().to_path_buf());
+    fs::write(tmp.path().join("secret.pem"), "same bytes").unwrap();
+    fs::write(tmp.path().join("x.md"), "same bytes").unwrap();
+    assert!(e.capture(&tmp.path().join("secret.pem"), "human", "init").await.unwrap().sensitive);
+    let plain = e.capture(&tmp.path().join("x.md"), "human", "init").await.unwrap();
+    assert!(!plain.sensitive, "x.md itself is not covered by any ignore rule");
+
+    let err = e.archive_version(plain.version_id.as_deref().unwrap(), &provider, false).await.unwrap_err();
+    assert!(err.to_string().contains("sensitive version blocked from external storage"), "{err}");
 }
 
 #[tokio::test]
