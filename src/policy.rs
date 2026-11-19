@@ -76,18 +76,20 @@ mod tests {
     use super::*;
     #[test] fn ut_policy_01_ignore_and_allow() {
         let t=tempfile::tempdir().unwrap();
-        std::fs::write(t.path().join(".LADONignore"),"*.pem\nprivate/\n").unwrap();
-        std::fs::create_dir(t.path().join("private")).unwrap();
-        let policy=LadonPolicy::load(t.path()).unwrap();
-        assert!(policy.excluded(&t.path().join("x.pem")).unwrap());
-        assert!(policy.excluded(&t.path().join("private/x.md")).unwrap());
-        assert!(!policy.excluded(&t.path().join("public.txt")).unwrap());
+        let root=t.path().canonicalize().unwrap();
+        std::fs::write(root.join(".LADONignore"),"*.pem\nprivate/\n").unwrap();
+        std::fs::create_dir(root.join("private")).unwrap();
+        let policy=LadonPolicy::load(&root).unwrap();
+        assert!(policy.excluded(&root.join("x.pem")).unwrap());
+        assert!(policy.excluded(&root.join("private/x.md")).unwrap());
+        assert!(!policy.excluded(&root.join("public.txt")).unwrap());
     }
     #[test] fn ut_policy_02_rule_is_ignored() {
         let t=tempfile::tempdir().unwrap();
-        std::fs::write(t.path().join(".LADONignore"),"").unwrap();
-        let p=LadonPolicy::load(t.path()).unwrap();
-        assert!(p.excluded(&t.path().join(".LADONignore")).unwrap());
+        let root=t.path().canonicalize().unwrap();
+        std::fs::write(root.join(".LADONignore"),"").unwrap();
+        let p=LadonPolicy::load(&root).unwrap();
+        assert!(p.excluded(&root.join(".LADONignore")).unwrap());
     }
     #[test] fn ut_policy_04_add_sensitive() {
         let t=tempfile::tempdir().unwrap();

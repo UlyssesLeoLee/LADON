@@ -2,7 +2,7 @@
 
 Source: `src/policy.rs`
 
-Source-SHA256: `e0eecd499ed2901d0c88b9340c3de348088b6a2a88598ee76a4ace3a00b9c21a`
+Source-SHA256: `0b5e8991e7c6abf61eb8b209276d51dff0a49ab4fbbea41090de46657150bf1b`
 
 ## Responsibility
 
