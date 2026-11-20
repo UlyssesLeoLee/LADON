@@ -2,7 +2,7 @@
 
 Source: `ui-prototype/src/main.rs`
 
-Source-SHA256: `242bdb00099f5829b033ca374c74deac98babd39b24f63e73c88c68c25d1db1c`
+Source-SHA256: `54e156b543f5cd0465443ae84da3c8bb0e958b5913bba8fc3e503c5ab2f41473`
 
 ## Responsibility
 
@@ -64,6 +64,7 @@ The window offers browsing, recording of a regular file (the first version of an
 - A `Worker::send` that returns false sets `worker-stopped` to true and clears `busy`. The banner is then shown.
 - Buttons that start a command are disabled while `busy` or `worker-stopped` is true. The overlay buttons are also disabled while their overlay is hidden, so they are not focusable then.
 - `select-row` sends `LoadHistory` only for a tracked regular file. `request-init` and `cancel-init` send nothing.
+- `refresh-folder` sends `ListFolder` for `current-dir` only when `should_refresh(busy, worker-stopped, workspace-open)` holds. In every other case it sends nothing and sets no status, so a refresh never shows `正在处理，请稍候。`. A sent refresh is marked silent, and every reply clears that mark.
 
 ### Callbacks
 
@@ -74,6 +75,7 @@ The window offers browsing, recording of a regular file (the first version of an
 | `confirm-init(path)` | clears `init-overlay` and sends `Init { path, confirmed: true }` |
 | `cancel-init()` | clears `init-overlay` |
 | `enter-folder(relative-path)` | sends `ListFolder { relative_dir }` |
+| `refresh-folder()` | when `should_refresh` holds, marks the request as silent and sends `ListFolder` for `current-dir`; otherwise sends nothing |
 | `go-up()` | sends `ListFolder` for the parent of `current-dir`; sends nothing when `current-dir` is empty |
 | `select-row(index)` | sets the selection to the row at `index`, or clears it when the index is out of range; sets the `selected-*` properties and empties `details-version`; for a tracked regular file sends `LoadHistory` |
 | `open-history()` | for the selected tracked regular file sends `LoadHistory` and sets `history_pending`; sends nothing when no such row is selected |
@@ -88,6 +90,11 @@ The window offers browsing, recording of a regular file (the first version of an
 - `Opened { root }`: sets `workspace-open` to true, `workspace-root` to the display path, `current-dir` to the empty string and `truncated` to false; clears the history, the diff panel, the folder items, the selection and `details-version`; sets `page` to 0; sets `status` to `已打开工作区` with `status-error` false; then sends `ListFolder { relative_dir: "" }`.
 - `NeedsInit { path }`: sets `status` to `该文件夹还不是工作区。可以点击“初始化”。` with `status-error` false. The open workspace, if any, is kept.
 - `Folder { relative_dir, rows, truncated }`: sets `current-dir` and `truncated`; clears the selection and `details-version`; replaces `folder-items` and `UiState.rows`; sets `status` to `共 {n} 项` where `n` is the number of rows, with `status-error` false.
+- `Folder` reply to a silent refresh, where `relative_dir` equals `current-dir`:
+  - when `listing_changed(UiState.rows, rows)` is false, nothing changes;
+  - otherwise `folder-items` and `UiState.rows` are replaced and `truncated` is set; `status` becomes `共 {n} 项` only when it currently reads `共 …` or `无法读取该文件夹。`, and then `status-error` is false; any other status text is kept;
+  - the selection is kept when `selection_after_refresh(rows, selected-path)` finds a row: the `selected-*` properties are set from that row and `details-version` keeps its text, without sending a command; otherwise the selection is cleared.
+- `Failed` reply to a silent refresh sets `status` as for any failure, with `status-error` true, and keeps the rows already shown. The `无法读取该文件夹。` message is shown when the folder can no longer be read.
 - `Captured { version_no, changed, .. }`: sets `status` to `已记录为 v{n}` when `changed` is true, otherwise to `内容与最新版本相同，未新增版本`, both with `status-error` false, so the status line uses the muted colour; then sends `ListFolder` for `current-dir`. The listing that follows sets `status` to `共 {n} 项`, so the capture text is replaced in the same round trip.
 - `History { relative_path, versions, chain_valid, event_count }`:
   - when `history_pending` is set (the reply answers `open-history`):
@@ -185,6 +192,7 @@ Every `Text` element sets its `color` explicitly.
 - Only Simplified Chinese messages exist (NFR-015 is not met in this release).
 - Files that carry the Windows reparse-point attribute, such as cloud placeholders, are listed as links and cannot be recorded.
 - The window never reads an archive key or token and never archives, restores or scans.
+- The file list refreshes by polling every two seconds while it is shown (a `Timer` in `app.slint`). A file added to or removed from the open folder appears within about two seconds, and a change made and undone within one interval may not appear. Owner: window. Planned change: directory change notifications from the kernel.
 
 ## Change Notes
 
@@ -193,3 +201,5 @@ The window is a client of `app::Worker`. It never calls the kernel directly and 
 The status line after a listing is always `共 {n} 项`, because the listing that follows `Opened` or `Captured` is a `Folder` reply. The texts `已打开工作区` and `已记录为 v{n}` are therefore visible only until that listing is applied.
 
 The window derives `can-record` from the browse row fields that the model provides: `is_directory`, `is_link`, `tracked` and the status text `未记录`. The model has no field that marks other entries, so an entry with any other status is not recordable.
+
+The open folder refreshes silently every two seconds. The timer lives in `app.slint`. The decisions that gate it and keep the selection are pure functions in `model.rs` (`should_refresh`, `selection_after_refresh`, `listing_changed`) and are unit-tested. A silent refresh shows no busy message, keeps the selection and the details card when the row still exists, and rewrites the count only when the status line is a listing count or the folder-unreadable message.

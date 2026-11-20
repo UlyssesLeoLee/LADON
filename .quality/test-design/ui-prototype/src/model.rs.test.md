@@ -2,7 +2,7 @@
 
 Source: `ui-prototype/src/model.rs`
 
-Source-SHA256: `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`
+Source-SHA256: `7ca63c1316ecd74d1018c5fea4dff72b4cd560d2a322d49b8bd5167380d80186`
 
 ## Test Strategy
 
@@ -29,6 +29,9 @@ Requirement coverage: REQ-009 (binary detection TC-602; version rows, sections a
 | TC-613 | Precondition: none. `version_rows` at +08:00 with three versions. Version 1: hash `0123456789abcdef0123`, 1536 bytes, local, not sensitive, no changed sections, actor `alice`, reason `manual capture`, created `2026-11-19T10:00:00Z`. Version 3: id `v-3`, hash `0123456789abcdef`, byte size -1, local, sensitive, sections `A`, `B`, `C`, `D`, actor `bob`, reason `gui-capture`, created `2026-11-19T10:00:00Z`. Version 2: hash `abc`, 5 MiB, not local, sensitive, no changed sections, actor `carol`, created `2026-11-18T23:30:00+00:00`. Also `version_rows` of an empty list | Order 3, 2, 1; only version 3 is current. Labels `v3`, `v2`, `v1`. Hashes `0123456789ab`, `abc`, `0123456789ab`. Sizes `—`, `5.0 MB`, `1.5 KB`. Sections `A、B、C 等 4 项`, `—`, `—`. Times `2026-11-19 18:00`, `2026-11-19 07:30`, `2026-11-19 18:00`. Availability `本地可读 · 敏感，不外传`, `内容不在本地，暂不可比较`, `本地可读`. Version 3 has actor `bob`, reason `gui-capture` and id `v-3`; version 1 has actor `alice` and reason `manual capture`. The empty list gives no rows | ui-prototype/src/model.rs::ut_613_version_rows |
 | TC-614 | `diff_lines` with a two-second timeout and 100 maximum lines: `a\nb\n` against itself; two empty strings; `one\r\ntwo\r\n` against `one\r\n2wo\r\n`; `a\rb\n` against `a\rc\n`; `x\r` against `y\r`; `line1` to `line20`, each followed by `\n`, against the same lines in which line 2 becomes `changed 2` and line 18 becomes `changed 18` | Identical inputs: no lines, totals 0 and 0, not truncated, not approximate. Empty inputs: no lines. CRLF pair: Context (1, 1) `one`, Removed (old_no 2) `two`, Added (new_no 2) `2wo`; totals 1 and 1. `a\rb\n` against `a\rc\n`: Context (1, 1) with text `a` followed by a CR, Removed (old_no 2) `b`, Added (new_no 2) `c`; totals 1 and 1. `x\r` against `y\r`: Removed (old_no 1) with text `x` followed by a CR, Added (new_no 1) with text `y` followed by a CR; totals 1 and 1. Line pair: Context (1, 1) `line1`, Removed (old_no 2) `line2`, Added (new_no 2) `changed 2`, Context (3, 3) `line3`, Context (4, 4) `line4`, Context (5, 5) `line5`, one Gap, Context (15, 15) `line15`, Context (16, 16) `line16`, Context (17, 17) `line17`, Removed (old_no 18) `line18`, Added (new_no 18) `changed 18`, Context (19, 19) `line19`, Context (20, 20) `line20`; totals 2 and 2; not truncated | ui-prototype/src/model.rs::ut_614_diff_lines_content |
 | TC-615 | `diff_lines` of `old1` to `old100` (each followed by `\n`) against `new1` to `new100` with 10 maximum lines and a two-second timeout; of `a\n` against `b\n` with 0, 1 and 2 maximum lines and a two-second timeout; of the line pair of TC-614 with 7 maximum lines; of `a\n` against `b\n` with 100 maximum lines and a zero timeout | 10 lines: exactly 10 lines, the first is Removed (old_no 1) `old1`, the tenth is Removed (old_no 10) `old10`; truncated; totals 100 and 100. 0 lines: no lines; truncated; totals 1 and 1. 1 line: one line, Removed (old_no 1) `a`; truncated. 2 lines: Removed (old_no 1) `a` and Added (new_no 1) `b`; not truncated; not approximate. The line pair with 7 lines: seven lines, the seventh is a Gap; truncated; totals 2 and 2. Zero timeout: approximate; totals 1 and 1 | ui-prototype/src/model.rs::ut_615_diff_lines_limits |
+| TC-616 | `should_refresh` with each of the eight combinations of `busy`, `worker_stopped` and `workspace_open`: all false; only `workspace_open` true; only `worker_stopped` true; `worker_stopped` and `workspace_open` true; only `busy` true; `busy` and `workspace_open` true; `busy` and `worker_stopped` true; all true | `true` only for the combination in which `workspace_open` is true and `busy` and `worker_stopped` are false; `false` for the other seven | ui-prototype/src/model.rs::ut_616_should_refresh |
+| TC-617 | `selection_after_refresh` over the rows `a.txt`, `docs` and `zeta.md` (relative paths in that order) with the selected paths `docs`, `zeta.md`, `Docs`, `missing.md` and the empty string | `Some(1)`, `Some(2)`, `None`, `None`, `None` | ui-prototype/src/model.rs::ut_617_selection_after_refresh |
+| TC-618 | `listing_changed` with: two identical lists of three rows; the same list with the status of its second row changed from `未记录` to `已记录 v1`; the same list with one row added at the end; the same rows in reverse order; two empty lists; an empty list against one row | `false`, `true`, `true`, `true`, `false`, `true` | ui-prototype/src/model.rs::ut_618_listing_changed |
 
 ## Boundary & Failure Cases
 
@@ -47,6 +50,8 @@ Requirement coverage: REQ-009 (binary detection TC-602; version rows, sections a
 - A zero timeout marks the diff as approximate; the lines are still produced from the inputs (TC-615).
 - A lone CR ends a line token and stays in the text of that line (TC-614).
 - Identical and empty inputs produce no lines and no Gap (TC-614).
+- An empty selected path never matches a row, so a refresh made with no selection keeps none (TC-617).
+- `listing_changed` compares all fields and the order of the rows, so a row whose status changes is a change even when its name stays the same (TC-618).
 
 ## Regression Scope
 

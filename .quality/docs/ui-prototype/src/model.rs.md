@@ -2,7 +2,7 @@
 
 Source: `ui-prototype/src/model.rs`
 
-Source-SHA256: `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`
+Source-SHA256: `7ca63c1316ecd74d1018c5fea4dff72b4cd560d2a322d49b8bd5167380d80186`
 
 ## Responsibility
 
@@ -80,6 +80,9 @@ Functions:
   - `added` and `removed` count every change, including dropped ones;
   - `approximate` is true when the elapsed time of the diff call is at least `timeout`;
   - identical inputs and two empty inputs produce no lines.
+- `pub fn should_refresh(busy: bool, worker_stopped: bool, workspace_open: bool) -> bool`: true exactly when `busy` is false, `worker_stopped` is false and `workspace_open` is true.
+- `pub fn selection_after_refresh(rows: &[BrowseRow], selected_path: &str) -> Option<usize>`: the index of the first row whose `relative_path` equals `selected_path`; `None` when `selected_path` is empty or no row matches.
+- `pub fn listing_changed(old: &[BrowseRow], new: &[BrowseRow]) -> bool`: false only when both slices have the same length and every pair of rows at the same index is equal in all fields; true otherwise.
 
 ## Change Notes
 
