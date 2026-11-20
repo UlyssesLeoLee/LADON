@@ -32,6 +32,8 @@ struct UiState {
     versions: Vec<model::VersionRow>,
     /// Set by `open-history` until its reply arrives. Only that reply switches to the history page.
     history_pending: bool,
+    /// Set by `refresh-folder` until its reply arrives. A silent listing does not set `busy`.
+    silent_refresh: bool,
 }
 
 thread_local! {
@@ -176,6 +178,11 @@ fn wire_callbacks(window: &AppWindow) {
         move || with_window(&weak, |ui| ui.set_about_visible(true))
     });
 
+    window.on_refresh_folder({
+        let weak = weak.clone();
+        move || with_window(&weak, refresh_folder)
+    });
+
     window.on_close_about({
         let weak = weak.clone();
         move || with_window(&weak, |ui| ui.set_about_visible(false))
@@ -190,7 +197,7 @@ fn send_command(ui: &AppWindow, command: app::Command) -> bool {
     if ui.get_worker_stopped() {
         return false;
     }
-    if ui.get_busy() {
+    if ui.get_busy() || silent_in_flight() {
         set_status(ui, BUSY_STATUS, false);
         return false;
     }
@@ -215,6 +222,7 @@ fn set_status(ui: &AppWindow, text: &str, error: bool) {
 fn apply_reply(ui: &AppWindow, reply: app::Reply) {
     ui.set_busy(false);
     let history_pending = UI.with(|state| std::mem::take(&mut state.borrow_mut().history_pending));
+    let silent = UI.with(|state| std::mem::take(&mut state.borrow_mut().silent_refresh));
 
     match reply {
         app::Reply::Opened { root } => {
@@ -228,13 +236,17 @@ fn apply_reply(ui: &AppWindow, reply: app::Reply) {
         }
         app::Reply::NeedsInit { .. } => set_status(ui, NEEDS_INIT_STATUS, false),
         app::Reply::Folder { relative_dir, rows, truncated } => {
-            ui.set_current_dir(relative_dir.into());
-            ui.set_truncated(truncated);
-            clear_selection(ui);
-            set_status(ui, &format!("共 {} 项", rows.len()), false);
-            let items: Vec<FileItem> = rows.iter().map(file_item).collect();
-            ui.set_folder_items(ModelRc::new(VecModel::from(items)));
-            UI.with(|state| state.borrow_mut().rows = rows);
+            if silent && ui.get_current_dir().as_str() == relative_dir.as_str() {
+                apply_silent_listing(ui, rows, truncated);
+            } else {
+                ui.set_current_dir(relative_dir.into());
+                ui.set_truncated(truncated);
+                clear_selection(ui);
+                set_status(ui, &format!("共 {} 项", rows.len()), false);
+                let items: Vec<FileItem> = rows.iter().map(file_item).collect();
+                ui.set_folder_items(ModelRc::new(VecModel::from(items)));
+                UI.with(|state| state.borrow_mut().rows = rows);
+            }
         }
         app::Reply::Captured { version_no, changed, .. } => {
             if changed {
@@ -274,6 +286,54 @@ fn apply_reply(ui: &AppWindow, reply: app::Reply) {
         }
         app::Reply::Failed { message, .. } => set_status(ui, &message, true),
     }
+}
+
+/// Lists the open folder again without a message, when no command is in flight.
+fn refresh_folder(ui: &AppWindow) {
+    let busy = ui.get_busy() || silent_in_flight();
+    if !model::should_refresh(busy, ui.get_worker_stopped(), ui.get_workspace_open()) {
+        return;
+    }
+    let command = app::Command::ListFolder { relative_dir: ui.get_current_dir().to_string() };
+    UI.with(|state| state.borrow_mut().silent_refresh = true);
+    let sent = UI.with(|state| state.borrow().worker.as_ref().is_some_and(|worker| worker.send(command)));
+    if !sent {
+        UI.with(|state| state.borrow_mut().silent_refresh = false);
+        ui.set_worker_stopped(true);
+    }
+}
+
+/// Whether a silent refresh is in flight. Commands sent meanwhile are refused.
+fn silent_in_flight() -> bool {
+    UI.with(|state| state.borrow().silent_refresh)
+}
+
+/// Applies the listing of a silent refresh. A listing equal to the one shown changes nothing.
+/// Otherwise the rows are replaced, the status keeps any text other than a listing count, and the
+/// selection stays on the same path when that row still exists.
+fn apply_silent_listing(ui: &AppWindow, rows: Vec<model::BrowseRow>, truncated: bool) {
+    let changed = UI.with(|state| model::listing_changed(&state.borrow().rows, &rows));
+    if !changed {
+        return;
+    }
+    let details = ui.get_details_version();
+    let selection = model::selection_after_refresh(&rows, ui.get_selected_path().as_str())
+        .map(|position| Selection::of(i32::try_from(position).unwrap_or(-1), &rows[position]));
+    ui.set_truncated(truncated);
+    let items: Vec<FileItem> = rows.iter().map(file_item).collect();
+    ui.set_folder_items(ModelRc::new(VecModel::from(items)));
+    let status = ui.get_status().to_string();
+    if status.starts_with("共 ") || status == app::MSG_LIST_FAILED {
+        set_status(ui, &format!("共 {} 项", rows.len()), false);
+    }
+    match selection {
+        Some(selection) => {
+            apply_selection(ui, &selection);
+            ui.set_details_version(details);
+        }
+        None => clear_selection(ui),
+    }
+    UI.with(|state| state.borrow_mut().rows = rows);
 }
 
 /// Fills the history page for a pending `open-history` request and switches to the page.
@@ -388,6 +448,15 @@ fn select_row(ui: &AppWindow, index: i32) {
 }
 
 fn show_selection(ui: &AppWindow, selection: Selection) {
+    apply_selection(ui, &selection);
+    ui.set_details_version("".into());
+    if selection.tracked && !selection.is_folder {
+        send_command(ui, app::Command::LoadHistory { relative_path: selection.path });
+    }
+}
+
+/// Sets the `selected-*` properties from a selection. It sends no command and keeps the details card.
+fn apply_selection(ui: &AppWindow, selection: &Selection) {
     ui.set_selected(selection.index);
     ui.set_selected_name(selection.name.as_str().into());
     ui.set_selected_path(selection.path.as_str().into());
@@ -398,10 +467,6 @@ fn show_selection(ui: &AppWindow, selection: Selection) {
     ui.set_selected_tracked(selection.tracked);
     ui.set_selected_sensitive(selection.sensitive);
     ui.set_selected_can_record(selection.can_record);
-    ui.set_details_version("".into());
-    if selection.tracked && !selection.is_folder {
-        send_command(ui, app::Command::LoadHistory { relative_path: selection.path });
-    }
 }
 
 fn go_up(ui: &AppWindow) {

@@ -1,6 +1,6 @@
 [package]
 name = "ladon-explorer"
-version = "0.3.0"
+version = "0.0.1"
 edition = "2021"
 rust-version = "1.85"
 license = "MIT"

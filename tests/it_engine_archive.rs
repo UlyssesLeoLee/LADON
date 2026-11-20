@@ -6,7 +6,7 @@
 use ladon_explorer::{engine::Engine, provider::FilesystemProvider};
 use std::fs;
 
-/// Fixed random 32-byte test key (64 hex digits). Never a documented example key.
+/// Fixed 32-byte virtual test key (64 hex digits). Never a documented example key.
 const TEST_KEY: &str = "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90";
 
 #[tokio::test]

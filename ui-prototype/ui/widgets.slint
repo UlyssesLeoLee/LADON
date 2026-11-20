@@ -1,0 +1,203 @@
+// Reusable controls shared by every page. Colours come from theme.slint only.
+import { Palette } from "theme.slint";
+
+export component Btn inherits Rectangle {
+    in property <string> label;
+    in property <bool> primary: false;
+    in property <bool> disabled: false;
+    in property <bool> small: false;
+    callback clicked();
+
+    height: root.small ? 28px : 34px;
+    min-width: root.small ? 56px : 76px;
+    border-radius: 8px;
+    border-width: root.primary ? 0px : 1px;
+    border-color: Palette.line;
+    background: root.disabled ? Palette.line-soft
+        : (root.primary ? (touch.pressed ? Palette.primary-dark : Palette.primary)
+        : (touch.has-hover ? Palette.hover : Palette.surface));
+    animate background { duration: 120ms; }
+
+    Text {
+        x: 0px;
+        width: root.width;
+        height: root.height;
+        text: root.label;
+        font-size: root.small ? 12px : 13px;
+        color: root.disabled ? Palette.header-text : (root.primary ? #ffffff : Palette.text);
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    touch := TouchArea {
+        width: root.width;
+        height: root.height;
+        enabled: !root.disabled;
+        clicked => { root.clicked(); }
+    }
+}
+
+export component Pill inherits Rectangle {
+    in property <string> label;
+    in property <color> tint: Palette.accent;
+    in property <color> fill: Palette.chip;
+
+    height: 20px;
+    width: caption.preferred-width + 14px;
+    border-radius: 10px;
+    border-width: 1px;
+    border-color: Palette.chip-line;
+    background: root.fill;
+
+    caption := Text {
+        x: 7px;
+        width: caption.preferred-width;
+        height: root.height;
+        text: root.label;
+        font-size: 11px;
+        color: root.tint;
+        vertical-alignment: center;
+    }
+}
+
+export component MenuRow inherits Rectangle {
+    in property <string> label;
+    in property <bool> disabled: false;
+    callback clicked();
+
+    height: 28px;
+    border-radius: 6px;
+    background: (!root.disabled && touch.has-hover) ? Palette.menu-hover : transparent;
+
+    Text {
+        x: 10px;
+        width: root.width - 20px;
+        height: root.height;
+        text: root.label;
+        font-size: 13px;
+        color: root.disabled ? Palette.header-text : Palette.text;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+
+    touch := TouchArea {
+        width: root.width;
+        height: root.height;
+        enabled: !root.disabled;
+        clicked => { root.clicked(); }
+    }
+}
+
+// One sidebar entry. Visual only; NavList handles pointer input for the whole column.
+component NavRow inherits Rectangle {
+    in property <string> label;
+    in property <string> glyph;
+    in property <bool> active: false;
+    in property <bool> disabled: false;
+    in property <bool> compact: false;
+
+    height: 40px;
+    border-radius: 11px;
+    background: root.active ? Palette.nav-active : transparent;
+
+    Rectangle {
+        visible: root.compact;
+        x: (root.width - 30px) / 2;
+        y: 5px;
+        width: 30px;
+        height: 30px;
+        border-radius: 15px;
+        background: root.active ? Palette.accent : Palette.chip;
+        Text {
+            x: 0px;
+            width: 30px;
+            height: 30px;
+            text: root.glyph;
+            font-size: 12px;
+            color: root.active ? #ffffff : Palette.nav-text;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+
+    Rectangle {
+        visible: root.active && !root.compact;
+        x: 0px;
+        y: 10px;
+        width: 3px;
+        height: 20px;
+        border-radius: 2px;
+        background: Palette.accent;
+    }
+
+    Text {
+        visible: !root.compact;
+        x: 14px;
+        width: root.width - 22px;
+        height: root.height;
+        text: root.label;
+        font-size: 13px;
+        font-weight: root.active ? 600 : 400;
+        color: root.disabled ? Palette.header-text : (root.active ? Palette.nav-active-text : Palette.nav-text);
+        vertical-alignment: center;
+        overflow: elide;
+    }
+}
+
+// The sidebar column (or its hover flyout). Rows are 40px high with 4px gaps from 8px down.
+export component NavList inherits Rectangle {
+    in property <[string]> labels;
+    in property <[string]> glyphs;
+    in property <int> active: 1;
+    in property <bool> expanded: true;
+    in property <bool> history-ok: true;
+    out property <bool> hovered: touch.has-hover;
+    callback picked(int);
+
+    background: transparent;
+
+    for entry[index] in root.labels : NavRow {
+        x: 8px;
+        y: 8px + index * 44px;
+        width: root.width - 16px;
+        label: entry;
+        glyph: root.glyphs[index];
+        compact: !root.expanded;
+        active: root.active == index;
+        disabled: index == 6 && !root.history-ok;
+    }
+
+    touch := TouchArea {
+        width: root.width;
+        height: root.height;
+        clicked => {
+            if (self.mouse-y >= 8px && floor((self.mouse-y - 8px) / 44px) < root.labels.length) {
+                root.picked(floor((self.mouse-y - 8px) / 44px));
+            }
+        }
+    }
+}
+
+// A chat entry in the bottom dock.
+export component ChatLine inherits Rectangle {
+    in property <string> who;
+    in property <string> body;
+    in property <string> at;
+
+    VerticalLayout {
+        spacing: 4px;
+        HorizontalLayout {
+            spacing: 6px;
+            Text { text: root.who; font-size: 12px; font-weight: 600; color: Palette.text; }
+            Text { text: root.at; font-size: 11px; color: Palette.status; }
+        }
+        Rectangle {
+            border-radius: 10px;
+            background: Palette.msg;
+            VerticalLayout {
+                padding: 9px;
+                Text { text: root.body; font-size: 13px; color: Palette.text; wrap: word-wrap; }
+            }
+        }
+    }
+}

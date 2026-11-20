@@ -104,7 +104,8 @@ fn tc510_allow_external_follows_rules() {
 #[test]
 fn tc511_invalid_rule_file_fails_load() {
     let (_tmp, root) = workspace();
-    fs::write(root.join(".LADONignore"), "[unclosed\n").unwrap();
+    // A reversed character range is a syntax error even though an unclosed `[` is read as a literal.
+    fs::write(root.join(".LADONignore"), "[z-a]\n").unwrap();
     assert!(LadonPolicy::load(&root).is_err());
 }
 

@@ -23,7 +23,8 @@ async fn it_02_sensitive_prevents_archive(){
  let c=e.capture(&tmp.path().join("secret.pem"),"human","init").await.unwrap();
  assert!(c.sensitive);
  let p=FilesystemProvider::new("nas",tmp.path().join("remote"));
- assert!(e.archive_version(c.version_id.as_deref().unwrap(),&p,false).await.is_err());
+ let err=e.archive_version(c.version_id.as_deref().unwrap(),&p,false).await.unwrap_err();
+ assert!(err.to_string().contains("denies external data transfer"),"{err}");
 }
 
 #[tokio::test]

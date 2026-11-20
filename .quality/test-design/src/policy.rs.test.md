@@ -22,7 +22,7 @@ Unit tests inside `src/policy.rs` cover the basic matching, the always-excluded 
 | TC-508 | add_sensitive for the root, for .LADONignore, for a file under .ladon, for a file outside the workspace and for a missing file | Errors invalid ignore target for the first three, cannot exclude resource outside workspace for the outside file, and an error for the missing file; the rule file is not changed | tests/it_policy.rs::tc508_add_sensitive_rejects_invalid_targets |
 | TC-509 | excluded for .git/config, .ladon/meta.turso and nested/.git/x with no rule file | All three are excluded | tests/it_policy.rs::tc509_internal_directories_always_excluded |
 | TC-510 | allow_external for a normal file and for a .pem file under the default style rules | Ok for the normal file; error containing denies external data transfer for the .pem file | tests/it_policy.rs::tc510_allow_external_follows_rules |
-| TC-511 | A rule file containing an unterminated character class | load returns an error | tests/it_policy.rs::tc511_invalid_rule_file_fails_load |
+| TC-511 | A rule file containing a reversed character range (the pattern z-a in brackets) | load returns an error | tests/it_policy.rs::tc511_invalid_rule_file_fails_load |
 | TC-512 | load on a directory that does not exist | Error containing workspace not found | tests/it_policy.rs::tc512_load_requires_existing_workspace |
 | TC-513 | LADON_GLOBAL_IGNORE names a rule file with a secret extension; then a non-existent file; then the variable is removed | The extension is excluded while the variable names the rule file, a non-existent file is ignored without error, and nothing is excluded once the variable is removed | tests/it_policy_global.rs::tc513_global_ignore_file_applies |
 

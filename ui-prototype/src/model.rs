@@ -574,6 +574,86 @@ fn strip_line_ending(text: &str) -> &str {
     }
 }
 
+/// Whether the open folder may be listed again in the background. The refresh waits while a
+/// command is in flight, and it needs a workspace that is open and a worker that runs.
+pub fn should_refresh(busy: bool, worker_stopped: bool, workspace_open: bool) -> bool {
+    !busy && !worker_stopped && workspace_open
+}
+
+/// Index of the row whose relative path is `selected_path`, so that a refreshed listing keeps the
+/// selection. An empty path and a path with no matching row give `None`.
+pub fn selection_after_refresh(rows: &[BrowseRow], selected_path: &str) -> Option<usize> {
+    if selected_path.is_empty() {
+        return None;
+    }
+    rows.iter().position(|row| row.relative_path == selected_path)
+}
+
+/// Whether a refreshed listing differs from the listing shown. Every field and the order of the
+/// rows are compared.
+pub fn listing_changed(old: &[BrowseRow], new: &[BrowseRow]) -> bool {
+    old != new
+}
+
+#[cfg(test)]
+mod refresh_tests {
+    use super::*;
+
+    fn listed(relative_path: &str) -> BrowseRow {
+        BrowseRow {
+            name: relative_path.to_string(),
+            relative_path: relative_path.to_string(),
+            is_directory: false,
+            is_link: false,
+            size_text: "—".to_string(),
+            modified_text: "—".to_string(),
+            status_text: "未记录".to_string(),
+            file_id: None,
+            tracked: false,
+            sensitive: false,
+            version_no: None,
+        }
+    }
+
+    #[test]
+    fn ut_616_should_refresh() {
+        assert!(!should_refresh(false, false, false));
+        assert!(should_refresh(false, false, true));
+        assert!(!should_refresh(false, true, false));
+        assert!(!should_refresh(false, true, true));
+        assert!(!should_refresh(true, false, false));
+        assert!(!should_refresh(true, false, true));
+        assert!(!should_refresh(true, true, false));
+        assert!(!should_refresh(true, true, true));
+    }
+
+    #[test]
+    fn ut_617_selection_after_refresh() {
+        let rows = vec![listed("a.txt"), listed("docs"), listed("zeta.md")];
+        assert_eq!(selection_after_refresh(&rows, "docs"), Some(1));
+        assert_eq!(selection_after_refresh(&rows, "zeta.md"), Some(2));
+        assert_eq!(selection_after_refresh(&rows, "Docs"), None);
+        assert_eq!(selection_after_refresh(&rows, "missing.md"), None);
+        assert_eq!(selection_after_refresh(&rows, ""), None);
+    }
+
+    #[test]
+    fn ut_618_listing_changed() {
+        let base = vec![listed("a.txt"), listed("docs"), listed("zeta.md")];
+        let mut status_changed = base.clone();
+        status_changed[1].status_text = "已记录 v1".to_string();
+        let mut one_added = base.clone();
+        one_added.push(listed("new.txt"));
+        let reversed: Vec<BrowseRow> = base.iter().rev().cloned().collect();
+        assert!(!listing_changed(&base, &base.clone()));
+        assert!(listing_changed(&base, &status_changed));
+        assert!(listing_changed(&base, &one_added));
+        assert!(listing_changed(&base, &reversed));
+        assert!(!listing_changed(&[], &[]));
+        assert!(listing_changed(&[], &base[..1]));
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

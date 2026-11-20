@@ -158,6 +158,9 @@ async fn tc105_append_after_delete_is_restored_event() {
     let other = store.find_path("b.md").await.unwrap().unwrap();
     store.mark_deleted(&other, "scanner", "gone").await.unwrap();
     store.append_version(pending("b.md", "hb", false)).await.unwrap();
+    let again = store.find_path("b.md").await.unwrap().unwrap();
+    assert!(!again.deleted);
+    assert_eq!(again.version_no, 2);
     assert_eq!(kinds(&store.events(&other_id).await.unwrap()), vec!["created", "deleted", "restored"]);
 }
 

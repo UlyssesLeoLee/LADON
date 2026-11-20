@@ -6,7 +6,7 @@ Source-SHA256: `ff15537fb063c1e1e90e47c37880b21648f9e566e1b25b3308c8b9ac31f21cda
 
 ## Test Strategy
 
-Integration tests call the public functions directly. `heuristic_tags` and `local_endpoint` need no fixtures. `ai_tags` is tested against a real HTTP listener built with `std::net::TcpListener` on `127.0.0.1:0` in a helper thread that serves one canned HTTP/1.1 response per test, so the production request code runs end to end without mocks and without extra dependencies. Because the HTTP client honours proxy environment variables, the helper sets `NO_PROXY` for loopback addresses once, before the first client of the test process is built; no other environment variable is touched, so the tests can run in parallel. The inline unit tests in `src/tagging.rs` stay in place.
+Integration tests call the public functions directly. `heuristic_tags` and `local_endpoint` need no fixtures. `ai_tags` is tested against a real HTTP listener built with `std::net::TcpListener` on `127.0.0.1:0` in a helper thread (`serve_once`) that serves one canned HTTP/1.1 response per listener (a test that needs two responses calls `serve_once` twice), so the production request code runs end to end without mocks and without extra dependencies. Because the HTTP client honours proxy environment variables, the helper sets `NO_PROXY` for loopback addresses once, before the first client of the test process is built; no other environment variable is touched, so the tests can run in parallel. The inline unit tests in `src/tagging.rs` stay in place.
 
 ## Test Cases
 
@@ -30,7 +30,7 @@ Integration tests call the public functions directly. `heuristic_tags` and `loca
 - Rows with three keywords and rows with four keywords are both reachable (TC-201).
 - A tag of exactly 80 bytes is kept and 81 bytes is dropped; a tag of 82 bytes that is only 41 characters is dropped, so the limit counts bytes (TC-208).
 - Whitespace-only tags are dropped (TC-208).
-- Exactly eight tags pass the cap and the ninth is cut (TC-208).
+- At most eight tags are returned: of the ten tags that pass the filters, the first eight are kept and the last two are cut (TC-208).
 - Both code-fence styles are accepted (TC-207).
 - Mixed-script keywords (Japanese, Chinese, English) match after lowercasing (TC-201, TC-205).
 - Remote plain HTTP is refused before any socket is opened (TC-210).

@@ -1,31 +1,31 @@
 # 47. V1.2 增补 UT／IT／ST 测试详细设计
 
-> 本文件的 Implemented 仅表示包含测试代码/设计；**未在当前环境执行 Rust/Windows 实机测试**。
+> 本文件的 Implemented 仅表示包含测试代码/设计；Pass 表示测试函数位于已执行的测试二进制中且通过，执行结果见 `46_测试执行记录与缺陷.md` 第 1 节。**Windows Shell 实机测试与 ST 用例未在当前环境执行。**
 
 ## 测试先决条件
 
-- UT：Rust stable、Cargo、当前 Rust module 编译通过；静态权限矩阵不等于 OIDC 服务端认证。
+- UT：Rust stable、Cargo；本文件中有测试函数的 UT 与 IT 用例已编译并运行，结果见 `46_测试执行记录与缺陷.md` 第 1 节；静态权限矩阵不等于 OIDC 服务端认证。
 - IT：测试目录使用独立临时目录；不得使用真实用户数据；Windows Shell 用隔离测试账户。
 - ST：Windows 11 最新稳定版、TortoiseGit、7-Zip、WinRAR（可选）、多个租户的测试账户、Google Drive 测试文件夹、NAS 假/真环境。
 
 ## 测试条目与预期结果
 
-| 分类 | Test ID | 测试名称 | 驱动/前置 | 判定标准 | 实现状态/要件 |
-|---|---|---|---|---|---|
+| 分类 | Test ID | 测试名称 | 驱动/前置 | 测试函数或场景 | 判定标准 | 实现状态/要件 |
+|---|---|---|---|---|---|---|
 | UT | UT-029 | Full NEMA Grammar | src/nema.rs | (future) | 全 139 例按最终编解码规范执行 | Design |
-| UT | UT-030 | 右键敏感规则写入 | src/policy.rs | ut_policy_04_add_sensitive | 根锚定的规则写入后，LadonPolicy 命中 | Implemented |
-| UT | UT-031 | Shell 响应状态区分 | src/shell.rs | ut_shell_result_distinct | 敏感与历史命令 ID 不冲突 | Implemented |
-| UT | UT-032 | Agent API 能力清单 | src/agent_api.rs | ut_agent_capability_status | 未实现接口明确设计状态 | Implemented |
-| UT | UT-033 | 跨租户访问拒绝 | src/auth.rs | ut_auth_cross_tenant | 不同租户无法读取工作区资源 | Implemented |
-| UT | UT-034 | 角色权限矩阵 | src/auth.rs | ut_auth_reviewer_no_write | Reviewer 拒绝写入 | Implemented |
-| UT | UT-035 | Viewer 敏感文件拒绝 | src/auth.rs | ut_auth_viewer_sensitive | Viewer 无权读取敏感文件 | Implemented |
-| UT | UT-036 | Agent 作用域 | src/auth.rs | ut_auth_agent_scoped | 作用域外写入拒绝 | Implemented |
+| UT | UT-030 | 右键敏感规则写入 | src/policy.rs | ut_policy_04_add_sensitive | 根锚定的规则写入后，LadonPolicy 命中 | Pass |
+| UT | UT-031 | Shell 响应状态区分 | src/shell.rs | ut_shell_result_distinct | 敏感与历史命令 ID 不冲突 | Pass |
+| UT | UT-032 | Agent API 能力清单 | src/agent_api.rs | ut_agent_capability_status | 未实现接口明确设计状态 | Pass |
+| UT | UT-033 | 跨租户访问拒绝 | src/auth.rs | ut_auth_cross_tenant | 不同租户无法读取工作区资源 | Pass |
+| UT | UT-034 | 角色权限矩阵 | src/auth.rs | ut_auth_reviewer_no_write | Reviewer 拒绝写入 | Pass |
+| UT | UT-035 | Viewer 敏感文件拒绝 | src/auth.rs | ut_auth_viewer_sensitive | Viewer 无权读取敏感文件 | Pass |
+| UT | UT-036 | Agent 作用域 | src/auth.rs | ut_auth_agent_scoped | 作用域外写入拒绝 | Pass |
 | UT | UT-037 | Shell COM 转发 | native/shell_menu.cpp | (future) | WM_MENUCHAR / DRAWITEM / QueryContextMenu 组合正确 | Design |
 | UT | UT-038 | 忽略规则并发写 | src/policy.rs | (future) | 并发更新不丢规则，保留注释和格式 | Design |
-| UT | UT-039 | Turso 迁移可重入 | src/store.rs | (future) | 从 001 升级 002 反复 init 安全 | Design |
+| UT | UT-039 | Turso 迁移可重入 | tests/it_store.rs | tc112_init_is_idempotent | 迁移 002 只应用一次：首次 init 后删除 002 的表 `agent_grants`，再次 init 不重建，已有数据仍可读（以集成测试实现，`cargo test --test it_store` 运行） | Pass |
 | UT | UT-040 | Auth 真实 Token 校验 | future | (future) | 令牌伪造、过期、改租户均拒绝 | Design |
 | IT | IT-014 | Turso cloud DLP | future | 配置云同步同时含敏感事件 | 远端 DB 不出现敏感数据 | Manual/Future |
-| IT | IT-015 | Agent 本地文件夹到历史 | tests/it_agent_folder.rs | 目录创建+capture+list+history | FileRef 和历史均可见 | Implemented |
+| IT | IT-015 | Agent 本地文件夹到历史 | tests/it_agent_folder.rs | it_agent_folder_snapshot_history | 目录列表含 requirements.md；历史的 FileRef 与捕获结果的文件标识一致，版本 1 条，链有效 | Pass |
 | IT | IT-016 | Shell 扩展宿主隔离 | scripts/st_windows_shell_matrix.ps1 | 恶意扩展/子进程退出注入 | 主 GUI 不崩溃，回退 Explorer | Manual/Future |
 | IT | IT-017 | 端到端历史外传与审计 | future | Google Drive 完整版本读取、Diff、恢复 | 每版本对象可校验，敏感不上传 | Manual/Future |
 | IT | IT-018 | 跨租户访问与消息 | future | 跨租户会话、workspace、Provider 探测 | 所有 HTTP、聊天均拒绝越权 | Manual/Future |
@@ -59,4 +59,4 @@
 
 ## 风险与缺陷登记
 
-每失败项记录环境（Win 版本/CPU/文件系统/扩展版本）、trace/event ID、步骤、复现率、严重度、责任模块、修复提交、复测结果。禁止将尚未运行的用例标为通过。
+每失败项记录环境（Win 版本/CPU/文件系统/扩展版本）、trace/event ID、步骤、复现率、严重度、责任模块、修复提交、复测结果。禁止将未运行的用例标为通过。

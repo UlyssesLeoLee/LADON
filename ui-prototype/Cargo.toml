@@ -1,12 +1,36 @@
 [package]
 name = "ladon-ui-prototype"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
 license = "MIT"
 
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "ladon-gui"
+path = "src/main.rs"
+required-features = ["kernel", "gui"]
+
+[[test]]
+name = "it_slice_a"
+path = "tests/it_slice_a.rs"
+required-features = ["kernel"]
+
+[features]
+default = ["kernel", "gui"]
+kernel = ["dep:ladon-explorer", "dep:tokio"]
+gui = ["dep:slint"]
+
 [dependencies]
-slint = "1.12"
-ladon-explorer = { path = ".." }
-tokio = { version = "1", features = ["rt", "macros"] }
+anyhow = "1"
+chrono = "0.4"
+similar = "2"
+ladon-explorer = { path = "..", optional = true }
+slint = { version = "1.19", optional = true }
+tokio = { version = "1", features = ["rt", "macros", "time", "fs", "sync"], optional = true }
+
+[dev-dependencies]
+tempfile = "3"
 
 [workspace]

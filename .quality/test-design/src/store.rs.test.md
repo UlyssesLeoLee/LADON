@@ -6,7 +6,7 @@ Source-SHA256: `a36b22395a6703671e5d6be00f21435b92c8ce85f238e8d68dc614a4a3d92bee
 
 ## Test Strategy
 
-Integration tests drive the public `Store` API against a real Turso database file inside a `tempfile::tempdir`, with no mocks. Each test creates its own directory, so tests are isolated and can run in parallel. `Store::new(dir/.ladon/meta.turso)` followed by `init()` is the shared fixture. Where the Store API exposes no reader (tag `source` and `rule_version`, existence of a table) or a test must change the schema (dropping a table), the test opens a separate raw `turso` connection on the same file; every Store method drops its own connection before returning, so connections never overlap. The engine-level tests in `tests/it_history.rs` and `tests/it_nema_task.rs` exercise the same code through `Engine`. The goal is every public method plus both branches of each conditional (existing or new resource, deleted or not deleted, valid or invalid state), with assertions that fail when the corresponding clause of the SQL or the Rust logic is removed.
+Integration tests drive the public `Store` API against a real Turso database file inside a `tempfile::tempdir`, with no mocks. Each test creates its own directory, so tests are isolated and can run in parallel. `Store::new(dir/.ladon/meta.turso)` followed by `init()` is the shared fixture. Where the Store API exposes no reader (tag `source` and `rule_version`, existence of a table) or a test must change the schema (dropping a table), the test opens a separate raw `turso` connection on the same file; every Store method drops its own connection before returning, so a raw connection opened by a test never overlaps a Store connection. The engine-level tests in `tests/it_history.rs` and `tests/it_nema_task.rs` exercise the same code through `Engine`. Every public method of `Store` is called directly by a test except `add_governance_event`, which runs only inside `add_annotation`, `create_task` and `set_task_status`; its rows are checked through `governance_events` (TC-108). The cases cover new and existing resources in `append_version` (TC-101, TC-102), deleted and live records in `mark_deleted` and `append_version` (TC-104, TC-105), and valid and invalid task states in `set_task_status` (TC-108, TC-109). Two branches have no test: the `missing version` error in `mark_deleted` (`src/store.rs` line 121) and the `Ok(false)` returns of `verify_chain` (`src/store.rs` lines 202 and 204, for a broken previous-hash link or a mismatched ledger hash), so every `verify_chain` assertion expects `true`. Assertions cover returned values, stored columns, error texts and the order of events, governance events, tags and archive records.
 
 ## Test Cases
 
@@ -21,10 +21,10 @@ Integration tests drive the public `Store` API against a real Turso database fil
 | TC-107 | set_tags with b, a, a blank tag, an 81-character tag and an 80-character tag, then again with source ai for tag a only | tags returns a, b and the 80-character tag sorted; blank and oversize tags absent; tag a carries source ai and rule version v2 while tag b keeps rule and v1 | tests/it_store.rs::tc107_set_tags_filters_and_sorts |
 | TC-108 | add_annotation, create_task, set_task_status done, then list_tasks and governance_events | Task listed with status done and its title; governance events appear in order annotation.created, task.created, task.state_changed | tests/it_store.rs::tc108_annotation_task_and_governance_flow |
 | TC-109 | set_task_status with state bogus; with an unknown task id | Errors containing invalid task state and task missing respectively | tests/it_store.rs::tc109_invalid_task_state_and_unknown_task |
-| TC-110 | find_path, latest_version, version, versions, events, archives and tags on unknown keys | None for single lookups, empty lists for collections, no errors | tests/it_store.rs::tc110_missing_records_return_none |
+| TC-110 | find_path, latest_version, version, versions, events, archives, tags, governance_events and list_tasks on unknown keys; is_hash_sensitive and verify_chain on an unknown id; list_files on an empty store | None for single lookups, empty lists for collections, false from is_hash_sensitive, true from verify_chain, no errors | tests/it_store.rs::tc110_missing_records_return_none |
 | TC-111 | Reason text with quotes, a newline, Japanese text and a quote followed by DROP TABLE resources | Stored and read back byte-identical; the resources table still works afterwards | tests/it_store.rs::tc111_special_characters_bound_verbatim |
 | TC-112 | After the first init drop the migration-2 table agent_grants through a raw connection, then call init twice | The table exists after the first init and stays absent after the later init calls, and earlier data remains readable | tests/it_store.rs::tc112_init_is_idempotent |
-| TC-113 | Capture a file through Engine, delete it from disk and run scan | The resource is marked deleted, its file id is unchanged and the hash chain verifies | tests/it_history.rs::it_04_detect_delete_and_keep_history |
+| TC-113 | Capture a file through Engine, delete it from disk and run scan | The resource is marked deleted, its file id is unchanged and the hash chain verifies | tests/it_history.rs::it_04_detect_delete_and_keep_history (engine-level) |
 
 ## Boundary & Failure Cases
 
@@ -34,7 +34,7 @@ Integration tests drive the public `Store` API against a real Turso database fil
 - Unknown identifiers return empty results instead of failing (TC-110).
 - Hostile text is never interpreted as SQL (TC-111).
 - Migration 2 is applied once: a table dropped after the first `init` is not recreated by later `init` calls (TC-112).
-- An upsert replaces every updatable column, including the false value of the encrypted flag (TC-106, TC-107).
+- An archive upsert replaces the locator, the encrypted flag and `verified_at`, including a false encrypted flag (TC-106); a tag upsert replaces `source` and `rule_version` (TC-107).
 
 ## Regression Scope
 

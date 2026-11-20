@@ -1,0 +1,17 @@
+LADON 试用指南（在示例工作区里依次运行）
+
+  ladon init                        初始化本目录：创建 .ladon 数据库与 .LADONignore
+  ladon scan                        扫描并记录每个文件的第一个版本
+  （用任意编辑器改一下 requirements.md，保存）
+  ladon scan                        再扫描一次，记录第二个版本
+  ladon files                       列出已记录的文件
+  ladon history requirements.md     查看版本与事件链
+  ladon verify requirements.md      校验事件哈希链是否完整
+  ladon ignore-check secret.pem     检查某文件是否禁止外传（*.pem 默认被排除）
+  ladon grep REQ-001                在工作区内按正则搜索文本
+  ladon sensitive-add requirements.md   把一个文件加入敏感列表（写入 .LADONignore）
+
+说明
+  - 这是试用构建：根 crate 的自动化测试 104 项通过，手工系统测试与用户验收尚未执行。请先只用示例工作区，不要管理重要数据。
+  - 所有数据都保存在工作区的 .ladon 目录里，删掉该目录即可重置。
+  - 如果 ignore-check 报 outside workspace，请传相对路径（如 secret.pem）。
