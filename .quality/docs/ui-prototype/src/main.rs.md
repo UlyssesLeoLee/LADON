@@ -64,7 +64,7 @@ The window offers browsing, recording of a regular file (the first version of an
 - A `Worker::send` that returns false sets `worker-stopped` to true and clears `busy`. The banner is then shown.
 - Buttons that start a command are disabled while `busy` or `worker-stopped` is true. The overlay buttons are also disabled while their overlay is hidden, so they are not focusable then.
 - `select-row` sends `LoadHistory` only for a tracked regular file. `request-init` and `cancel-init` send nothing.
-- `refresh-folder` sends `ListFolder` for `current-dir` only when `should_refresh(busy, worker-stopped, workspace-open)` holds. In every other case it sends nothing and sets no status, so a refresh never shows `正在处理，请稍候。`. A sent refresh is marked silent, and every reply clears that mark.
+- `refresh-folder` sends `ListFolder` for `current-dir` only when `should_refresh(busy, worker-stopped, workspace-open)` holds, where `busy` is the window's `busy` property or a silent refresh already in flight. In every other case it sends nothing and sets no status. A sent refresh sets `silent_refresh` in `UiState` and does not set `busy`, so it shows no busy indicator and disables no button. While it is in flight, a command is refused with `正在处理，请稍候。`. Every reply clears `silent_refresh`.
 
 ### Callbacks
 
@@ -202,4 +202,4 @@ The status line after a listing is always `共 {n} 项`, because the listing tha
 
 The window derives `can-record` from the browse row fields that the model provides: `is_directory`, `is_link`, `tracked` and the status text `未记录`. The model has no field that marks other entries, so an entry with any other status is not recordable.
 
-The open folder refreshes silently every two seconds. The timer lives in `app.slint`. The decisions that gate it and keep the selection are pure functions in `model.rs` (`should_refresh`, `selection_after_refresh`, `listing_changed`) and are unit-tested. A silent refresh shows no busy message, keeps the selection and the details card when the row still exists, and rewrites the count only when the status line is a listing count or the folder-unreadable message.
+The open folder refreshes silently every two seconds. The timer lives in `app.slint`. The decisions that gate it and keep the selection are pure functions in `model.rs` (`should_refresh`, `selection_after_refresh`, `listing_changed`) and are unit-tested. A silent refresh never sets `busy`, so the busy indicator and the disabled buttons do not appear every two seconds, which would otherwise flicker on large folders. It shows no busy message, keeps the selection and the details card when the row still exists, and rewrites the count only when the status line is a listing count or the folder-unreadable message.
