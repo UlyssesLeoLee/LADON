@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "source": "src/google_oauth.rs",
+  "baseline_source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "prepared_branch": "fix/compile-errors",
+  "technical_design": ".quality/docs/src/google_oauth.rs.md",
+  "test_design": ".quality/test-design/src/google_oauth.rs.test.md",
+  "prepared_technical_design_sha256": "3f6643ed92a267d59e26c471a87eff3383a838249a1776393df98b062ecf9224",
+  "prepared_test_design_sha256": "ebca5d70cc7d7f8dc40392c0a06c470d19df1d92d3ec861baa923201a350b28f",
+  "prepared_related_design_sha256": {}
+}

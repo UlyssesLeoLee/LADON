@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "source": "src/lib.rs",
+  "baseline_source_sha256": "f4a2863a4354a2bc723789854fa79e8b66d3f666fc48d24e5239ac9748bf43c6",
+  "prepared_branch": "fix/compile-errors",
+  "technical_design": ".quality/docs/src/lib.rs.md",
+  "test_design": ".quality/test-design/src/lib.rs.test.md",
+  "prepared_technical_design_sha256": "9661da75ee62738e4dd75b9196d4afe3fb2647d8d04bf3e6d8030c33c758c025",
+  "prepared_test_design_sha256": "a7e667c2d5c730e2bcb344b3b763378faed11acb0b8d656efb0afd1abf4288f1",
+  "prepared_related_design_sha256": {}
+}
