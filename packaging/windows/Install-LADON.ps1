@@ -1,12 +1,12 @@
-﻿# LADON Explorer 安装向导（按当前用户安装，不需要管理员权限）
+﻿# LADON 安装向导（按当前用户安装，不需要管理员权限）
 # 交互使用：双击 Setup.cmd。静默安装：加 -Silent。
 param(
   [switch]$Silent,
   [string]$PayloadDir = $PSScriptRoot,
-  [string]$InstallDir = (Join-Path $env:LOCALAPPDATA 'Programs\LADON Explorer'),
+  [string]$InstallDir = (Join-Path $env:LOCALAPPDATA 'Programs\LADON'),
   [string]$SampleDir = (Join-Path $env:USERPROFILE 'LADON-Sandbox'),
   [string]$StartMenuRoot = (Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs'),
-  [string]$RegistryName = 'LADON Explorer',
+  [string]$RegistryName = 'LADON',
   [switch]$NoPath,
   [switch]$NoShortcuts,
   [switch]$NoSample,
@@ -15,8 +15,8 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2.0
-$Version = '0.0.1'
-$AppName = 'LADON Explorer'
+$Version = '0.0.2'
+$AppName = 'LADON'
 
 . (Join-Path $PSScriptRoot 'LADON-Common.ps1')
 
@@ -106,9 +106,9 @@ function Install-Ladon([hashtable]$Opt, [scriptblock]$Log) {
     $manifest.shortcutDir = $folder
     $workDir = if ($ws -and (Test-Path -LiteralPath $ws)) { $ws } else { [Environment]::GetFolderPath('MyDocuments') }
     $l1 = Join-Path $folder 'LADON 命令行.lnk'
-    New-Shortcut $l1 "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" "-NoExit -NoLogo -ExecutionPolicy Bypass -File `"$shell`"" $workDir $ico 'LADON Explorer 命令行（ladon 已加入本窗口 PATH）'
-    $l2 = Join-Path $folder '卸载 LADON Explorer.lnk'
-    New-Shortcut $l2 "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" "-NoProfile -ExecutionPolicy Bypass -File `"$(Join-Path $dir 'Uninstall-LADON.ps1')`"" $dir $ico '卸载 LADON Explorer'
+    New-Shortcut $l1 "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" "-NoExit -NoLogo -ExecutionPolicy Bypass -File `"$shell`"" $workDir $ico 'LADON 命令行（ladon 已加入本窗口 PATH）'
+    $l2 = Join-Path $folder '卸载 LADON.lnk'
+    New-Shortcut $l2 "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" "-NoProfile -ExecutionPolicy Bypass -File `"$(Join-Path $dir 'Uninstall-LADON.ps1')`"" $dir $ico '卸载 LADON'
     $manifest.shortcuts = @($l1, $l2)
     & $Log "已创建开始菜单项：$folder"
   }
@@ -198,7 +198,7 @@ function New-Label([string]$Text, [int]$X, [int]$Y, [int]$W, [int]$H) { $l = New
 # 页 0：欢迎
 $p0 = New-Page
 $p0.Controls.Add((New-Label ("欢迎使用 $AppName $Version（试用构建）`r`n`r`n" +
-  "LADON Explorer 是事件驱动的文件历史与治理内核，本安装包提供命令行程序 ladon：记录文件每次稳定保存的版本与事件链、按 .LADONignore 阻止敏感内容外传、支持加密归档与恢复。`r`n`r`n" +
+  "LADON 是事件驱动的文件历史与治理内核，本安装包提供命令行程序 ladon：记录文件每次稳定保存的版本与事件链、按 .LADONignore 阻止敏感内容外传、支持加密归档与恢复。`r`n`r`n" +
   "· 按当前用户安装，不需要管理员权限，可随时卸载。`r`n" +
   "· 安装完成后会运行一次自检，并可创建示例工作区供你试用。`r`n`r`n" +
   "试用提示：这是试用构建。根 crate 的自动化测试 104 项通过，手工系统测试与用户验收尚未执行。请不要用它管理重要数据，先在示例工作区里试用。") 24 12 590 280))
@@ -215,7 +215,7 @@ $cbReg = New-Object System.Windows.Forms.CheckBox; $cbReg.Text = '登记到「�
 $note = New-Label '以上操作只写入当前用户的位置（用户目录、用户 PATH、开始菜单、HKCU 注册表），卸载程序会按安装清单把它们逐项还原；示例工作区里的数据不会被自动删除。' 24 226 580 52
 $note.ForeColor = [System.Drawing.Color]::FromArgb(90, 96, 110)
 $p1.Controls.AddRange(@($tbDir, $btnBrowse, $cbPath, $cbMenu, $cbSample, $cbReg, $note))
-$btnBrowse.Add_Click({ $d = New-Object System.Windows.Forms.FolderBrowserDialog; $d.Description = '选择安装目录（建议选一个空目录）'; if ($d.ShowDialog() -eq 'OK') { $tbDir.Text = (Join-Path $d.SelectedPath 'LADON Explorer') } })
+$btnBrowse.Add_Click({ $d = New-Object System.Windows.Forms.FolderBrowserDialog; $d.Description = '选择安装目录（建议选一个空目录）'; if ($d.ShowDialog() -eq 'OK') { $tbDir.Text = (Join-Path $d.SelectedPath 'LADON') } })
 
 # 页 2：安装
 $p2 = New-Page
@@ -265,7 +265,7 @@ function Start-Install {
     $txt = "安装完成。`r`n`r`n程序位置：$($m.installDir)`r`n"
     if ($m.pathAdded) { $txt += "已加入用户 PATH：新打开的终端里直接输入 ladon 即可。`r`n" }
     if ($m.sampleDir) { $txt += "示例工作区：$($m.sampleDir)（内有 QUICKSTART.txt）`r`n" }
-    $txt += "`r`n卸载：开始菜单「卸载 LADON Explorer」，或 设置 → 应用 → 已安装的应用。"
+    $txt += "`r`n卸载：开始菜单「卸载 LADON」，或 设置 → 应用 → 已安装的应用。"
     $lblDone.Text = $txt
     $cbOpen.Visible = [bool]$m.shortcutDir -or [bool]$m.sampleDir -or $true
     $script:failed = $false
@@ -303,8 +303,8 @@ if ($ScreenshotDir) {
   $form.Show()
   for ($i = 0; $i -lt 4; $i++) {
     Show-Page $i
-    if ($i -eq 2) { $logBox.Text = "安装目录：示例`r`n  复制 ladon.exe`r`n自检通过：ladon 0.0.1" }
-    if ($i -eq 3) { $lblDone.Text = "安装完成。`r`n`r`n程序位置：示例`r`n已加入用户 PATH。`r`n示例工作区：示例（内有 QUICKSTART.txt）`r`n`r`n卸载：开始菜单「卸载 LADON Explorer」。"; $cbOpen.Visible = $true }
+    if ($i -eq 2) { $logBox.Text = "安装目录：示例`r`n  复制 ladon.exe`r`n自检通过：ladon 0.0.2" }
+    if ($i -eq 3) { $lblDone.Text = "安装完成。`r`n`r`n程序位置：示例`r`n已加入用户 PATH。`r`n示例工作区：示例（内有 QUICKSTART.txt）`r`n`r`n卸载：开始菜单「卸载 LADON」。"; $cbOpen.Visible = $true }
     [System.Windows.Forms.Application]::DoEvents(); Start-Sleep -Milliseconds 300; [System.Windows.Forms.Application]::DoEvents()
     $bmp = New-Object System.Drawing.Bitmap($form.Width, $form.Height)
     $form.DrawToBitmap($bmp, (New-Object System.Drawing.Rectangle(0, 0, $form.Width, $form.Height)))

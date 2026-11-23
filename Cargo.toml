@@ -1,10 +1,10 @@
 [package]
 name = "ladon-explorer"
-version = "0.0.1"
+version = "0.0.2"
 edition = "2021"
 rust-version = "1.85"
 license = "MIT"
-description = "Event-driven file history and governance kernel for LADON Explorer"
+description = "Event-driven file history and governance kernel for LADON"
 
 [[bin]]
 name = "ladon"

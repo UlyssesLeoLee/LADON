@@ -1,16 +1,16 @@
-﻿# 组装 LADON Explorer 安装包：整理文件夹 + 校验和 + zip。安装向导入口是文件夹里的 Setup.cmd。
-# 用法：Build-Package.ps1 -Binary <ladon.exe 路径> [-GuiBinary <ladon-gui.exe 路径>] [-OutDir E:\LADON-dist] [-Version 0.0.1]
+﻿# 组装 LADON 安装包：整理文件夹 + 校验和 + zip。安装向导入口是文件夹里的 Setup.cmd。
+# 用法：Build-Package.ps1 -Binary <ladon.exe 路径> [-GuiBinary <ladon-gui.exe 路径>] [-OutDir E:\LADON-dist] [-Version 0.0.2]
 param(
   [Parameter(Mandatory = $true)][string]$Binary,
   [string]$GuiBinary = '',
   [string]$OutDir = 'E:\LADON-dist',
-  [string]$Version = '0.0.1'
+  [string]$Version = '0.0.2'
 )
 $ErrorActionPreference = 'Stop'
 $here = $PSScriptRoot
 $repo = Resolve-Path (Join-Path $here '..\..')
 if (-not (Test-Path -LiteralPath $Binary)) { throw "找不到二进制：$Binary" }
-$name = "LADON-Explorer-$Version-Setup"
+$name = "LADON-$Version-Setup"
 $stage = Join-Path $OutDir $name
 if (Test-Path -LiteralPath $stage) { Remove-Item -LiteralPath $stage -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $stage | Out-Null

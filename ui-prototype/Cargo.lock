@@ -3153,7 +3153,7 @@ dependencies = [
 
 [[package]]
 name = "ladon-explorer"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -3181,7 +3181,7 @@ dependencies = [
 
 [[package]]
 name = "ladon-ui-prototype"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "anyhow",
  "chrono",

@@ -1,4 +1,4 @@
-LADON Explorer 0.0.1 试用构建
+﻿LADON 0.0.2 试用构建
 
 内容：命令行程序 ladon.exe（事件驱动的文件历史与治理内核）。
 构建配置：为降低编译内存占用，试用构建可能采用轻量优化配置（关闭 LTO、较低的优化级别），
@@ -9,5 +9,5 @@ LADON Explorer 0.0.1 试用构建
 数据与隐私：所有历史保存在各工作区的 .ladon 目录；程序不会主动联网，外传（Google Drive、AI 端点）
 只在你显式运行 archive / tag-folder 并配置令牌时发生，且受 .LADONignore 约束。
 
-安装位置默认：%LOCALAPPDATA%\Programs\LADON Explorer
-卸载：开始菜单“卸载 LADON Explorer”，或 设置 → 应用 → 已安装的应用。
+安装位置默认：%LOCALAPPDATA%\Programs\LADON
+卸载：开始菜单“卸载 LADON”，或 设置 → 应用 → 已安装的应用。
