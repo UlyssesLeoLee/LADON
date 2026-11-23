@@ -33,6 +33,7 @@ Source-SHA256: `490aeb44f19e35242dad7b48fd24784deb230c6852214267002d71f5672b0f56
 
 - `delete` is disabled in this release; deletion needs a retention and approval step.
 - Constructing a Drive provider sends no request. The first request that needs a token refreshes it.
+- A sign-in provider keeps no access token between requests. Each request refreshes one, so a revoked sign-in fails on the next request.
 
 ## Dependencies (upstream)
 

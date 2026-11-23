@@ -19,6 +19,9 @@ Unit tests in `src/provider.rs` cover the filesystem round trip and the Drive id
 ## Boundary & Failure Cases
 
 - A Drive provider with an empty fixed token is refused at construction.
+- A whitespace-only `LADON_GOOGLE_ACCESS_TOKEN` counts as unset and falls through to the stored sign-in (TC-809).
+- A stored sign-in without `LADON_GOOGLE_CLIENT_ID` is reported as `Google Drive is not connected`, and no request is sent (TC-809).
+- A failed refresh of a sign-in fails the request. The error text contains neither the refresh token nor the access token.
 - `delete` returns an error in every case.
 
 ## Regression Scope
