@@ -177,3 +177,30 @@ async fn tc310_capture_large_file_defers_structured_diff() {
     assert_eq!(cap.status, "captured");
     assert_eq!(cap.changed_sections, vec!["LARGE_BINARY_OR_TEXT".to_string()]);
 }
+
+#[tokio::test]
+async fn tc315_open_defers_nested_rule_errors() {
+    let (tmp, e) = workspace().await;
+    let root = tmp.path().canonicalize().unwrap();
+    fs::write(root.join("top.txt"), "top").unwrap();
+    fs::create_dir(root.join("sub")).unwrap();
+    fs::write(root.join("sub/.LADONignore"), "[z-a]\n").unwrap();
+    drop(e);
+    let reopened = Engine::open(&root).await.expect("open must not read the nested rule file");
+    let first = reopened.capture(&root.join("top.txt"), "human", "gui-capture").await;
+    assert!(first.is_err(), "a capture under a failed scan must fail closed");
+    assert!(reopened.store.find_path("top.txt").await.unwrap().is_none(), "nothing may be recorded");
+    fs::write(root.join("sub/.LADONignore"), "# fixed\n").unwrap();
+    reopened.reload_policy().unwrap();
+    let second = reopened.capture(&root.join("top.txt"), "human", "gui-capture").await.unwrap();
+    assert_eq!(second.status, "captured");
+}
+
+#[tokio::test]
+async fn tc316_open_rejects_invalid_root_rules() {
+    let tmp = tempfile::tempdir().unwrap();
+    let e = Engine::init(tmp.path()).await.unwrap();
+    drop(e);
+    fs::write(tmp.path().join(".LADONignore"), "[z-a]\n").unwrap();
+    assert!(Engine::open(tmp.path()).await.is_err());
+}

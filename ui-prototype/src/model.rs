@@ -305,6 +305,111 @@ pub fn drive_status_text(initialised: bool) -> &'static str {
     }
 }
 
+/// One visible row of the folder tree in the navigation pane. `path` is the absolute
+/// display path of the node.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TreeRow {
+    pub path: String,
+    pub name: String,
+    pub depth: usize,
+    pub expanded: bool,
+}
+
+/// One collapsed row per drive, at depth 0, in the order given.
+pub fn drive_tree_rows(drives: &[DriveRow]) -> Vec<TreeRow> {
+    drives
+        .iter()
+        .map(|drive| TreeRow {
+            path: drive.root.clone(),
+            name: drive.label.clone(),
+            depth: 0,
+            expanded: false,
+        })
+        .collect()
+}
+
+/// Path of a child folder: `parent` and `name` joined by one backslash, which is not added
+/// when `parent` already ends with one.
+pub fn child_path(parent: &str, name: &str) -> String {
+    if parent.ends_with('\\') {
+        format!("{parent}{name}")
+    } else {
+        format!("{parent}\\{name}")
+    }
+}
+
+/// Index of the first row whose path equals `path` ignoring ASCII case.
+pub fn tree_index(rows: &[TreeRow], path: &str) -> Option<usize> {
+    rows.iter().position(|row| row.path.eq_ignore_ascii_case(path))
+}
+
+/// Expands the row at `index` with one child row per name, directly after it. Returns false
+/// and changes nothing when the row does not exist or is already expanded.
+pub fn tree_expand(rows: &mut Vec<TreeRow>, index: usize, names: &[String]) -> bool {
+    let Some(parent) = rows.get(index) else {
+        return false;
+    };
+    if parent.expanded {
+        return false;
+    }
+    let depth = parent.depth + 1;
+    let children: Vec<TreeRow> = names
+        .iter()
+        .map(|name| TreeRow {
+            path: child_path(&parent.path, name),
+            name: name.clone(),
+            depth,
+            expanded: false,
+        })
+        .collect();
+    rows[index].expanded = true;
+    rows.splice(index + 1..index + 1, children);
+    true
+}
+
+/// Collapses the expanded row at `index` by removing the rows below it that are deeper than
+/// it. Returns false and changes nothing when the row does not exist or is not expanded.
+pub fn tree_collapse(rows: &mut Vec<TreeRow>, index: usize) -> bool {
+    let Some(node) = rows.get(index) else {
+        return false;
+    };
+    if !node.expanded {
+        return false;
+    }
+    let depth = node.depth;
+    let end = rows[index + 1..]
+        .iter()
+        .position(|row| row.depth <= depth)
+        .map_or(rows.len(), |offset| index + 1 + offset);
+    rows.drain(index + 1..end);
+    rows[index].expanded = false;
+    true
+}
+
+/// The drive root of a path that starts with `X:\`, or is exactly `X:`, as `X:\`. Other paths,
+/// including UNC paths, give None.
+pub fn drive_root_of(path: &str) -> Option<String> {
+    match path.as_bytes() {
+        [drive, b':'] if drive.is_ascii_alphabetic() => Some(format!("{}:\\", *drive as char)),
+        [drive, b':', b'\\', ..] if drive.is_ascii_alphabetic() => {
+            Some(format!("{}:\\", *drive as char))
+        }
+        _ => None,
+    }
+}
+
+/// The part of `path` below `root`, with `/` separators and no leading separator. The root
+/// itself gives the empty string. A path outside `root` gives None. The comparison of the
+/// root part ignores ASCII case.
+pub fn relative_in_root(root: &str, path: &str) -> Option<String> {
+    let head = path.get(..root.len())?;
+    if !head.eq_ignore_ascii_case(root) {
+        return None;
+    }
+    let rest = &path[root.len()..];
+    Some(rest.replace('\\', "/").trim_start_matches('/').to_string())
+}
+
 /// Compares two directory paths after removing the extended-length prefix and
 /// one trailing separator from each. The comparison ignores ASCII case, and
 /// separators are compared as written.
@@ -1294,5 +1399,55 @@ mod tests {
         );
         assert_eq!(drive_status_text(true), "已是工作区");
         assert_eq!(drive_status_text(false), "未初始化");
+    }
+
+    #[test]
+    fn ut_654_tree_rows_and_child_paths() {
+        let drives = vec![
+            DriveRow { root: "C:\\".into(), label: "本地磁盘 (C:)".into(), initialised: true },
+            DriveRow { root: "D:\\".into(), label: "本地磁盘 (D:)".into(), initialised: false },
+        ];
+        let rows = drive_tree_rows(&drives);
+        assert_eq!(rows.len(), 2);
+        assert_eq!(
+            rows[0],
+            TreeRow { path: "C:\\".into(), name: "本地磁盘 (C:)".into(), depth: 0, expanded: false }
+        );
+        assert_eq!(rows[1].path, "D:\\");
+        assert_eq!(child_path("C:\\", "docs"), "C:\\docs");
+        assert_eq!(child_path("C:\\docs", "a.txt"), "C:\\docs\\a.txt");
+    }
+
+    #[test]
+    fn ut_655_tree_expand_and_collapse() {
+        let mut rows = drive_tree_rows(&[
+            DriveRow { root: "C:\\".into(), label: "C".into(), initialised: true },
+            DriveRow { root: "D:\\".into(), label: "D".into(), initialised: false },
+        ]);
+        let names = vec!["a".to_string(), "b".to_string()];
+        assert!(tree_expand(&mut rows, 0, &names));
+        let paths: Vec<&str> = rows.iter().map(|row| row.path.as_str()).collect();
+        assert_eq!(paths, ["C:\\", "C:\\a", "C:\\b", "D:\\"]);
+        assert_eq!(rows[1].depth, 1);
+        assert!(rows[0].expanded);
+        assert!(!tree_expand(&mut rows, 0, &names), "an expanded row is not expanded again");
+        assert_eq!(tree_index(&rows, "c:\\"), Some(0));
+        assert_eq!(tree_index(&rows, "C:\\A"), Some(1));
+        assert_eq!(tree_index(&rows, "C:\\x"), None);
+        assert!(tree_collapse(&mut rows, 0));
+        assert_eq!(rows.len(), 2);
+        assert!(!rows[0].expanded);
+        assert!(!tree_collapse(&mut rows, 1), "a row that is not expanded does not collapse");
+    }
+
+    #[test]
+    fn ut_656_drive_root_and_relative_path() {
+        assert_eq!(drive_root_of("C:\\docs\\x").as_deref(), Some("C:\\"));
+        assert_eq!(drive_root_of("C:\\").as_deref(), Some("C:\\"));
+        assert_eq!(drive_root_of("C:").as_deref(), Some("C:\\"));
+        assert_eq!(drive_root_of("\\\\server\\share"), None);
+        assert_eq!(relative_in_root("C:\\", "C:\\docs\\x").as_deref(), Some("docs/x"));
+        assert_eq!(relative_in_root("C:\\", "C:\\").as_deref(), Some(""));
+        assert_eq!(relative_in_root("D:\\", "C:\\x"), None);
     }
 }

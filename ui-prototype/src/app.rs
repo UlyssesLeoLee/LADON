@@ -40,6 +40,8 @@ pub const MSG_RULE_PARSE_FAILED: &str =
 pub const MSG_OPEN_FAILED: &str =
     "无法打开该工作区。请检查 .ladon 目录和 .LADONignore 规则文件是否完整。";
 pub const MSG_INIT_FAILED: &str = "无法初始化该文件夹。请检查该文件夹的写入权限。";
+pub const MSG_DRIVE_INIT_FAILED: &str =
+    "无法初始化该驱动器。请检查写入权限；访问系统盘等受保护位置时，请以管理员身份运行 LADON。";
 pub const MSG_LIST_FAILED: &str = "无法读取该文件夹。";
 pub const MSG_CAPTURE_FAILED: &str = "无法记录该文件，请稍后重试。";
 pub const MSG_HISTORY_FAILED: &str = "无法读取该文件的历史。";
@@ -61,6 +63,11 @@ const OWNED_ENTRIES: [&str; 4] = [".ladon", META_DB, ".ladon/cas", RULE_FILE];
 /// FILE_ATTRIBUTE_REPARSE_POINT from the Windows file attribute set.
 #[cfg(windows)]
 const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x0000_0400;
+/// FILE_ATTRIBUTE_HIDDEN and FILE_ATTRIBUTE_SYSTEM. Explorer leaves both out of its default view.
+#[cfg(windows)]
+const FILE_ATTRIBUTE_HIDDEN: u32 = 0x0000_0002;
+#[cfg(windows)]
+const FILE_ATTRIBUTE_SYSTEM: u32 = 0x0000_0004;
 
 /// One request from the window.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -72,6 +79,10 @@ pub enum Command {
     LoadHistory { relative_path: String },
     LoadDiff { older_version_id: String, newer_version_id: String },
     ListDrives,
+    /// Opens a drive root as the workspace, initialising it first when it holds no database.
+    OpenDrive { path: String },
+    /// Lists the folders directly under one absolute directory path.
+    ListSubfolders { path: String },
 }
 
 /// Why a text diff is not shown.
@@ -111,6 +122,9 @@ pub enum Reply {
     Diff { older_version_id: String, newer_version_id: String, diff: model::DiffResult },
     DiffUnavailable { older_version_id: String, newer_version_id: String, reason: DiffBlock },
     Drives { drives: Vec<model::DriveRow> },
+    /// The reply to `ListSubfolders`: the request path as given and the folder names, sorted by
+    /// their lowercased text.
+    Subfolders { path: String, names: Vec<String> },
     Failed { kind: FailKind, message: String, detail: Option<String> },
 }
 
@@ -174,6 +188,8 @@ pub async fn handle(state: &mut State, command: Command) -> Reply {
             load_diff(state, &older_version_id, &newer_version_id).await
         }
         Command::ListDrives => list_drives(),
+        Command::OpenDrive { path } => open_drive(state, &path).await,
+        Command::ListSubfolders { path } => list_subfolders(&path),
     }
 }
 
@@ -267,6 +283,18 @@ fn has_reparse_point(_meta: &Metadata) -> bool {
     false
 }
 
+/// True for entries with the Windows hidden or system attribute.
+#[cfg(windows)]
+fn is_hidden_or_system(meta: &Metadata) -> bool {
+    use std::os::windows::fs::MetadataExt;
+    (meta.file_attributes() & (FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM)) != 0
+}
+
+#[cfg(not(windows))]
+fn is_hidden_or_system(_meta: &Metadata) -> bool {
+    false
+}
+
 /// True for symbolic links and for entries with the reparse-point attribute.
 fn is_link_or_reparse(meta: &Metadata) -> bool {
     meta.file_type().is_symlink() || has_reparse_point(meta)
@@ -335,9 +363,11 @@ fn check_root_components(input: &str, path: &Path) -> Result<(), Reply> {
     Ok(())
 }
 
-/// Root candidate checks used by Open and Init. `io_message` is the message for an
-/// unexpected I/O failure of the command.
-fn root_candidate(input: &str, io_message: &'static str) -> Result<Candidate, Reply> {
+/// Checks a directory path for `root_candidate` and `list_subfolders`: the path is absolute,
+/// has no NUL character, passes `check_root_components`, and every entry from the top down to
+/// the path is neither a link nor a reparse point. The path must be a directory. Returns the
+/// rebuilt path. `io_message` is the message for an unexpected I/O failure of the command.
+fn directory_path(input: &str, io_message: &'static str) -> Result<PathBuf, Reply> {
     if input.contains('\0') || !Path::new(input).is_absolute() {
         return Err(invalid_path());
     }
@@ -369,6 +399,13 @@ fn root_candidate(input: &str, io_message: &'static str) -> Result<Candidate, Re
     if !last.is_some_and(|meta| meta.is_dir()) {
         return Err(invalid_path());
     }
+    Ok(path)
+}
+
+/// Root candidate checks used by Open, Init and OpenDrive. `io_message` is the message for an
+/// unexpected I/O failure of the command.
+fn root_candidate(input: &str, io_message: &'static str) -> Result<Candidate, Reply> {
+    let path = directory_path(input, io_message)?;
     let root = fs::canonicalize(&path).map_err(|_| failed(FailKind::Kernel, io_message))?;
     let shown = root.to_string_lossy().into_owned();
     if is_profile_dir(&shown) {
@@ -419,16 +456,21 @@ fn walk(root: &Path, components: &[String], io_message: &'static str) -> Result<
     Ok(current)
 }
 
-/// Classifies the entries of one directory without following links.
+/// Classifies the entries of one directory without following links. An entry that cannot be
+/// read, whose name is not valid Unicode, or that has the hidden or system attribute is left
+/// out, and does not fail the listing. The directory itself must be readable.
 fn read_entries(dir: &Path) -> Option<Vec<model::RawEntry>> {
     let mut entries = Vec::new();
     for item in fs::read_dir(dir).ok()? {
-        let item = item.ok()?;
-        let name = item.file_name().into_string().ok()?;
+        let Ok(item) = item else { continue };
+        let Ok(name) = item.file_name().into_string() else { continue };
         if name.eq_ignore_ascii_case(".ladon") || name.eq_ignore_ascii_case(".git") {
             continue;
         }
-        let meta = fs::symlink_metadata(item.path()).ok()?;
+        let Ok(meta) = item.metadata() else { continue };
+        if is_hidden_or_system(&meta) {
+            continue;
+        }
         let (kind, size, modified_unix) = if is_link_or_reparse(&meta) {
             (model::EntryKind::Link, 0, None)
         } else if meta.is_dir() {
@@ -471,10 +513,24 @@ async fn init_workspace(state: &mut State, path: &str, confirmed: bool) -> Reply
     if !confirmed {
         return failed(FailKind::NotConfirmed, MSG_NOT_CONFIRMED);
     }
-    let candidate = match root_candidate(path, MSG_INIT_FAILED) {
-        Ok(candidate) => candidate,
-        Err(reply) => return reply,
-    };
+    match root_candidate(path, MSG_INIT_FAILED) {
+        Ok(candidate) => init_candidate(state, candidate, MSG_INIT_FAILED).await,
+        Err(reply) => reply,
+    }
+}
+
+/// Opens a drive root as the workspace. A root without a database is initialised first, without
+/// a confirmation, because the double click on the drive is the request.
+async fn open_drive(state: &mut State, path: &str) -> Reply {
+    match root_candidate(path, MSG_OPEN_FAILED) {
+        Ok(candidate) => init_candidate(state, candidate, MSG_DRIVE_INIT_FAILED).await,
+        Err(reply) => reply,
+    }
+}
+
+/// Opens an initialised candidate, or initialises it and opens it. `message` is the reply text
+/// when the initialisation fails.
+async fn init_candidate(state: &mut State, candidate: Candidate, message: &'static str) -> Reply {
     if candidate.initialised {
         return open_candidate(state, candidate).await;
     }
@@ -486,8 +542,36 @@ async fn init_workspace(state: &mut State, path: &str, confirmed: bool) -> Reply
             state.rule_mtime = rule_mtime;
             Reply::Opened { root }
         }
-        Err(_) => failed(FailKind::Kernel, MSG_INIT_FAILED),
+        Err(_) => failed(FailKind::Kernel, message),
     }
+}
+
+/// Lists the folders directly under an absolute directory path, for the navigation tree. Files,
+/// links, `.ladon`, `.git` and entries with the hidden or system attribute are left out. Nothing
+/// is written and no workspace is needed.
+fn list_subfolders(path: &str) -> Reply {
+    let dir = match directory_path(path, MSG_LIST_FAILED) {
+        Ok(dir) => dir,
+        Err(reply) => return reply,
+    };
+    let Ok(read) = fs::read_dir(&dir) else {
+        return failed(FailKind::Kernel, MSG_LIST_FAILED);
+    };
+    let mut names = Vec::new();
+    for item in read {
+        let Ok(item) = item else { continue };
+        let Ok(name) = item.file_name().into_string() else { continue };
+        if name.eq_ignore_ascii_case(".ladon") || name.eq_ignore_ascii_case(".git") {
+            continue;
+        }
+        let Ok(meta) = item.metadata() else { continue };
+        if is_link_or_reparse(&meta) || !meta.is_dir() || is_hidden_or_system(&meta) {
+            continue;
+        }
+        names.push(name);
+    }
+    names.sort_by_key(|name| name.to_lowercase());
+    Reply::Subfolders { path: path.to_string(), names }
 }
 
 /// Lists the drive letters present on this machine, with whether each drive root holds

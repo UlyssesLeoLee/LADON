@@ -11,19 +11,18 @@ use ladon_ui_prototype::{app, model};
 use slint::{ComponentHandle, ModelRc, VecModel};
 
 slint::slint! {
-    import { AppWindow, FileItem, VersionItem, DiffItem, DriveItem } from "ui/app.slint";
-    export { AppWindow, FileItem, VersionItem, DiffItem, DriveItem }
+    import { AppWindow, FileItem, VersionItem, DiffItem, DriveItem, TreeItem } from "ui/app.slint";
+    export { AppWindow, FileItem, VersionItem, DiffItem, DriveItem, TreeItem }
 }
 
 const BUSY_STATUS: &str = "正在处理，请稍候。";
-const NEEDS_INIT_STATUS: &str = "该文件夹还不是工作区。可以点击“初始化”。";
 const OPENED_STATUS: &str = "已打开工作区";
 const UNCHANGED_STATUS: &str = "内容与最新版本相同，未新增版本";
 const NO_VERSIONS_NOTE: &str = "该文件还没有版本。";
 /// Status text of an untracked file in `model::browse_rows`.
 const UNTRACKED_STATUS: &str = "未记录";
 /// Status text shown on the This PC page after the drive list arrives.
-const DRIVES_STATUS: &str = "选择一个驱动器打开；未初始化的驱动器需先初始化。";
+const DRIVES_STATUS: &str = "双击驱动器即可打开；未初始化的驱动器会自动初始化。";
 
 /// State that exists only on the user-interface thread.
 #[derive(Default)]
@@ -37,6 +36,11 @@ struct UiState {
     history_pending: bool,
     /// Set by `refresh-folder` until its reply arrives. A silent listing does not set `busy`.
     silent_refresh: bool,
+    /// Nodes of the folder tree, in the same order as `tree-items`.
+    tree: Vec<model::TreeRow>,
+    /// Relative folder that the next `Opened` reply lists. Set by `tree-open` for a drive root that
+    /// is not the open workspace.
+    pending_folder: Option<String>,
 }
 
 thread_local! {
@@ -107,23 +111,23 @@ fn with_window(weak: &slint::Weak<AppWindow>, action: impl FnOnce(&AppWindow)) {
 fn wire_callbacks(window: &AppWindow) {
     let weak = window.as_weak();
 
-    window.on_open_workspace({
-        let weak = weak.clone();
-        move |path| {
-            with_window(&weak, |ui| {
-                send_command(ui, app::Command::Open { path: path.to_string() });
-            });
-        }
-    });
-
     window.on_open_drive({
         let weak = weak.clone();
         move |path| {
             with_window(&weak, |ui| {
-                ui.set_workspace_path(path.clone());
-                send_command(ui, app::Command::Open { path: path.to_string() });
+                send_command(ui, app::Command::OpenDrive { path: path.to_string() });
             });
         }
+    });
+
+    window.on_tree_toggle({
+        let weak = weak.clone();
+        move |index| with_window(&weak, |ui| tree_toggle(ui, index))
+    });
+
+    window.on_tree_open({
+        let weak = weak.clone();
+        move |index| with_window(&weak, |ui| tree_open(ui, index))
     });
 
     window.on_show_this_pc({
@@ -133,31 +137,6 @@ fn wire_callbacks(window: &AppWindow) {
                 send_command(ui, app::Command::ListDrives);
             });
         }
-    });
-
-    window.on_request_init({
-        let weak = weak.clone();
-        move |path| {
-            with_window(&weak, |ui| {
-                ui.set_init_path(path);
-                ui.set_init_overlay(true);
-            });
-        }
-    });
-
-    window.on_confirm_init({
-        let weak = weak.clone();
-        move |path| {
-            with_window(&weak, |ui| {
-                ui.set_init_overlay(false);
-                send_command(ui, app::Command::Init { path: path.to_string(), confirmed: true });
-            });
-        }
-    });
-
-    window.on_cancel_init({
-        let weak = weak.clone();
-        move || with_window(&weak, |ui| ui.set_init_overlay(false))
     });
 
     window.on_enter_folder({
@@ -249,6 +228,7 @@ fn apply_reply(ui: &AppWindow, reply: app::Reply) {
     ui.set_busy(false);
     let history_pending = UI.with(|state| std::mem::take(&mut state.borrow_mut().history_pending));
     let silent = UI.with(|state| std::mem::take(&mut state.borrow_mut().silent_refresh));
+    let pending_folder = UI.with(|state| state.borrow_mut().pending_folder.take());
 
     match reply {
         app::Reply::Opened { root } => {
@@ -258,9 +238,9 @@ fn apply_reply(ui: &AppWindow, reply: app::Reply) {
             clear_history(ui);
             clear_folder(ui);
             set_status(ui, OPENED_STATUS, false);
-            send_command(ui, app::Command::ListFolder { relative_dir: String::new() });
+            send_command(ui, app::Command::ListFolder { relative_dir: pending_folder.unwrap_or_default() });
         }
-        app::Reply::NeedsInit { .. } => set_status(ui, NEEDS_INIT_STATUS, false),
+        app::Reply::NeedsInit { .. } => set_status(ui, app::MSG_NO_WORKSPACE, false),
         app::Reply::Folder { relative_dir, rows, truncated } => {
             if silent && ui.get_current_dir().as_str() == relative_dir.as_str() {
                 apply_silent_listing(ui, rows, truncated);
@@ -312,6 +292,7 @@ fn apply_reply(ui: &AppWindow, reply: app::Reply) {
         }
         app::Reply::Failed { message, .. } => set_status(ui, &message, true),
         app::Reply::Drives { drives } => {
+            let tree = model::drive_tree_rows(&drives);
             let items: Vec<DriveItem> = drives
                 .into_iter()
                 .map(|row| DriveItem {
@@ -321,8 +302,91 @@ fn apply_reply(ui: &AppWindow, reply: app::Reply) {
                 })
                 .collect();
             ui.set_drives(ModelRc::new(VecModel::from(items)));
+            UI.with(|state| state.borrow_mut().tree = tree);
+            set_tree_items(ui);
+            ui.set_drive_selected(-1);
             ui.set_page(2);
             set_status(ui, DRIVES_STATUS, false);
+        }
+        app::Reply::Subfolders { path, names } => {
+            let changed = UI.with(|state| {
+                let mut state = state.borrow_mut();
+                match model::tree_index(&state.tree, &path) {
+                    Some(index) => model::tree_expand(&mut state.tree, index, &names),
+                    None => false,
+                }
+            });
+            if changed {
+                set_tree_items(ui);
+            }
+        }
+    }
+}
+
+/// Rebuilds the `tree-items` model of the window from `UiState.tree`.
+fn set_tree_items(ui: &AppWindow) {
+    let items: Vec<TreeItem> = UI.with(|state| {
+        state
+            .borrow()
+            .tree
+            .iter()
+            .map(|row| TreeItem {
+                name: row.name.as_str().into(),
+                path: row.path.as_str().into(),
+                depth: i32::try_from(row.depth).unwrap_or(i32::MAX),
+                expanded: row.expanded,
+            })
+            .collect()
+    });
+    ui.set_tree_items(ModelRc::new(VecModel::from(items)));
+}
+
+/// Expands a node of the folder tree by asking the worker for its subfolders, or collapses it.
+fn tree_toggle(ui: &AppWindow, index: i32) {
+    let Ok(index) = usize::try_from(index) else {
+        return;
+    };
+    let to_list = UI.with(|state| {
+        let mut state = state.borrow_mut();
+        let row = state.tree.get(index).cloned()?;
+        if row.expanded {
+            model::tree_collapse(&mut state.tree, index);
+            None
+        } else {
+            Some(row.path)
+        }
+    });
+    match to_list {
+        Some(path) => {
+            send_command(ui, app::Command::ListSubfolders { path });
+        }
+        None => set_tree_items(ui),
+    }
+}
+
+/// Opens the folder of a tree node in the list. A node on the open workspace is listed directly.
+/// A node on another drive opens that drive first, and then lists the folder.
+fn tree_open(ui: &AppWindow, index: i32) {
+    let row = usize::try_from(index)
+        .ok()
+        .and_then(|index| UI.with(|state| state.borrow().tree.get(index).cloned()));
+    let Some(row) = row else {
+        return;
+    };
+    let Some(root) = model::drive_root_of(&row.path) else {
+        return;
+    };
+    let Some(relative) = model::relative_in_root(&root, &row.path) else {
+        return;
+    };
+    if ui.get_workspace_open() && model::same_directory(ui.get_workspace_root().as_str(), &root) {
+        if send_command(ui, app::Command::ListFolder { relative_dir: relative }) {
+            ui.set_page(0);
+        }
+    } else {
+        UI.with(|state| state.borrow_mut().pending_folder = Some(relative));
+        if !send_command(ui, app::Command::OpenDrive { path: root }) {
+            UI.with(|state| state.borrow_mut().pending_folder = None);
         }
     }
 }

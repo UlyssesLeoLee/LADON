@@ -1292,3 +1292,179 @@ async fn it_646_list_drives() {
         assert_eq!(row.initialised, expected, "initialised flag of {}", row.root);
     }
 }
+
+#[tokio::test]
+async fn it_647_open_drive_initialises_and_opens() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = canonical(tmp.path());
+    let mut state = State::new();
+    let root = match app::handle(&mut state, Command::OpenDrive { path: arg(&dir) }).await {
+        Reply::Opened { root } => root,
+        other => panic!("expected Opened, got {other:?}"),
+    };
+    assert_eq!(root, display_of(&dir));
+    assert!(dir.join(".ladon/meta.turso").is_file());
+    assert!(dir.join(".LADONignore").is_file());
+    let (_, rows, _) = folder(run_list(&mut state, "").await);
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0].name, ".LADONignore");
+    assert_eq!(rows[0].status_text, "未记录");
+}
+
+#[tokio::test]
+async fn it_648_open_drive_keeps_existing_workspace() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = canonical(tmp.path());
+    let mut state = State::new();
+    assert!(matches!(run_init(&mut state, &dir).await, Reply::Opened { .. }));
+    fs::write(dir.join("notes.md"), "one\n").unwrap();
+    assert!(matches!(run_capture(&mut state, "notes.md").await, Reply::Captured { .. }));
+    drop(state);
+    fs::write(dir.join(".LADONignore"), "# custom\n").unwrap();
+    let mut second = State::new();
+    assert!(matches!(
+        app::handle(&mut second, Command::OpenDrive { path: arg(&dir) }).await,
+        Reply::Opened { .. }
+    ));
+    assert_eq!(fs::read_to_string(dir.join(".LADONignore")).unwrap(), "# custom\n");
+    let (versions, _, _) = history(run_history(&mut second, "notes.md").await);
+    assert_eq!(versions.len(), 1);
+    assert_eq!(versions[0].label, "v1");
+}
+
+#[tokio::test]
+async fn it_649_open_drive_refusals() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = canonical(tmp.path());
+    fs::write(dir.join("notes.md"), "x").unwrap();
+    fs::create_dir(dir.join("sub")).unwrap();
+    let mut state = State::new();
+    let open = |path: String| Command::OpenDrive { path };
+    assert_failed(
+        app::handle(&mut state, open("relative/dir".into())).await,
+        FailKind::InvalidPath,
+        app::MSG_INVALID_PATH,
+    );
+    assert_failed(
+        app::handle(&mut state, open(format!("{}\0x", arg(&dir)))).await,
+        FailKind::InvalidPath,
+        app::MSG_INVALID_PATH,
+    );
+    assert_failed(
+        app::handle(&mut state, open(arg(&dir.join("notes.md")))).await,
+        FailKind::InvalidPath,
+        app::MSG_INVALID_PATH,
+    );
+    assert_failed(
+        app::handle(&mut state, open(arg(&dir.join("missing")))).await,
+        FailKind::NotFound,
+        app::MSG_NOT_FOUND,
+    );
+    if let Some(profile) = std::env::var_os("USERPROFILE") {
+        let profile = PathBuf::from(profile);
+        if profile.is_dir() {
+            assert_failed(
+                app::handle(&mut state, open(arg(&canonical(&profile)))).await,
+                FailKind::Refused,
+                app::MSG_ROOT_REFUSED,
+            );
+        }
+    }
+    assert!(!dir.join(".ladon").exists(), "a refused drive root must not be initialised");
+}
+
+#[tokio::test]
+async fn it_650_open_drive_init_failure_message() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = canonical(tmp.path());
+    fs::write(dir.join(".ladon"), "not a folder").unwrap();
+    let mut state = State::new();
+    assert_failed(
+        app::handle(&mut state, Command::OpenDrive { path: arg(&dir) }).await,
+        FailKind::Kernel,
+        app::MSG_DRIVE_INIT_FAILED,
+    );
+    assert!(!dir.join(".LADONignore").exists());
+}
+
+#[cfg(windows)]
+fn write_with_attributes(path: &Path, attributes: u32) {
+    fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .attributes(attributes)
+        .open(path)
+        .unwrap();
+}
+
+#[cfg(windows)]
+#[tokio::test]
+async fn it_651_listing_omits_hidden_and_system() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = canonical(tmp.path());
+    fs::write(dir.join("visible.txt"), "v").unwrap();
+    write_with_attributes(&dir.join("hidden.txt"), 0x2);
+    write_with_attributes(&dir.join("system.txt"), 0x4);
+    let mut state = State::new();
+    assert!(matches!(run_init(&mut state, &dir).await, Reply::Opened { .. }));
+    let (_, rows, _) = folder(run_list(&mut state, "").await);
+    let names: Vec<&str> = rows.iter().map(|row| row.name.as_str()).collect();
+    assert_eq!(names, [".LADONignore", "visible.txt"]);
+}
+
+#[tokio::test]
+async fn it_652_list_subfolders_folders_only() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = canonical(tmp.path());
+    fs::create_dir(dir.join("beta")).unwrap();
+    fs::create_dir(dir.join("Alpha")).unwrap();
+    fs::create_dir(dir.join(".git")).unwrap();
+    fs::write(dir.join("zeta.txt"), "z").unwrap();
+    fs::write(dir.join(".LADONignore"), "").unwrap();
+    let mut state = State::new();
+    match app::handle(&mut state, Command::ListSubfolders { path: arg(&dir) }).await {
+        Reply::Subfolders { path, names } => {
+            assert_eq!(path, arg(&dir));
+            assert_eq!(names, ["Alpha", "beta"]);
+        }
+        other => panic!("expected Subfolders, got {other:?}"),
+    }
+    assert!(!dir.join(".ladon").exists(), "listing subfolders writes nothing");
+}
+
+#[cfg(windows)]
+#[tokio::test]
+async fn it_653_list_subfolders_refusals() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = canonical(tmp.path());
+    fs::create_dir(dir.join("real")).unwrap();
+    let outside = tempfile::tempdir().unwrap();
+    make_junction(&dir.join("link"), &canonical(outside.path()));
+    fs::write(dir.join("link2.txt"), "x").unwrap();
+    let mut state = State::new();
+    match app::handle(&mut state, Command::ListSubfolders { path: arg(&dir) }).await {
+        Reply::Subfolders { names, .. } => assert_eq!(names, ["real"]),
+        other => panic!("expected Subfolders, got {other:?}"),
+    }
+    let list = |path: String| Command::ListSubfolders { path };
+    assert_failed(
+        app::handle(&mut state, list("real".into())).await,
+        FailKind::InvalidPath,
+        app::MSG_INVALID_PATH,
+    );
+    assert_failed(
+        app::handle(&mut state, list(format!("{}\0x", arg(&dir)))).await,
+        FailKind::InvalidPath,
+        app::MSG_INVALID_PATH,
+    );
+    assert_failed(
+        app::handle(&mut state, list(arg(&dir.join("link2.txt")))).await,
+        FailKind::InvalidPath,
+        app::MSG_INVALID_PATH,
+    );
+    assert_failed(
+        app::handle(&mut state, list(arg(&dir.join("missing")))).await,
+        FailKind::NotFound,
+        app::MSG_NOT_FOUND,
+    );
+}

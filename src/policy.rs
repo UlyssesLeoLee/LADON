@@ -1,11 +1,81 @@
 //! .LADONignore applies to external data flow; local history still permitted.
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use ignore::gitignore::{Gitignore, GitignoreBuilder};
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Condvar, Mutex};
 
 pub struct LadonPolicy { root: PathBuf, matcher: Gitignore }
 
+/// A rule set loaded on a background thread. `start` returns at once; `with` waits for the
+/// load to finish and then runs its closure on the rule set. A failed load keeps its message.
+pub struct PendingPolicy { cell: Arc<(Mutex<Option<Result<LadonPolicy, String>>>, Condvar)> }
+
+impl PendingPolicy {
+    /// Starts the full rule scan of `root` on one background thread.
+    pub fn start(root: &Path) -> PendingPolicy {
+        let cell = Arc::new((Mutex::new(None), Condvar::new()));
+        let worker = Arc::clone(&cell);
+        let root = root.to_path_buf();
+        let spawned = std::thread::Builder::new()
+            .name("ladon-rule-scan".into())
+            .spawn(move || {
+                let result = LadonPolicy::load(&root).map_err(|err| format!("{err:#}"));
+                let (lock, ready) = &*worker;
+                if let Ok(mut slot) = lock.lock() {
+                    *slot = Some(result);
+                }
+                ready.notify_all();
+            });
+        if spawned.is_err() {
+            let (lock, ready) = &*cell;
+            if let Ok(mut slot) = lock.lock() {
+                *slot = Some(Err("rule scan could not start".to_string()));
+            }
+            ready.notify_all();
+        }
+        PendingPolicy { cell }
+    }
+
+    /// Waits for the scan to finish, then runs `f` on the rule set. A failed scan returns an
+    /// error with the stored message on every call.
+    pub fn with<R>(&self, f: impl FnOnce(&LadonPolicy) -> Result<R>) -> Result<R> {
+        let (lock, ready) = &*self.cell;
+        let mut slot = lock.lock().map_err(|_| anyhow!("rule scan lock poisoned"))?;
+        while slot.is_none() {
+            slot = ready.wait(slot).map_err(|_| anyhow!("rule scan lock poisoned"))?;
+        }
+        match slot.as_ref() {
+            Some(Ok(policy)) => f(policy),
+            Some(Err(message)) => Err(anyhow!("{message}")),
+            None => Err(anyhow!("rule scan did not finish")),
+        }
+    }
+}
+
 impl LadonPolicy {
+    /// Checks the global rule file and the root `.LADONignore` only; nested rule files are
+    /// not read, so the cost does not depend on the size of the tree.
+    pub fn check_root(root: &Path) -> Result<()> {
+        let root = root.canonicalize().context("workspace not found")?;
+        let mut builder = GitignoreBuilder::new(&root);
+        if let Ok(path) = std::env::var("LADON_GLOBAL_IGNORE") {
+            let p = PathBuf::from(path);
+            if p.is_file() {
+                if let Some(err) = builder.add(&p) {
+                    return Err(err.into());
+                }
+            }
+        }
+        let rule = root.join(".LADONignore");
+        if rule.is_file() {
+            if let Some(err) = builder.add(&rule) {
+                return Err(err.into());
+            }
+        }
+        builder.build()?;
+        Ok(())
+    }
+
     pub fn load(root: &Path) -> Result<Self> {
         let root=root.canonicalize().context("workspace not found")?;
         let mut builder=GitignoreBuilder::new(&root);

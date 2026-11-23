@@ -42,6 +42,14 @@ export struct DriveItem {
     status-text: string,
 }
 
+// One visible row of the folder tree in the navigation pane.
+export struct TreeItem {
+    path: string,
+    name: string,
+    depth: int,
+    expanded: bool,
+}
+
 // One checklist row in the document-task view.
 component TaskRow inherits Rectangle {
     in property <string> label;
@@ -223,7 +231,6 @@ export component AppWindow inherits Window {
     no-frame: true;
     forward-focus: path-field;
 
-    in-out property <string> workspace-path;
     in-out property <string> workspace-root;
     in-out property <bool> workspace-open: false;
     in-out property <bool> busy: false;
@@ -253,17 +260,16 @@ export component AppWindow inherits Window {
     in-out property <string> diff-totals: "";
     in-out property <string> diff-note: "";
     in-out property <[DiffItem]> diff-lines: [];
-    in-out property <bool> init-overlay: false;
-    in-out property <string> init-path: "";
     in-out property <bool> about-visible: false;
     in-out property <bool> history-available: false;
     in-out property <[DriveItem]> drives: [];
+    in-out property <int> drive-selected: -1;
+    in-out property <[TreeItem]> tree-items: [];
+    in-out property <int> tree-selected: -1;
 
-    callback open-workspace(string);
-    callback request-init(string);
-    callback confirm-init(string);
-    callback cancel-init();
     callback enter-folder(string);
+    callback tree-toggle(int);
+    callback tree-open(int);
     callback go-up();
     callback select-row(int);
     callback open-history();
@@ -347,14 +353,6 @@ export component AppWindow inherits Window {
         root.details-closed-manual = false;
     }
 
-    changed init-overlay => {
-        if (root.init-overlay) {
-            init-scope.focus();
-        } else {
-            path-field.focus();
-        }
-    }
-
     changed about-visible => {
         if (root.about-visible) {
             keys.focus();
@@ -377,10 +375,6 @@ export component AppWindow inherits Window {
 
         key-pressed(event) => {
             if (event.text == Key.Escape) {
-                if (root.init-overlay) {
-                    root.cancel-init();
-                    return accept;
-                }
                 if (root.about-visible) {
                     root.close-about();
                     return accept;
@@ -551,18 +545,6 @@ export component AppWindow inherits Window {
                         disabled: !(root.workspace-open && root.current-dir != "" && !root.busy && !root.worker-stopped);
                         clicked => { root.go-up(); }
                     }
-                    Btn {
-                        small: true;
-                        label: "打开";
-                        disabled: root.busy || root.worker-stopped;
-                        clicked => { root.open-workspace(root.workspace-path); }
-                    }
-                    Btn {
-                        small: true;
-                        label: "初始化";
-                        disabled: root.busy || root.worker-stopped || root.workspace-path == "";
-                        clicked => { root.request-init(root.workspace-path); }
-                    }
                     Rectangle {
                         horizontal-stretch: 3;
                         border-radius: 8px;
@@ -574,7 +556,8 @@ export component AppWindow inherits Window {
                             padding-right: 10px;
                             path-field := TextInput {
                                 horizontal-stretch: 1;
-                                text <=> root.workspace-path;
+                                text: root.workspace-root;
+                                read-only: true;
                                 font-size: 13px;
                                 color: Palette.text;
                                 vertical-alignment: center;
@@ -608,15 +591,78 @@ export component AppWindow inherits Window {
                     background: Palette.side;
                     animate width { duration: 160ms; }
 
-                    side-list := NavList {
-                        width: 100%;
-                        height: 100%;
-                        labels: ["此电脑", "快速访问", "文件浏览", "搜索", "文档任务", "FileSpace", "云盘存储", "版本历史", "LADON Ignore"];
-                        glyphs: ["此", "快", "文", "搜", "任", "F", "云", "历", "I"];
-                        active: root.page == 1 ? 7 : (root.page == 2 ? 0 : root.nav-index);
-                        expanded: !root.sidebar-collapsed;
-                        history-ok: root.history-available;
-                        picked(i) => { root.nav-pick(i); }
+                    VerticalLayout {
+                        side-list := NavList {
+                            width: 100%;
+                            height: 404px;
+                            labels: ["此电脑", "快速访问", "文件浏览", "搜索", "文档任务", "FileSpace", "云盘存储", "版本历史", "LADON Ignore"];
+                            glyphs: ["此", "快", "文", "搜", "任", "F", "云", "历", "I"];
+                            active: root.page == 1 ? 7 : (root.page == 2 ? 0 : root.nav-index);
+                            expanded: !root.sidebar-collapsed;
+                            history-ok: root.history-available;
+                            picked(i) => { root.nav-pick(i); }
+                        }
+
+                        // Folder tree: the drives, and the folders below each one, as in the navigation pane of Explorer.
+                        if !root.sidebar-collapsed : VerticalLayout {
+                            vertical-stretch: 1;
+                            padding-left: 8px;
+                            padding-right: 8px;
+                            padding-bottom: 8px;
+                            spacing: 4px;
+                            Text {
+                                text: "文件夹";
+                                font-size: 12px;
+                                color: Palette.header-text;
+                            }
+                            Rectangle {
+                                vertical-stretch: 1;
+                                border-radius: 6px;
+                                clip: true;
+                                ListView {
+                                    width: 100%;
+                                    height: 100%;
+                                    for node[index] in root.tree-items : Rectangle {
+                                        height: 28px;
+                                        background: root.tree-selected == index ? Palette.nav-active : transparent;
+
+                                        tree-ta := TouchArea {
+                                            width: 100%;
+                                            height: 100%;
+                                            clicked => { root.tree-selected = index; }
+                                            double-clicked => { root.tree-open(index); }
+                                        }
+                                        HorizontalLayout {
+                                            padding-left: 4px + node.depth * 16px;
+                                            padding-right: 4px;
+                                            spacing: 4px;
+                                            Text {
+                                                width: 14px;
+                                                text: node.expanded ? "−" : "+";
+                                                font-size: 13px;
+                                                color: Palette.muted;
+                                                horizontal-alignment: center;
+                                                vertical-alignment: center;
+                                            }
+                                            Text {
+                                                text: node.name;
+                                                font-size: 12px;
+                                                color: Palette.text;
+                                                vertical-alignment: center;
+                                                overflow: elide;
+                                                horizontal-stretch: 1;
+                                            }
+                                        }
+                                        arrow-ta := TouchArea {
+                                            x: 4px + node.depth * 16px;
+                                            width: 14px;
+                                            height: 100%;
+                                            clicked => { root.tree-toggle(index); }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -637,14 +683,15 @@ export component AppWindow inherits Window {
                         ListView {
                             width: 100%;
                             height: 100%;
-                            for drive in root.drives : Rectangle {
+                            for drive[index] in root.drives : Rectangle {
                                 height: 44px;
-                                background: drive-ta.has-hover ? Palette.hover : transparent;
+                                background: root.drive-selected == index ? Palette.nav-active : (drive-ta.has-hover ? Palette.hover : transparent);
 
                                 drive-ta := TouchArea {
                                     width: 100%;
                                     height: 100%;
-                                    clicked => { root.open-drive(drive.path); }
+                                    clicked => { root.drive-selected = index; }
+                                    double-clicked => { root.open-drive(drive.path); }
                                 }
 
                                 HorizontalLayout {
@@ -817,6 +864,11 @@ export component AppWindow inherits Window {
                                     row-ta := TouchArea {
                                         width: 100%;
                                         height: 100%;
+                                        double-clicked => {
+                                            if (item.is-folder && !item.is-link) {
+                                                root.enter-folder(item.relative-path);
+                                            }
+                                        }
                                         pointer-event(event) => {
                                             if (event.kind == PointerEventKind.down) {
                                                 list-scope.focus();
@@ -1168,16 +1220,20 @@ export component AppWindow inherits Window {
                     spacing: 12px;
                     Text { text: "存储中心"; font-size: 18px; font-weight: 600; color: Palette.text; }
                     Text {
-                        text: "本地工作区与云盘、NAS 的归档状态。云盘与 NAS 的归档功能将在下一版接入。";
+                        text: "这里显示真实的连接状态。云盘与 NAS 的归档尚未接入，因此没有归档记录。";
                         font-size: 12px;
                         color: Palette.muted;
                         wrap: word-wrap;
                     }
                     HorizontalLayout {
                         spacing: 12px;
-                        StoreCard { title: "本地数据"; value: "2.4 GB"; caption: "工作区 · 数据库与版本仓库"; }
-                        StoreCard { title: "Google Drive"; value: "128.4 GB"; caption: "已连接 · 归档与分享"; }
-                        StoreCard { title: "NAS"; value: "—"; caption: "未连接 · 需要先添加设备"; }
+                        StoreCard {
+                            title: "本地工作区";
+                            value: root.workspace-open ? "已打开" : "未打开";
+                            caption: root.workspace-open ? root.workspace-root : "请从“此电脑”双击驱动器打开";
+                        }
+                        StoreCard { title: "Google Drive"; value: "未接入"; caption: "授权流程尚未实现"; }
+                        StoreCard { title: "NAS"; value: "未接入"; caption: "归档到 NAS 尚未实现"; }
                     }
                     Rectangle {
                         vertical-stretch: 1;
@@ -1188,10 +1244,8 @@ export component AppWindow inherits Window {
                         VerticalLayout {
                             padding: 14px;
                             spacing: 6px;
-                            Text { text: "历史归档队列"; font-size: 14px; font-weight: 600; color: Palette.text; }
-                            ArchiveRow { file: "要件定义.md"; version: "v12"; status: "已归档"; }
-                            ArchiveRow { file: "基本设计.md"; version: "v10"; status: "排队中"; }
-                            ArchiveRow { file: "ST-014.xlsx"; version: "v05"; status: "待上传"; }
+                            Text { text: "归档记录"; font-size: 14px; font-weight: 600; color: Palette.text; }
+                            Text { text: "暂无归档记录。"; font-size: 12px; color: Palette.muted; }
                             Rectangle { vertical-stretch: 1; }
                         }
                     }
@@ -1595,12 +1649,12 @@ export component AppWindow inherits Window {
             VerticalLayout {
                 padding: 6px;
                 spacing: 1px;
-                MenuRow { label: "打开"; clicked => { root.close-overlays(); } }
-                MenuRow { label: "打开方式"; clicked => { root.close-overlays(); } }
-                MenuRow { label: "复制"; clicked => { root.close-overlays(); } }
-                MenuRow { label: "重命名"; clicked => { root.close-overlays(); } }
-                MenuRow { label: "压缩为 ZIP"; clicked => { root.close-overlays(); } }
-                MenuRow { label: "删除"; clicked => { root.close-overlays(); } }
+                MenuRow { label: "打开"; disabled: true; clicked => { root.close-overlays(); } }
+                MenuRow { label: "打开方式"; disabled: true; clicked => { root.close-overlays(); } }
+                MenuRow { label: "复制"; disabled: true; clicked => { root.close-overlays(); } }
+                MenuRow { label: "重命名"; disabled: true; clicked => { root.close-overlays(); } }
+                MenuRow { label: "压缩为 ZIP"; disabled: true; clicked => { root.close-overlays(); } }
+                MenuRow { label: "删除"; disabled: true; clicked => { root.close-overlays(); } }
                 Rectangle { height: 9px; }
                 MenuRow {
                     label: "查看完整历史";
@@ -1609,7 +1663,7 @@ export component AppWindow inherits Window {
                 }
                 MenuRow { label: "文档任务"; clicked => { root.section = 1; root.nav-index = 4; root.close-overlays(); } }
                 MenuRow { label: "AI 标签"; clicked => { root.tag-open = true; root.menu-open = false; } }
-                MenuRow { label: "添加到敏感文件"; clicked => { root.close-overlays(); } }
+                MenuRow { label: "添加到敏感文件"; disabled: true; clicked => { root.close-overlays(); } }
                 Rectangle { height: 9px; }
                 MenuRow { label: "Windows 传统菜单"; clicked => { root.menu-open = false; root.classic-open = true; } }
             }
@@ -1631,15 +1685,15 @@ export component AppWindow inherits Window {
             VerticalLayout {
                 padding: 4px;
                 spacing: 1px;
-                MenuRow { label: "打开"; clicked => { root.close-overlays(); } }
-                MenuRow { label: "打开方式"; clicked => { root.close-overlays(); } }
-                MenuRow { label: "复制"; clicked => { root.close-overlays(); } }
-                MenuRow { label: "重命名"; clicked => { root.close-overlays(); } }
-                MenuRow { label: "压缩为 ZIP"; clicked => { root.close-overlays(); } }
-                MenuRow { label: "删除"; clicked => { root.close-overlays(); } }
-                MenuRow { label: "属性"; clicked => { root.close-overlays(); } }
+                MenuRow { label: "打开"; disabled: true; clicked => { root.close-overlays(); } }
+                MenuRow { label: "打开方式"; disabled: true; clicked => { root.close-overlays(); } }
+                MenuRow { label: "复制"; disabled: true; clicked => { root.close-overlays(); } }
+                MenuRow { label: "重命名"; disabled: true; clicked => { root.close-overlays(); } }
+                MenuRow { label: "压缩为 ZIP"; disabled: true; clicked => { root.close-overlays(); } }
+                MenuRow { label: "删除"; disabled: true; clicked => { root.close-overlays(); } }
+                MenuRow { label: "属性"; disabled: true; clicked => { root.close-overlays(); } }
                 Rectangle { height: 9px; }
-                MenuRow { label: "显示更多选项"; clicked => { root.close-overlays(); } }
+                MenuRow { label: "显示更多选项"; disabled: true; clicked => { root.close-overlays(); } }
             }
         }
 
@@ -1661,12 +1715,12 @@ export component AppWindow inherits Window {
                 padding: 10px;
                 spacing: 2px;
                 Text { text: "切换工作空间"; font-size: 11px; color: Palette.header-text; height: 22px; vertical-alignment: center; }
-                MenuRow { label: "个人 · 当前"; clicked => { root.close-overlays(); } }
-                MenuRow { label: "Research Team"; clicked => { root.close-overlays(); } }
+                MenuRow { label: "个人 · 当前"; disabled: true; clicked => { root.close-overlays(); } }
+                MenuRow { label: "Research Team"; disabled: true; clicked => { root.close-overlays(); } }
                 Rectangle { height: 9px; }
-                MenuRow { label: "成员与角色"; clicked => { root.close-overlays(); } }
-                MenuRow { label: "跨空间共享设置"; clicked => { root.close-overlays(); } }
-                MenuRow { label: "账号与安全"; clicked => { root.close-overlays(); } }
+                MenuRow { label: "成员与角色"; disabled: true; clicked => { root.close-overlays(); } }
+                MenuRow { label: "跨空间共享设置"; disabled: true; clicked => { root.close-overlays(); } }
+                MenuRow { label: "账号与安全"; disabled: true; clicked => { root.close-overlays(); } }
                 Rectangle { vertical-stretch: 1; }
             }
         }
@@ -1786,72 +1840,6 @@ export component AppWindow inherits Window {
                         Rectangle { horizontal-stretch: 1; }
                         Btn { label: "取消"; clicked => { root.tag-open = false; } }
                         Btn { label: "开始分析"; primary: true; disabled: true; }
-                    }
-                }
-            }
-        }
-
-        // Initialise-workspace confirmation.
-        Rectangle {
-            visible: root.init-overlay;
-            width: root.width;
-            height: root.height;
-            background: Palette.scrim;
-            TouchArea { }
-            Rectangle {
-                width: 460px;
-                height: 236px;
-                x: (root.width - self.width) / 2;
-                y: (root.height - self.height) / 2;
-                background: Palette.surface;
-                border-radius: 12px;
-                border-width: 1px;
-                border-color: Palette.menu-line;
-                drop-shadow-blur: 18px;
-                drop-shadow-color: #1f2a2230;
-                drop-shadow-offset-y: 6px;
-                init-scope := FocusScope {
-                    enabled: root.init-overlay;
-                    width: 0px;
-                    height: 0px;
-                    key-pressed(event) => {
-                        if (event.text == Key.Return && root.init-overlay && !root.busy && !root.worker-stopped && root.init-path != "") {
-                            root.confirm-init(root.init-path);
-                            return accept;
-                        }
-                        reject
-                    }
-                }
-                VerticalLayout {
-                    padding: 22px;
-                    spacing: 14px;
-                    Text {
-                        text: "初始化工作区";
-                        font-size: 16px;
-                        font-weight: 600;
-                        color: Palette.text;
-                    }
-                    Text {
-                        text: root.init-path == "" ? "请先在上方输入要初始化的文件夹路径。" : "将以下文件夹初始化为工作区：" + root.init-path + "。这会在其中创建 .ladon 目录和 .LADONignore 规则文件。之后可以记录该文件夹中文件的历史。不会上传任何文件。";
-                        font-size: 13px;
-                        color: Palette.muted;
-                        wrap: word-wrap;
-                    }
-                    HorizontalLayout {
-                        spacing: 8px;
-                        Rectangle {
-                            horizontal-stretch: 1;
-                        }
-                        Btn {
-                            label: "取消";
-                            clicked => { root.cancel-init(); }
-                        }
-                        Btn {
-                            label: "确认初始化";
-                            primary: true;
-                            disabled: root.busy || root.worker-stopped || root.init-path == "";
-                            clicked => { root.confirm-init(root.init-path); }
-                        }
                     }
                 }
             }

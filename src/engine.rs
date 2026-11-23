@@ -1,4 +1,4 @@
-use crate::{archive::{CasStore,assert_under_workspace},crypto::{digest,load_archive_key,seal,open},diff,model::{CaptureResult,FileRecord,StorageObject},policy::LadonPolicy,provider::StorageProvider,store::{PendingVersion,Store}};
+use crate::{archive::{CasStore,assert_under_workspace},crypto::{digest,load_archive_key,seal,open},diff,model::{CaptureResult,FileRecord,StorageObject},policy::{LadonPolicy,PendingPolicy},provider::StorageProvider,store::{PendingVersion,Store}};
 use anyhow::{anyhow,bail,Context,Result};
 use chrono::Utc;
 use std::{collections::HashSet,fs,path::{Path,PathBuf},sync::{RwLock,atomic::{AtomicBool,Ordering}}};
@@ -6,7 +6,7 @@ use std::{collections::HashSet,fs,path::{Path,PathBuf},sync::{RwLock,atomic::{At
 const MAX_STRUCTURED_DIFF_BYTES:usize=8*1024*1024;
 const MAX_ARCHIVE_IN_MEMORY:usize=128*1024*1024;
 
-pub struct Engine { pub root:PathBuf,pub cas:CasStore,pub store:Store, policy:RwLock<LadonPolicy>, policy_valid:AtomicBool }
+pub struct Engine { pub root:PathBuf,pub cas:CasStore,pub store:Store, policy:RwLock<PendingPolicy>, policy_valid:AtomicBool }
 
 impl Engine {
     pub async fn init(path:&Path)->Result<Self>{
@@ -17,23 +17,25 @@ impl Engine {
         store.init().await?;
         let rule=root.join(".LADONignore");
         if !rule.exists() {fs::write(rule,include_str!("../config/examples/.LADONignore"))?;}
-        let policy=LadonPolicy::load(&root)?;
+        LadonPolicy::check_root(&root)?;
+        let policy=PendingPolicy::start(&root);
         Ok(Self{root:root.clone(),cas:CasStore::new(root.join(".ladon/cas")),store,policy:RwLock::new(policy),policy_valid:AtomicBool::new(true)})
     }
     pub async fn open(path:&Path)->Result<Self>{
         let root=path.canonicalize().context("workspace does not exist")?;
         let db=root.join(".ladon/meta.turso");
         if !db.exists(){bail!("workspace not initialized; run `ladon init`");}
-        let policy=LadonPolicy::load(&root)?;
+        LadonPolicy::check_root(&root)?;
+        let policy=PendingPolicy::start(&root);
         Ok(Self{root:root.clone(),cas:CasStore::new(root.join(".ladon/cas")),store:Store::new(db),policy:RwLock::new(policy),policy_valid:AtomicBool::new(true)})
     }
     /// Reload `.LADONignore` after FS events without rescanning all rule files per capture.
     pub fn reload_policy(&self)->Result<()> {
-        let updated=match LadonPolicy::load(&self.root){
-            Ok(policy)=>policy,
-            Err(err)=>{self.policy_valid.store(false,Ordering::SeqCst);return Err(err);}
-        };
-        *self.policy.write().map_err(|_|anyhow!("policy lock poisoned"))?=updated;
+        if let Err(err)=LadonPolicy::check_root(&self.root){
+            self.policy_valid.store(false,Ordering::SeqCst);
+            return Err(err);
+        }
+        *self.policy.write().map_err(|_|anyhow!("policy lock poisoned"))?=PendingPolicy::start(&self.root);
         self.policy_valid.store(true,Ordering::SeqCst);
         Ok(())
     }
@@ -46,7 +48,7 @@ impl Engine {
     }
     pub async fn capture(&self,path:&Path,actor:&str,reason:&str)->Result<CaptureResult>{
         let (path,relative)=self.resolve(path)?;
-        let sensitive=self.policy.read().map_err(|_|anyhow!("policy lock poisoned"))?.excluded(&path)?;
+        let sensitive=self.policy.read().map_err(|_|anyhow!("policy lock poisoned"))?.with(|policy| policy.excluded(&path))?;
         let existing=self.store.find_path(&relative).await?;
         let (hash,size)=self.cas.put_file(&path)?;
         if let Some(e)=&existing {
@@ -94,7 +96,7 @@ impl Engine {
         let version=self.store.version(version_id).await?.ok_or_else(||anyhow!("unknown version"))?;
         let current=self.store.list_files().await?.into_iter().find(|f|f.id==version.file_id)
             .ok_or_else(||anyhow!("missing tracked file"))?;
-        self.policy.read().map_err(|_|anyhow!("policy lock poisoned"))?.allow_external(Path::new(&current.relative_path))?;
+        self.policy.read().map_err(|_|anyhow!("policy lock poisoned"))?.with(|policy| policy.allow_external(Path::new(&current.relative_path)))?;
         if version.sensitive||self.store.is_hash_sensitive(&version.content_hash).await? {bail!("sensitive version blocked from external storage");}
         // Archive may exist on this provider already, verify it before doing anything.
         let key=load_archive_key()?;
