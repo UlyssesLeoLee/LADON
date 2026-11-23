@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "source": "src/policy.rs",
-  "baseline_source_sha256": "e0eecd499ed2901d0c88b9340c3de348088b6a2a88598ee76a4ace3a00b9c21a",
+  "baseline_source_sha256": "0b5e8991e7c6abf61eb8b209276d51dff0a49ab4fbbea41090de46657150bf1b",
   "prepared_branch": "fix/compile-errors",
   "technical_design": ".quality/docs/src/policy.rs.md",
   "test_design": ".quality/test-design/src/policy.rs.test.md",
-  "prepared_technical_design_sha256": "b620a67eeeaeab8b6c54dbffcaaf9f0cb567d4c172214c2bb025566dbae065ba",
-  "prepared_test_design_sha256": "af49cfc9b4fc04578bdfb29735c3086199005f2cd0a4ddb178181c49de1cef3a",
+  "prepared_technical_design_sha256": "77f82a363fe95fdda1c1159afabcffe54e650de518aeac26d995c5e1fdfe2563",
+  "prepared_test_design_sha256": "86c202722e616c42357bc51a6c47e63ef5763d2beb51bd6e1de16420f67016c4",
   "prepared_related_design_sha256": {}
 }

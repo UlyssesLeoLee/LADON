@@ -26,6 +26,8 @@ Integration tests use a real `Engine` over a `tempfile::tempdir` workspace, a re
 | TC-312 | Capture secret.pem, which the default rules ignore, then archive_version | Error is returned and its text contains denies external data transfer | No tc312 function; the scenario is tests/it_history.rs::it_02_sensitive_prevents_archive |
 | TC-313 | Capture, modify, capture; restore with approve false and true | Restore without approve fails; with approve restores and appends a third event | No tc313 function; the scenario is tests/it_history.rs::it_03_archive_restore_with_verification |
 | TC-314 | Capture secret.pem and x.md with identical bytes, then archive the version of x.md | The version of x.md is not sensitive itself, and the error contains sensitive version blocked from external storage | tests/it_engine.rs::tc314_archive_blocks_hash_shared_with_sensitive_file |
+| TC-315 | A workspace whose subdirectory `sub/.LADONignore` holds the reversed range `[z-a]`, and a file `top.txt` at the root. Steps: Engine::open; capture top.txt; replace `sub/.LADONignore` with the comment line `# fixed`; reload_policy; capture top.txt again. | open returns Ok without reading `sub/.LADONignore`. The first capture returns an error and the ledger has no row for top.txt. After the reload the second capture returns status captured with version 1. | tests/it_engine.rs::tc315_open_defers_nested_rule_errors |
+| TC-316 | A workspace whose root `.LADONignore` holds the reversed range `[z-a]`. Steps: Engine::open. | open returns an error, and no engine is returned. | tests/it_engine.rs::tc316_open_rejects_invalid_root_rules |
 
 ## Boundary & Failure Cases
 

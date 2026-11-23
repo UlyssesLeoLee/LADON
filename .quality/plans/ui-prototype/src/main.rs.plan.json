@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "source": "ui-prototype/src/main.rs",
-  "baseline_source_sha256": "30481090dc62c604a15a0a53ade2e5c782181424f9a6b3db07a078390570d734",
+  "baseline_source_sha256": "d92a0cdee5b84d3ad3db97dd2f62e9af0c4f0a203ee39a6e253c93d83188a7dd",
   "prepared_branch": "fix/compile-errors",
   "technical_design": ".quality/docs/ui-prototype/src/main.rs.md",
   "test_design": ".quality/test-design/ui-prototype/src/main.rs.test.md",
-  "prepared_technical_design_sha256": "df87121872c35664ac0b413b5b6ff558b1b0152d9f608749b75f9106dec5c5ed",
-  "prepared_test_design_sha256": "29bffdecb7ccdaf5fb94917a007d5a441a4306839a34971daad5556cc3d8e6a4",
+  "prepared_technical_design_sha256": "00d7ec9960762584d5e6ed747c90f9909345850f122c40bc9d70062474fb5926",
+  "prepared_test_design_sha256": "17d5cfb2207dac2101e97a2e6cea00930df4b8f2fdd590f8a8e6c62111c78564",
   "prepared_related_design_sha256": {}
 }

@@ -25,6 +25,10 @@ Unit tests inside `src/policy.rs` cover the basic matching, the always-excluded 
 | TC-511 | A rule file containing a reversed character range (the pattern z-a in brackets) | load returns an error | tests/it_policy.rs::tc511_invalid_rule_file_fails_load |
 | TC-512 | load on a directory that does not exist | Error containing workspace not found | tests/it_policy.rs::tc512_load_requires_existing_workspace |
 | TC-513 | LADON_GLOBAL_IGNORE names a rule file with a secret extension; then a non-existent file; then the variable is removed | The extension is excluded while the variable names the rule file, a non-existent file is ignored without error, and nothing is excluded once the variable is removed | tests/it_policy_global.rs::tc513_global_ignore_file_applies |
+| TC-514 | A workspace whose root `.LADONignore` holds `*.pem`, and whose subdirectory `sub/.LADONignore` holds the reversed range `[z-a]`; `check_root` on the root. | `check_root` returns Ok; the invalid nested file is not read. | tests/it_policy_pending.rs::tc514_check_root_reads_only_the_root_rules |
+| TC-515 | A root `.LADONignore` that holds the reversed range `[z-a]`; `check_root` on the root. | `check_root` returns an error. | tests/it_policy_pending.rs::tc515_check_root_rejects_invalid_root_rules |
+| TC-516 | A root `.LADONignore` that holds `*.pem`, and a subdirectory `sub/.LADONignore` that holds `*.log`. `PendingPolicy::start` on the root, then `with` for `top.log` and for `sub/a.pem`. | `with` gives excluded true for `top.log`, which is matched by the nested rule because rules are workspace-wide, and true for `sub/a.pem`. | tests/it_policy_pending.rs::tc516_pending_policy_applies_nested_rules_workspace_wide |
+| TC-517 | A subdirectory `sub/.LADONignore` that holds the reversed range `[z-a]`. `PendingPolicy::start` on the root; `with` called twice. | Both calls return an error with the same message, which names the rule file parse failure. | tests/it_policy_pending.rs::tc517_pending_policy_keeps_scan_error |
 
 ## Boundary & Failure Cases
 

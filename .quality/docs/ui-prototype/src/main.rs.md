@@ -2,13 +2,13 @@
 
 Source: `ui-prototype/src/main.rs`
 
-Source-SHA256: `30481090dc62c604a15a0a53ade2e5c782181424f9a6b3db07a078390570d734`
+Source-SHA256: `d92a0cdee5b84d3ad3db97dd2f62e9af0c4f0a203ee39a6e253c93d83188a7dd`
 
 ## Responsibility
 
 `main.rs` is the entry point of the binary `ladon-gui`, the LADON desktop window. It creates the window from `ui/app.slint`, starts one `app::Worker`, connects each window callback to at most one `app::Command`, and applies each `app::Reply` on the user-interface thread. It performs no file-system, ledger, diff or rule work.
 
-The window offers browsing, recording of a regular file (the first version of an untracked file, a further version of a tracked file), the version history of one tracked file, and a read-only text diff between two versions of one file. The window opens on the This PC page, which lists the drive roots of the machine, and a drive root can be opened as a workspace in the same way as a folder. It offers no restore, whole-workspace scan, rule editing, tags, document tasks, archive or cloud function.
+The window offers browsing, recording of a regular file (the first version of an untracked file, a further version of a tracked file), the version history of one tracked file, and a read-only text diff between two versions of one file. The window opens on the This PC page, which lists the drive roots of the machine. Double-clicking a drive root opens it as the workspace, initialising it first when it holds no `.ladon` database; the window offers no other way to open or initialise a workspace. It offers no restore, whole-workspace scan, rule editing, tags, document tasks, archive or cloud function.
 
 ## Dependencies
 
@@ -38,7 +38,7 @@ The window offers browsing, recording of a regular file (the first version of an
 - `fn main() -> Result<(), slint::PlatformError>`:
   1. installs a silent panic hook, `std::panic::set_hook(Box::new(|_| {}))`;
   2. creates `AppWindow` and sets `status` to `app::MSG_NO_WORKSPACE`;
-  3. wires the sixteen callbacks listed below;
+  3. wires the twelve callbacks listed below;
   4. starts one `app::Worker` whose reply closure calls `slint::Weak::upgrade_in_event_loop` with a closure that applies the reply on the window, and stores the worker in `UiState`;
   5. sets `page` to 2 (This PC) and sends `ListDrives` through `send_command`, which sets `busy`;
   6. runs the event loop until the window closes and returns the error from `run`.
@@ -55,6 +55,8 @@ The window offers browsing, recording of a regular file (the first version of an
   - `versions: Vec<model::VersionRow>`, the versions shown in `versions`, in the same order;
   - `history_pending: bool`, set by `open-history` and cleared by the next reply;
   - `silent_refresh: bool`, set by a sent `refresh-folder` and cleared by the next reply.
+  - `tree: Vec<model::TreeRow>`, the nodes shown in `tree-items`, in the same order;
+  - `pending_folder: Option<String>`, the relative folder that the next `Opened` reply lists. `tree-open` sets it when the drive root is not the open workspace.
 - The folder being shown is the window property `current-dir`, a workspace-relative path with `/` separators. The workspace root shown by the kernel is `workspace-root`.
 - The selected row is the window property `selected` (index into `folder-items`, -1 when none). The selected row's fields are copied into the `selected-*` properties.
 
@@ -65,19 +67,15 @@ The window offers browsing, recording of a regular file (the first version of an
 - When `busy` is true and `worker-stopped` is false, nothing is sent and `status` becomes `正在处理，请稍候。` with `status-error` false, so the status line uses the muted colour.
 - Sending a command sets `busy` to true. Each reply clears `busy` before it is applied, so `busy` is false exactly when the reply to the last command has been applied.
 - A `Worker::send` that returns false sets `worker-stopped` to true and clears `busy`. The banner is then shown.
-- Buttons that start a command are disabled while `busy` or `worker-stopped` is true. The overlay buttons are also disabled while their overlay is hidden, so they are not focusable then.
-- `select-row` sends `LoadHistory` only for a tracked regular file. `request-init` and `cancel-init` send nothing.
+- Buttons that start a command are disabled while `busy` or `worker-stopped` is true. The about overlay button is also disabled while the overlay is hidden, so it is not focusable then.
+- `select-row` sends `LoadHistory` only for a tracked regular file.
 - `refresh-folder` sends `ListFolder` for `current-dir` only when `should_refresh(busy, worker-stopped, workspace-open)` holds, where `busy` is the window's `busy` property or a silent refresh already in flight. In every other case it sends nothing and sets no status. A sent refresh sets `silent_refresh` in `UiState` and does not set `busy`, so it shows no busy indicator and disables no button. While it is in flight, a command is refused with `正在处理，请稍候。`. Every reply clears `silent_refresh`.
 
 ### Callbacks
 
 | Window callback | Command or effect |
 | --- | --- |
-| `open-workspace(path)` | sends `Open { path }` |
-| `open-drive(path)` | sets `workspace-path` to `path`, then sends `Open { path }` |
-| `request-init(path)` | sets `init-path` to `path` and sets `init-overlay`; sends nothing |
-| `confirm-init(path)` | clears `init-overlay` and sends `Init { path, confirmed: true }` |
-| `cancel-init()` | clears `init-overlay` |
+| `open-drive(path)` | sends `OpenDrive { path }` |
 | `enter-folder(relative-path)` | sends `ListFolder { relative_dir }` |
 | `refresh-folder()` | when `should_refresh` holds, marks the request as silent and sends `ListFolder` for `current-dir`; otherwise sends nothing |
 | `go-up()` | sends `ListFolder` for the parent of `current-dir`; sends nothing when `current-dir` is empty |
@@ -89,14 +87,18 @@ The window offers browsing, recording of a regular file (the first version of an
 | `open-about()` | sets `about-visible` to true |
 | `close-about()` | sets `about-visible` to false |
 | `show-this-pc()` | sends `ListDrives` |
+| `tree-toggle(index)` | for the node at `index`: when it is expanded, collapses it with `model::tree_collapse`; otherwise sends `ListSubfolders { path }` for its `path` |
+| `tree-open(index)` | opens the node at `index`. When the drive root of its `path` is the open workspace, sends `ListFolder` for its path relative to that root. Otherwise it stores the relative path as `pending_folder` and sends `OpenDrive { path: drive root }` |
 
-A drive root such as `C:\` is a workspace root in the same way as a folder. `Open` on a drive root replies `Opened` when the drive root holds a `.ladon` database and `NeedsInit` otherwise. `Init` on a drive root creates `.ladon` and `.LADONignore` in it. The user profile directory is refused with `app::MSG_ROOT_REFUSED`, whose text is 不能把用户主目录本身作为工作区，请选择其中的子文件夹。
+A drive root such as `C:\` is a workspace root in the same way as a folder. `OpenDrive` on a drive root replies `Opened` when the drive root holds a `.ladon` database. Otherwise it creates `.ladon` and `.LADONignore` in the drive root, without a confirmation, and then replies `Opened`. A failed initialisation replies with `app::MSG_DRIVE_INIT_FAILED`. The user profile directory is refused with `app::MSG_ROOT_REFUSED`, whose text is 不能把用户主目录本身作为工作区，请选择其中的子文件夹。
 
 ### Reply effects
 
-- `Opened { root }`: sets `workspace-open` to true, `workspace-root` to the display path, `current-dir` to the empty string and `truncated` to false; clears the history, the diff panel, the folder items, the selection and `details-version`; sets `page` to 0; sets `status` to `已打开工作区` with `status-error` false; then sends `ListFolder { relative_dir: "" }`.
-- `NeedsInit { path }`: sets `status` to `该文件夹还不是工作区。可以点击“初始化”。` with `status-error` false. The open workspace, if any, is kept.
-- `Drives { drives }`: replaces `drives` with one `DriveItem` for each `model::DriveRow` of the reply, in the same order. The `path` of an item is the row's `root`, its `label` is the row's `label`, and its `status-text` is `model::drive_status_text(row.initialised)`. Sets `page` to 2 and `status` to `选择一个驱动器打开；未初始化的驱动器需先初始化。` with `status-error` false.
+- `Opened { root }`: sets `workspace-open` to true, `workspace-root` to the display path, `current-dir` to the empty string and `truncated` to false; clears the history, the diff panel, the folder items, the selection and `details-version`; sets `page` to 0; sets `status` to `已打开工作区` with `status-error` false; then sends `ListFolder { relative_dir }`, where `relative_dir` is `pending_folder` when it is set (and clears it), and the empty string otherwise.
+- `NeedsInit { path }`: sets `status` to `app::MSG_NO_WORKSPACE` with `status-error` false. The open workspace, if any, is kept. The window sends no `Open`, so this reply does not arise from a window command.
+- `Subfolders { path, names }`: `model::tree_index` finds the node whose path is `path`. When the node exists and is not expanded, `model::tree_expand` inserts one row per name directly after it and `tree-items` is rebuilt. Otherwise nothing changes. The reply sets no status.
+- `Drives { drives }` also replaces `tree` with `model::drive_tree_rows` of the same drives, and sets `tree-items` from it.
+- `Drives { drives }`: replaces `drives` with one `DriveItem` for each `model::DriveRow` of the reply, in the same order. The `path` of an item is the row's `root`, its `label` is the row's `label`, and its `status-text` is `model::drive_status_text(row.initialised)`. Sets `page` to 2, sets `drive-selected` to -1, and sets `status` to `双击驱动器即可打开；未初始化的驱动器会自动初始化。` with `status-error` false.
 - `Folder { relative_dir, rows, truncated }`: sets `current-dir` and `truncated`; clears the selection and `details-version`; replaces `folder-items` and `UiState.rows`; sets `status` to `共 {n} 项` where `n` is the number of rows, with `status-error` false.
 - `Folder` reply to a silent refresh, where `relative_dir` equals `current-dir`:
   - when `listing_changed(UiState.rows, rows)` is false, nothing changes;
@@ -135,7 +137,7 @@ A drive root such as `C:\` is a workspace root in the same way as a folder. `Ope
 
 ### Window properties
 
-- Input and output: `workspace-path` (bound to the path field), `workspace-root`, `workspace-open`, `busy`, `worker-stopped`, `status`, `status-error`, `page` (0 browse, 1 history, 2 This PC), `current-dir`, `folder-items: [FileItem]`, `drives: [DriveItem]`, `truncated`, `selected` (-1 when none), `selected-name`, `selected-path`, `selected-status`, `selected-size`, `selected-modified`, `selected-is-folder`, `selected-tracked`, `selected-sensitive`, `selected-can-record`, `details-version`, `history-title`, `chain-text`, `history-note`, `versions: [VersionItem]`, `history-available`, `diff-title`, `diff-totals`, `diff-note`, `diff-lines: [DiffItem]`, `init-overlay`, `init-path`, `about-visible`.
+- Input and output: `workspace-root` (shown read-only in the path field), `drive-selected` (-1 when none), `workspace-open`, `busy`, `worker-stopped`, `status`, `status-error`, `page` (0 browse, 1 history, 2 This PC), `current-dir`, `folder-items: [FileItem]`, `drives: [DriveItem]`, `truncated`, `selected` (-1 when none), `selected-name`, `selected-path`, `selected-status`, `selected-size`, `selected-modified`, `selected-is-folder`, `selected-tracked`, `selected-sensitive`, `selected-can-record`, `details-version`, `history-title`, `chain-text`, `history-note`, `versions: [VersionItem]`, `history-available`, `diff-title`, `diff-totals`, `diff-note`, `diff-lines: [DiffItem]`, `init-overlay`, `init-path`, `about-visible`.
 - Every property listed above is an `in-out` property of `AppWindow`.
 - `workspace-root`, `truncated`, `selected-sensitive` and the `sensitive` and `local` fields of `VersionItem` are set but have no visible text, because the string list defines none for them. Sensitivity is shown only inside the availability and status texts that the kernel model provides.
 
@@ -164,35 +166,34 @@ Every `Text` element sets its `color` explicitly.
 ### Window layout (`ui/app.slint`)
 
 - Menu bar: `帮助` with the item `关于 LADON Explorer`, which calls `open-about()`.
-- Top bar on the surface colour: the label `工作区`, a path field bound to `workspace-path`, and the buttons `打开` (calls `open-workspace`) and `初始化` (calls `request-init`).
-- Left navigation, 180 px wide on the surface colour: `浏览` (page 0) and `版本历史` (page 1, enabled when `history-available` is true), and the entry `此电脑` (This PC), which calls `show-this-pc()`.
-- This PC page (page 2): one row for each item of `drives`, in order. A row calls `open-drive(path)` with its `path` when it is clicked, and shows the `label` and `status-text` of its item.
+- Location bar on the surface colour: the button `↑` (calls `go-up()`, enabled when a folder below the root is shown), a read-only path field that shows `workspace-root`, and the search box, which is not functional in this release.
+- Left navigation, 238 px wide (62 px when collapsed) on the surface colour: the entries `此电脑` (This PC, page 2, calls `show-this-pc()`), `浏览` (page 0), `版本历史` (page 1, enabled when `history-available` is true) and the rest of the NavList. Below them is the folder tree: one row for each node of `tree-items`, indented by 16 px for each depth level, with an expand arrow on every row. A click on the arrow calls `tree-toggle(index)`; a click on the row sets `tree-selected`; a double-click calls `tree-open(index)`. The tree is hidden when the sidebar is collapsed.
+- This PC page (page 2): one row for each item of `drives`, in order. A click selects the row, which then has the selected background; a double-click calls `open-drive(path)` with its `path`. Each row shows the `label` and `status-text` of its item.
 - Browse page:
   - a breadcrumb card with the button `上一级` and the text `工作区 /` at the root, `工作区 / {current-dir}` below the root, or `未打开工作区` when no workspace is open;
   - a header row with the labels `名称`, `大小`, `修改时间` and `状态`;
-  - the folder rows in a virtualised `ListView`, which instantiates only the visible rows. Each row shows the name, size, modified time and status. The selected row has the selected background. A tracked row shows its status in the accent colour when it is not selected;
+  - the folder rows in a virtualised `ListView`, which instantiates only the visible rows. Each row shows the name, size, modified time and status. The selected row has the selected background. A tracked row shows its status in the accent colour when it is not selected. A double-click on a folder row that is not a link calls `enter-folder` with its relative path;
   - the details card, 300 px wide: the name, or `未选择` when nothing is selected; then `状态：{status}`, `大小：{size}` and `修改时间：{modified}` for the selected row; then `details-version`; then the buttons `进入文件夹`, `记录此文件`, `记录新版本` and `查看历史` as described under Recording rules.
 - History page:
   - a card, 380 px wide, with the button `返回浏览`, `history-title`, `chain-text`, `history-note` when it is not empty, and the version cards in a `ScrollView`, in the order of `versions`;
   - each version card shows the label, the marker `当前版本` on the current card, the time, `actor · reason`, `size · sections`, the short hash, the availability text, and the button `与上一版比较`, enabled when `can-compare` is true, `busy` is false and `worker-stopped` is false;
   - a diff panel with `diff-title` (or `选择“与上一版比较”查看差异。` when empty), `diff-totals`, `diff-note` in the danger colour, and the lines in a `ListView`. Added lines use the added colours with the prefix `+ `, removed lines use the removed colours with the prefix `− `, context lines have two spaces as a prefix, and a gap line shows `…`. The first column shows the line number in the first compared version and the second column the line number in the second compared version; the text is in the third column.
 - Status bar on the surface colour: `status` in the danger colour when `status-error` is true and in the muted colour otherwise; the text `处理中…` in the accent colour while `busy` is true; the banner `后台服务已停止，请关闭并重新打开应用。` in the danger colour while `worker-stopped` is true.
-- Init overlay, shown when `init-overlay` is true: a card with the text `将以下文件夹初始化为工作区：{init-path}。这会在其中创建 .ladon 目录和 .LADONignore 规则文件。之后可以记录该文件夹中文件的历史。不会上传任何文件。` and the buttons `确认初始化` (calls `confirm-init(init-path)`) and `取消` (calls `cancel-init()`).
 - About overlay, shown when `about-visible` is true: a card with `LADON Explorer`, the `AboutSlint` widget and the button `关闭` (calls `close-about()`).
-- Overlays cover the whole window with the background `#1f2a2280` and block pointer input to the content behind them. Showing the init overlay moves focus to `确认初始化`; showing the about overlay moves focus to `关闭`; hiding either overlay moves focus to the path field.
+- Overlays cover the whole window with the background `#1f2a2280` and block pointer input to the content behind them. Showing the about overlay moves focus to `关闭`; hiding it moves focus to the path field.
 - Font sizes: the details card title (the name, or `未选择`) and `history-title` use 16 px, the about dialog title uses 18 px, and all other text uses the window default size.
 
 ### Keyboard and focus
 
 - Initial focus is the path field, set with `forward-focus`.
-- Tab order follows the tree order: the path field, `打开`, `初始化`; `浏览`, then `版本历史` when enabled; on the browse page `上一级` when enabled, the list, then the details buttons that are shown; on the history page `返回浏览`, then the `与上一版比较` buttons that are enabled. Disabled elements are skipped.
+- Tab order follows the tree order: the `↑` button when enabled, then the path field; `浏览`, then `版本历史` when enabled; on the browse page `上一级` when enabled, the list, then the details buttons that are shown; on the history page `返回浏览`, then the `与上一版比较` buttons that are enabled. Disabled elements are skipped.
 - The folder list is a zero-size `FocusScope` next to the `ListView`. It takes focus by Tab, when a row is clicked, and when the browse page is shown again from the history page; the initial focus stays on the path field. Its focus ring is drawn around the list.
   - Down selects the next row, or the first row when none is selected. The list scrolls the selected row into view with `ensure-row-visible`.
   - Up selects the previous row, or the first row when none is selected. The list scrolls the selected row into view.
   - Enter enters the selected folder, or opens the history of the selected tracked file.
   - Backspace goes up one folder when `current-dir` is not empty.
 - Navigation entries are zero-size `FocusScope`s that take focus when enabled and activate with Enter or Space.
-- Escape closes the init overlay when it is shown, otherwise the about overlay. The window-level `FocusScope` `keys` is enabled (`enabled: true`), because a disabled FocusScope cannot take focus and would never receive the Escape key that its focused descendants reject; `keys` receives the key events that its focused descendants reject and handles Escape for the overlays.
+- Escape closes the about overlay when it is shown. The window-level `FocusScope` `keys` is enabled (`enabled: true`), because a disabled FocusScope cannot take focus and would never receive the Escape key that its focused descendants reject; `keys` receives the key events that its focused descendants reject and handles Escape for the overlays.
 
 ## Known Limitations
 
@@ -205,6 +206,9 @@ Every `Text` element sets its `color` explicitly.
 - The window runs without a console, so text written to standard error is not shown. Every user-visible result appears in the window itself.
 - The file list refreshes by polling every two seconds while it is shown (a `Timer` in `app.slint`). A file added to or removed from the open folder appears within about two seconds, and a change made and undone within one interval may not appear. Owner: window. Planned change: directory change notifications from the kernel.
 - The This PC page shows no capacity and no drive type.
+- Workspaces are opened and initialised only from drive roots on the This PC page. A folder that is not a drive root cannot be initialised from the window.
+- Double-clicking a file does nothing; the window has no open-file action.
+- The folder tree does not follow changes made in Explorer until its parent is collapsed and expanded again. It does not follow the folder shown in the list either.
 
 ## Change Notes
 

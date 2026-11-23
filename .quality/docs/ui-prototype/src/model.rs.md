@@ -2,7 +2,7 @@
 
 Source: `ui-prototype/src/model.rs`
 
-Source-SHA256: `9d656426040f10eb7f40514b6ad947765f6be5a236c4708b24a48e92da0832f9`
+Source-SHA256: `f925dcd46a93b08f25fe197d486fc997fa59e9b124783e0501e1259120a71d40`
 
 ## Responsibility
 
@@ -90,6 +90,15 @@ Functions:
 - `pub fn should_refresh(busy: bool, worker_stopped: bool, workspace_open: bool) -> bool`: true exactly when `busy` is false, `worker_stopped` is false and `workspace_open` is true.
 - `pub fn selection_after_refresh(rows: &[BrowseRow], selected_path: &str) -> Option<usize>`: the index of the first row whose `relative_path` equals `selected_path`; `None` when `selected_path` is empty or no row matches.
 - `pub fn listing_changed(old: &[BrowseRow], new: &[BrowseRow]) -> bool`: false only when both slices have the same length and every pair of rows at the same index is equal in all fields; true otherwise.
+
+- `pub struct TreeRow { pub path: String, pub name: String, pub depth: usize, pub expanded: bool }` derives `Debug, Clone, PartialEq, Eq`. It is one visible row of the folder tree in the navigation pane. `path` is the absolute display path of the node.
+- `pub fn drive_tree_rows(drives: &[DriveRow]) -> Vec<TreeRow>`: one row per drive, in the order given, with `path` equal to `root`, `name` equal to `label`, `depth` 0 and `expanded` false.
+- `pub fn child_path(parent: &str, name: &str) -> String`: `parent` followed by `name`, with a `\` between them unless `parent` already ends with `\`.
+- `pub fn tree_index(rows: &[TreeRow], path: &str) -> Option<usize>`: the index of the first row whose `path` equals `path` ignoring ASCII case.
+- `pub fn tree_expand(rows: &mut Vec<TreeRow>, index: usize, names: &[String]) -> bool`: when the row at `index` exists and is not expanded, marks it expanded and inserts one row per name directly after it, with `depth` one more than the row, `path` from `child_path` and `expanded` false, and returns true. Otherwise it changes nothing and returns false.
+- `pub fn tree_collapse(rows: &mut Vec<TreeRow>, index: usize) -> bool`: when the row at `index` exists and is expanded, removes the following rows whose `depth` is greater than its depth, marks it not expanded, and returns true. Otherwise it changes nothing and returns false.
+- `pub fn drive_root_of(path: &str) -> Option<String>`: for a path that starts with an ASCII letter, a colon and a backslash, or is exactly `X:`, returns `X:\`. Any other path gives None.
+- `pub fn relative_in_root(root: &str, path: &str) -> Option<String>`: when `path` equals `root` or starts with it (ASCII case-insensitive), returns the rest of `path` with `\` replaced by `/` and a leading `/` removed; the root itself gives the empty string. Any other input gives None.
 
 ## Change Notes
 

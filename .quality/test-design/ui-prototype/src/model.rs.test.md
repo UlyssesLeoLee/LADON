@@ -2,7 +2,7 @@
 
 Source: `ui-prototype/src/model.rs`
 
-Source-SHA256: `9d656426040f10eb7f40514b6ad947765f6be5a236c4708b24a48e92da0832f9`
+Source-SHA256: `f925dcd46a93b08f25fe197d486fc997fa59e9b124783e0501e1259120a71d40`
 
 ## Test Strategy
 
@@ -33,6 +33,9 @@ Requirement coverage: REQ-009 (binary detection TC-602; version rows, sections a
 | TC-617 | `selection_after_refresh` over the rows `a.txt`, `docs` and `zeta.md` (relative paths in that order) with the selected paths `docs`, `zeta.md`, `Docs`, `missing.md` and the empty string | `Some(1)`, `Some(2)`, `None`, `None`, `None` | ui-prototype/src/model.rs::ut_617_selection_after_refresh |
 | TC-618 | `listing_changed` with: two identical lists of three rows; the same list with the status of its second row set to `已记录 v1`, where the base list holds `未记录`; the same list with one row added at the end; the same rows in reverse order; two empty lists; an empty list against one row | `false`, `true`, `true`, `true`, `false`, `true` | ui-prototype/src/model.rs::ut_618_listing_changed |
 | TC-619 | `drive_rows` with the entries `('d', false)`, `('C', true)`, `('1', true)` and `('C', false)`; then `drive_status_text` with `true` and `false` | `drive_rows`: two rows in this order: root `C:\` with label `本地磁盘 (C:)` and initialised true; root `D:\` with label `本地磁盘 (D:)` and initialised false. The entry for `1` is skipped, and the second `C` entry is dropped. `drive_status_text`: `已是工作区` for `true`; `未初始化` for `false` | ui-prototype/src/model.rs::ut_619_drive_rows_and_status |
+| TC-654 | `drive_tree_rows` with the drives `C:\` labelled `本地磁盘 (C:)` and `D:\` labelled `本地磁盘 (D:)`; `child_path` with the parent `C:\` and the name `docs`, and with the parent `C:\docs` and the name `a.txt`. | Two rows with depth 0, names equal to the labels, paths `C:\` and `D:\`, and expanded false. The child paths are `C:\docs` and `C:\docs\a.txt`. | src/model.rs::ut_654_tree_rows_and_child_paths |
+| TC-655 | Rows `C:\` and `D:\` at depth 0. `tree_expand` at index 0 with the names `a` and `b`; `tree_expand` at index 0 again; `tree_index` for `c:\` and for `C:\A`; `tree_collapse` at index 0; `tree_collapse` at index 1. | The first expansion returns true and gives the rows `C:\`, `C:\a` and `C:\b` at depth 1 and then `D:\`, with the first row expanded. The second expansion returns false and changes nothing. `tree_index` finds index 0 for `c:\` and index 1 for `C:\A`. The collapse returns true and leaves `C:\` and `D:\`. Collapsing `D:\`, which is not expanded, returns false. | src/model.rs::ut_655_tree_expand_and_collapse |
+| TC-656 | `drive_root_of` with `C:\docs\x`, `C:\`, `C:` and `\\server\share`; `relative_in_root` with the root `C:\` and the paths `C:\docs\x`, `C:\` and `D:\x`, and the root `D:\` with the path `C:\x`. | `drive_root_of` gives `C:\`, `C:\`, `C:\` and None. `relative_in_root` gives `docs/x`, the empty string, and None for the path on another drive. | src/model.rs::ut_656_drive_root_and_relative_path |
 
 ## Boundary & Failure Cases
 
