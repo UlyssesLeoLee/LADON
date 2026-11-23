@@ -2,13 +2,13 @@
 
 Source: `ui-prototype/src/main.rs`
 
-Source-SHA256: `54e156b543f5cd0465443ae84da3c8bb0e958b5913bba8fc3e503c5ab2f41473`
+Source-SHA256: `9ddaa56c9a7210824245a227918286736133abf931129b1e986717e972e355eb`
 
 ## Test Strategy
 
 `main.rs` contains no workspace logic. The replies it applies come from the kernel handler, whose cases are in `ui-prototype/tests/it_slice_a.rs` (TC-620 to TC-645). The labels, status texts, availability texts, section texts and diff totals it shows come from `ui-prototype/src/model.rs` (TC-601 to TC-615). The build lanes are TC-600.
 
-The window is checked by fifteen manual system tests (TC-650 to TC-664, ST-GUI-01 to ST-GUI-15) on Windows 11 with `ladon-gui.exe` built by `cargo build --release --bin ladon-gui`. Each step is performed by hand, and each case names its checkpoints, where a screenshot is taken. A case passes when every expectation at every checkpoint is met. A case fails when any expectation is not met. Slint callbacks have no automated test in this release.
+The window is checked by sixteen manual system tests (TC-650 to TC-665, ST-GUI-01 to ST-GUI-16) on Windows 11 with `ladon-gui.exe` built by `cargo build --release --bin ladon-gui`. Each step is performed by hand, and each case names its checkpoints, where a screenshot is taken. A case passes when every expectation at every checkpoint is met. A case fails when any expectation is not met. Slint callbacks have no automated test in this release.
 
 Each window case names, in its Input / Setup cell, the kernel and model tests whose behaviour it depends on, using the exact identifiers. Kernel identifiers are `ui-prototype/tests/it_slice_a.rs::it_6xx_...` and model identifiers are `ui-prototype/src/model.rs::ut_6xx_...`.
 
@@ -43,6 +43,7 @@ Every case starts with the application closed, unless its precondition says othe
 | TC-662 | Precondition: `C:\ladon-test\big` is the workspace of TC-660, whose folder `inner` holds 5001 files; the listing of `inner` must run for at least three seconds; no dialog is open. Steps: click `inner` and press 进入文件夹; while 处理中… shows, wait three seconds without clicking. Checkpoint: during the wait and after the listing completes. Kernel: `ui-prototype/src/model.rs::ut_616_should_refresh`, `ui-prototype/tests/it_slice_a.rs::it_627_list_limit_truncates`. | During the wait the status line never shows 正在处理，请稍候。 and keeps its text from before the wait; 处理中… stays until the listing completes, so the timer sends nothing while a command is in flight. After the listing completes the list shows 5000 rows and the status reads 共 5000 项 (NFR-002, REQ-003). | ST-GUI-13 (manual, Windows 11) |
 | TC-663 | Precondition: `C:\ladon-test\ws` is open with `docs` entered, so the list shows `one.txt` and `two.txt` and the status reads 共 2 项; no dialog is open. Steps: in Windows Explorer delete the folder `C:\ladon-test\ws\docs`; wait three seconds; recreate `C:\ladon-test\ws\docs` with `one.txt` and `two.txt` in it; wait three seconds. Checkpoint: after each wait. Kernel: `ui-prototype/tests/it_slice_a.rs::it_645_constants_and_message_text` (the message text `无法读取该文件夹。`). | After the deletion the status reads 无法读取该文件夹。 in the danger colour, the list still shows `one.txt` and `two.txt`, and the window stays open. After the folder is recreated the status reads 共 2 项 in the muted colour and the list shows the two files again (NFR-002, NFR-013). | ST-GUI-14 (manual, Windows 11) |
 | TC-664 | Precondition: `C:\ladon-test\big` is the workspace of TC-660, and `inner` holds 5001 files and is open with its list complete; no dialog is open. Steps: press Down once to select the first row; wait ten seconds, which covers five refresh cycles, without clicking or pressing keys. Checkpoint: sampled once a second during the wait, and after it. Kernel: `ui-prototype/src/model.rs::ut_616_should_refresh`, `ui-prototype/src/model.rs::ut_617_selection_after_refresh`, `ui-prototype/tests/it_slice_a.rs::it_627_list_limit_truncates`. | During the wait the 处理中… indicator never shows, no button takes its disabled colour, and the status text keeps its value; the list keeps its 5000 rows; the first row stays selected and its details card does not change, so the silent refreshes keep the selection (NFR-002, REQ-003). | ST-GUI-15 (manual, Windows 11) |
+| TC-665 | Precondition: no LADON window is open and no console window is open. Steps: start `ladon-gui.exe` from the Start menu shortcut, or from `target\release\ladon-gui.exe`; wait five seconds; close the window with its close button. Checkpoint: after the start and after the close. Kernel: none; the case checks the window and the process type only. | After the start the LADON Explorer window appears and no console window (cmd, PowerShell or Windows Terminal) opens with it. The `Subsystem` field of the PE optional header of `ladon-gui.exe` is 2 (Windows GUI). After the close the process exits and no console window remains (NFR-002, NFR-026). | ST-GUI-16 (manual, Windows 11) |
 
 ## Boundary & Failure Cases
 
@@ -58,6 +59,7 @@ Every case starts with the application closed, unless its precondition says othe
 - A silent refresh never sends while a command is in flight, so the timer never shows the busy text (TC-662).
 - A silent refresh never sets `busy`, so no busy indicator or disabled button appears between refresh cycles (TC-664).
 - A failed silent refresh keeps the rows that were shown and sets the failure status (TC-663).
+- The GUI runs as a Windows GUI program, so launching it opens no console window; the command-line program keeps its console (TC-665).
 - A silent refresh whose selected row is gone clears the selection without a message; `selection_after_refresh` returns `None` in that case (TC-617).
 
 ## Regression Scope

@@ -2,7 +2,7 @@
 
 Source: `ui-prototype/src/main.rs`
 
-Source-SHA256: `54e156b543f5cd0465443ae84da3c8bb0e958b5913bba8fc3e503c5ab2f41473`
+Source-SHA256: `9ddaa56c9a7210824245a227918286736133abf931129b1e986717e972e355eb`
 
 ## Responsibility
 
@@ -23,6 +23,7 @@ The window offers browsing, recording of a regular file (the first version of an
 
 - `ui-prototype/Cargo.toml` keeps its own `[workspace]` table, so the Slint dependency tree stays outside the feature resolution of the root workspace.
 - The binary target is `[[bin]] name = "ladon-gui" path = "src/main.rs" required-features = ["kernel", "gui"]`.
+- `main.rs` starts with `#![windows_subsystem = "windows"]`, so `ladon-gui.exe` is a Windows GUI program: launching it opens no console window. The command-line program `ladon.exe` in the root crate keeps the console subsystem.
 - Features: `default = ["kernel", "gui"]`, `kernel = ["dep:ladon-explorer", "dep:tokio"]`, `gui = ["dep:slint"]`.
 - Dependency declared for the window: `slint = { version = "1.19", optional = true }`.
 - Verification lanes that involve this module:
@@ -192,6 +193,7 @@ Every `Text` element sets its `color` explicitly.
 - Only Simplified Chinese messages exist (NFR-015 is not met in this release).
 - Files that carry the Windows reparse-point attribute, such as cloud placeholders, are listed as links and cannot be recorded.
 - The window never reads an archive key or token and never archives, restores or scans.
+- The window runs without a console, so text written to standard error is not shown. Every user-visible result appears in the window itself.
 - The file list refreshes by polling every two seconds while it is shown (a `Timer` in `app.slint`). A file added to or removed from the open folder appears within about two seconds, and a change made and undone within one interval may not appear. Owner: window. Planned change: directory change notifications from the kernel.
 
 ## Change Notes
