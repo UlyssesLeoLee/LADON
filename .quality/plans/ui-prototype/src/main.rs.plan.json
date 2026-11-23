@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "source": "ui-prototype/src/main.rs",
-  "baseline_source_sha256": "9ddaa56c9a7210824245a227918286736133abf931129b1e986717e972e355eb",
+  "baseline_source_sha256": "30481090dc62c604a15a0a53ade2e5c782181424f9a6b3db07a078390570d734",
   "prepared_branch": "fix/compile-errors",
   "technical_design": ".quality/docs/ui-prototype/src/main.rs.md",
   "test_design": ".quality/test-design/ui-prototype/src/main.rs.test.md",
-  "prepared_technical_design_sha256": "cf662f3368af73c991780d4c466f59fac1beddc6fad71188d1e08ee7dddcde1e",
-  "prepared_test_design_sha256": "78b292ddbfa94db70061374db08f716a584e482633f22e3f10f4bb3eeb23c41c",
+  "prepared_technical_design_sha256": "df87121872c35664ac0b413b5b6ff558b1b0152d9f608749b75f9106dec5c5ed",
+  "prepared_test_design_sha256": "29bffdecb7ccdaf5fb94917a007d5a441a4306839a34971daad5556cc3d8e6a4",
   "prepared_related_design_sha256": {}
 }

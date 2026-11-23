@@ -2,19 +2,19 @@
 
 Source: `ui-prototype/src/model.rs`
 
-Source-SHA256: `7ca63c1316ecd74d1018c5fea4dff72b4cd560d2a322d49b8bd5167380d80186`
+Source-SHA256: `9d656426040f10eb7f40514b6ad947765f6be5a236c4708b24a48e92da0832f9`
 
 ## Responsibility
 
-`model.rs` holds the pure logic of the LADON Explorer window. It validates workspace-relative paths and their components, provides the drive-root and directory-comparison helpers used for root candidates, classifies binary content, builds the rows of the browse list and of the version list, computes line diffs between two text versions, and formats bytes, times and section lists for display. It performs no file-system, database, Slint, Tokio or kernel call. Apart from the elapsed-time check that `diff_lines` uses for its `approximate` flag, every function is a pure function of its inputs: the time zone is passed as a `chrono::FixedOffset` and the diff time limit as a `std::time::Duration`.
+`model.rs` holds the pure logic of the LADON window. It validates workspace-relative paths and their components, provides the drive-root and directory-comparison helpers used for root candidates, builds the rows of the This PC page from the drive letters, classifies binary content, builds the rows of the browse list and of the version list, decides when an open folder is listed again and which row keeps the selection, computes line diffs between two text versions, and formats bytes, times, drive status and section lists for display. It performs no file-system, database, Slint, Tokio or kernel call. Apart from the elapsed-time check that `diff_lines` uses for its `approximate` flag, every function is a pure function of its inputs: the time zone is passed as a `chrono::FixedOffset` and the diff time limit as a `std::time::Duration`.
 
 The module supports REQ-009 (version history and diff), NFR-013 (path safety), NFR-004 (sensitive status and availability text), NFR-007 (actor and reason in every version row) and NFR-003 (offline operation).
 
 ## Dependencies
 
 - Crates: `chrono` (`DateTime`, `FixedOffset`, `Utc`), `similar` (`TextDiff`, `ChangeTag`) and `std` (`borrow::Cow`, `collections::HashMap`, `time::{Duration, Instant}`).
-- Upstream: none inside the crate. Callers pass plain values: directory entries as `RawEntry`, ledger rows as `LedgerRow`, version records as `VersionInput`.
-- Downstream: `app.rs` (feature `kernel`) calls the path, entry, version and diff functions to build the reply of each command. The window (`main.rs`) maps the row structs carried by `app::Reply` into Slint models.
+- Upstream: none inside the crate. Callers pass plain values: directory entries as `RawEntry`, ledger rows as `LedgerRow`, version records as `VersionInput`, and drive letters with their initialised flag as `(char, bool)` pairs.
+- Downstream: `app.rs` (feature `kernel`) calls the path, entry, version and diff functions to build the reply of each command, `strip_extended_prefix` for display paths and `same_directory` for the profile-directory check. It builds the `Drives` reply of the `ListDrives` command with `drive_rows`. The window (`main.rs`) maps the row structs carried by `app::Reply`, including `DriveRow`, into Slint models and shows the status of each drive row with `drive_status_text`.
 
 ## Public Contract
 
@@ -30,6 +30,7 @@ Types. Every type derives `Debug`, `Clone`, `PartialEq` and `Eq`. The fieldless 
 - `pub enum LineKind { Context, Added, Removed, Gap }`.
 - `pub struct DiffLine { pub kind: LineKind, pub old_no: Option<usize>, pub new_no: Option<usize>, pub text: String }`. Line numbers are 1-based.
 - `pub struct DiffResult { pub lines: Vec<DiffLine>, pub added: usize, pub removed: usize, pub truncated: bool, pub approximate: bool }`.
+- `pub struct DriveRow { pub root: String, pub label: String, pub initialised: bool }`. `root` is `X:\` and `label` is `本地磁盘 (X:)`, where `X` is an upper-case ASCII letter. `initialised` is true when the drive is already a workspace.
 
 Functions:
 
@@ -52,6 +53,12 @@ Functions:
 - `pub fn strip_extended_prefix(path: &str) -> Cow<'_, str>`. Removes the extended-length prefix `\\?\`. `\\?\UNC\server\share` becomes `\\server\share`, which is an owned string. Other paths with the prefix give the rest of the path borrowed. Inputs without the prefix are returned borrowed and unchanged.
 - `pub fn is_drive_root(path: &str) -> bool`. Applies `strip_extended_prefix`, then returns true for `X:`, `X:\` and `X:/`, where `X` is an ASCII letter.
 - `pub fn same_directory(a: &str, b: &str) -> bool`. Applies `strip_extended_prefix` to both inputs and removes one trailing `/` or `\` from each. The results are compared ASCII-case-insensitively. Separators are compared as written.
+- `pub fn drive_rows(entries: &[(char, bool)]) -> Vec<DriveRow>`. Builds one row per drive letter:
+  - an entry whose character is an ASCII letter gives a row with `root` `X:\`, `label` `本地磁盘 (X:)` and `initialised` equal to the flag of the entry, where `X` is the letter in upper case;
+  - an entry whose character is not an ASCII letter is skipped;
+  - a letter that repeats, in either case, keeps the row of its first entry, and the later entries are dropped;
+  - rows are sorted by letter.
+- `pub fn drive_status_text(initialised: bool) -> &'static str`. Returns `已是工作区` when `initialised` is true and `未初始化` when it is false.
 - `pub fn format_bytes(n: u64) -> String`. A value below 1024 gives `{n} B`. Larger values use binary multiples. The unit is the first of `KB`, `MB` and `GB` whose value, rounded to one decimal place, is below 1024.0; `GB` is used when none is. The value is shown with one decimal place. The rounding is the one that the display uses, so `1048575` gives `1.0 MB`, `1536` gives `1.5 KB`, `5242880` gives `5.0 MB` and `1099511627776` gives `1024.0 GB`.
 - `pub fn format_time(rfc3339: &str, offset: FixedOffset) -> String`. Converts the instant to `offset` and formats it as `YYYY-MM-DD HH:MM`. Input that does not parse as RFC 3339 is returned unchanged.
 - `pub fn unix_time_text(secs: Option<i64>, offset: FixedOffset) -> String`. `None`, or a value out of range for `DateTime::<Utc>::from_timestamp(secs, 0)`, gives `—`. Otherwise the output is `YYYY-MM-DD HH:MM` in `offset`.
@@ -86,4 +93,4 @@ Functions:
 
 ## Change Notes
 
-The module writes no data and has no side effects. `validate_relative` and `check_component` refuse the `..`, `.ladon` and `.git` components, so the handler reports these paths before the engine is called. The `.ladon` and `.git` comparison ignores ASCII case and trailing dots and spaces; the kernel compares these names case-sensitively in `resolve` and `scan`, which is a known limitation of this release. Symbolic links and reparse points are not visible to this module. The handler decides them with `symlink_metadata`, and `RawEntry` carries only the kind that call reports.
+The module writes no data and has no side effects. `validate_relative` and `check_component` refuse the `..`, `.ladon` and `.git` components, so the handler reports these paths before the engine is called. The `.ladon` and `.git` comparison in `check_component` ignores ASCII case and trailing dots and spaces. `app.rs` (`read_entries`) omits the entries named `.ladon` or `.git` with an ASCII-case-insensitive comparison that does not remove trailing dots and spaces. `drive_rows` takes the drive letters and their flags from the caller and does not probe the machine, so the caller decides which letters exist and which drives are already workspaces. Symbolic links and reparse points are not visible to this module. The handler decides them with `symlink_metadata`, and `RawEntry` carries only the kind that call reports.

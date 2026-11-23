@@ -2,18 +2,18 @@
 
 Source: `ui-prototype/src/main.rs`
 
-Source-SHA256: `9ddaa56c9a7210824245a227918286736133abf931129b1e986717e972e355eb`
+Source-SHA256: `30481090dc62c604a15a0a53ade2e5c782181424f9a6b3db07a078390570d734`
 
 ## Responsibility
 
-`main.rs` is the entry point of the binary `ladon-gui`, the LADON Explorer desktop window. It creates the window from `ui/app.slint`, starts one `app::Worker`, connects each window callback to at most one `app::Command`, and applies each `app::Reply` on the user-interface thread. It performs no file-system, ledger, diff or rule work.
+`main.rs` is the entry point of the binary `ladon-gui`, the LADON desktop window. It creates the window from `ui/app.slint`, starts one `app::Worker`, connects each window callback to at most one `app::Command`, and applies each `app::Reply` on the user-interface thread. It performs no file-system, ledger, diff or rule work.
 
-The window offers browsing, recording of a regular file (the first version of an untracked file, a further version of a tracked file), the version history of one tracked file, and a read-only text diff between two versions of one file. It offers no restore, whole-workspace scan, rule editing, tags, document tasks, archive or cloud function.
+The window offers browsing, recording of a regular file (the first version of an untracked file, a further version of a tracked file), the version history of one tracked file, and a read-only text diff between two versions of one file. The window opens on the This PC page, which lists the drive roots of the machine, and a drive root can be opened as a workspace in the same way as a folder. It offers no restore, whole-workspace scan, rule editing, tags, document tasks, archive or cloud function.
 
 ## Dependencies
 
 - `ladon_ui_prototype::app`: `Worker` (`spawn`, `send`), `Command`, `Reply`, `diff_block_message`, and the constants `MSG_NO_WORKSPACE`, `MSG_DIFF_APPROXIMATE` and `MSG_DIFF_TRUNCATED`.
-- `ladon_ui_prototype::model`: `BrowseRow`, `VersionRow`, `DiffLine` and `LineKind`, which are copied into Slint models.
+- `ladon_ui_prototype::model`: `BrowseRow`, `VersionRow`, `DiffLine` and `LineKind`, which are copied into Slint models; `DriveRow` and `drive_status_text`, which map the drive list to `DriveItem`.
 - `slint` 1.19 (optional, enabled by feature `gui`): `slint::slint!`, `ComponentHandle`, `slint::Weak` with `upgrade_in_event_loop`, `ModelRc`, `VecModel` and `slint::PlatformError`.
 - `std`: `cell::RefCell` for the thread-local state and `panic::set_hook`.
 - The markup file `ui/app.slint`, resolved by the macro relative to the crate directory `ui-prototype/`. The markup imports `Button`, `LineEdit`, `ScrollView`, `ListView` and `AboutSlint` from `std-widgets.slint` and uses the built-in `MenuBar`, `Menu`, `MenuItem`, `FocusScope` and `TouchArea` elements.
@@ -38,11 +38,12 @@ The window offers browsing, recording of a regular file (the first version of an
 - `fn main() -> Result<(), slint::PlatformError>`:
   1. installs a silent panic hook, `std::panic::set_hook(Box::new(|_| {}))`;
   2. creates `AppWindow` and sets `status` to `app::MSG_NO_WORKSPACE`;
-  3. wires the thirteen callbacks listed below;
+  3. wires the sixteen callbacks listed below;
   4. starts one `app::Worker` whose reply closure calls `slint::Weak::upgrade_in_event_loop` with a closure that applies the reply on the window, and stores the worker in `UiState`;
-  5. runs the event loop until the window closes and returns the error from `run`.
-- `slint::slint!` imports `ui/app.slint` and exports `AppWindow`, `FileItem`, `VersionItem` and `DiffItem`. Those Slint types are the only window types used in `main.rs`.
-- The window title is `LADON Explorer`. The preferred size is 1180 by 760 logical pixels and the minimum size is 960 by 640. The window sets `default-font-family` to `Microsoft YaHei UI`, which text elements and standard widgets inherit.
+  5. sets `page` to 2 (This PC) and sends `ListDrives` through `send_command`, which sets `busy`;
+  6. runs the event loop until the window closes and returns the error from `run`.
+- `slint::slint!` imports `ui/app.slint` and exports `AppWindow`, `FileItem`, `VersionItem`, `DiffItem` and `DriveItem`. Those Slint types are the only window types used in `main.rs`.
+- The window title is `LADON`. The preferred size is 1180 by 760 logical pixels and the minimum size is 960 by 640. The window sets `default-font-family` to `Microsoft YaHei UI`, which text elements and standard widgets inherit.
 - The window is light only. It uses no dark palette.
 
 ### User-interface state
@@ -52,7 +53,8 @@ The window offers browsing, recording of a regular file (the first version of an
   - `worker: Option<app::Worker>`;
   - `rows: Vec<model::BrowseRow>`, the rows shown in `folder-items`, in the same order;
   - `versions: Vec<model::VersionRow>`, the versions shown in `versions`, in the same order;
-  - `history_pending: bool`, set by `open-history` and cleared by the next reply.
+  - `history_pending: bool`, set by `open-history` and cleared by the next reply;
+  - `silent_refresh: bool`, set by a sent `refresh-folder` and cleared by the next reply.
 - The folder being shown is the window property `current-dir`, a workspace-relative path with `/` separators. The workspace root shown by the kernel is `workspace-root`.
 - The selected row is the window property `selected` (index into `folder-items`, -1 when none). The selected row's fields are copied into the `selected-*` properties.
 
@@ -72,6 +74,7 @@ The window offers browsing, recording of a regular file (the first version of an
 | Window callback | Command or effect |
 | --- | --- |
 | `open-workspace(path)` | sends `Open { path }` |
+| `open-drive(path)` | sets `workspace-path` to `path`, then sends `Open { path }` |
 | `request-init(path)` | sets `init-path` to `path` and sets `init-overlay`; sends nothing |
 | `confirm-init(path)` | clears `init-overlay` and sends `Init { path, confirmed: true }` |
 | `cancel-init()` | clears `init-overlay` |
@@ -85,11 +88,15 @@ The window offers browsing, recording of a regular file (the first version of an
 | `back-to-browse()` | sets `page` to 0 |
 | `open-about()` | sets `about-visible` to true |
 | `close-about()` | sets `about-visible` to false |
+| `show-this-pc()` | sends `ListDrives` |
+
+A drive root such as `C:\` is a workspace root in the same way as a folder. `Open` on a drive root replies `Opened` when the drive root holds a `.ladon` database and `NeedsInit` otherwise. `Init` on a drive root creates `.ladon` and `.LADONignore` in it. The user profile directory is refused with `app::MSG_ROOT_REFUSED`, whose text is 不能把用户主目录本身作为工作区，请选择其中的子文件夹。
 
 ### Reply effects
 
 - `Opened { root }`: sets `workspace-open` to true, `workspace-root` to the display path, `current-dir` to the empty string and `truncated` to false; clears the history, the diff panel, the folder items, the selection and `details-version`; sets `page` to 0; sets `status` to `已打开工作区` with `status-error` false; then sends `ListFolder { relative_dir: "" }`.
 - `NeedsInit { path }`: sets `status` to `该文件夹还不是工作区。可以点击“初始化”。` with `status-error` false. The open workspace, if any, is kept.
+- `Drives { drives }`: replaces `drives` with one `DriveItem` for each `model::DriveRow` of the reply, in the same order. The `path` of an item is the row's `root`, its `label` is the row's `label`, and its `status-text` is `model::drive_status_text(row.initialised)`. Sets `page` to 2 and `status` to `选择一个驱动器打开；未初始化的驱动器需先初始化。` with `status-error` false.
 - `Folder { relative_dir, rows, truncated }`: sets `current-dir` and `truncated`; clears the selection and `details-version`; replaces `folder-items` and `UiState.rows`; sets `status` to `共 {n} 项` where `n` is the number of rows, with `status-error` false.
 - `Folder` reply to a silent refresh, where `relative_dir` equals `current-dir`:
   - when `listing_changed(UiState.rows, rows)` is false, nothing changes;
@@ -128,7 +135,7 @@ The window offers browsing, recording of a regular file (the first version of an
 
 ### Window properties
 
-- Input and output: `workspace-path` (bound to the path field), `workspace-root`, `workspace-open`, `busy`, `worker-stopped`, `status`, `status-error`, `page` (0 browse, 1 history), `current-dir`, `folder-items: [FileItem]`, `truncated`, `selected` (-1 when none), `selected-name`, `selected-path`, `selected-status`, `selected-size`, `selected-modified`, `selected-is-folder`, `selected-tracked`, `selected-sensitive`, `selected-can-record`, `details-version`, `history-title`, `chain-text`, `history-note`, `versions: [VersionItem]`, `history-available`, `diff-title`, `diff-totals`, `diff-note`, `diff-lines: [DiffItem]`, `init-overlay`, `init-path`, `about-visible`.
+- Input and output: `workspace-path` (bound to the path field), `workspace-root`, `workspace-open`, `busy`, `worker-stopped`, `status`, `status-error`, `page` (0 browse, 1 history, 2 This PC), `current-dir`, `folder-items: [FileItem]`, `drives: [DriveItem]`, `truncated`, `selected` (-1 when none), `selected-name`, `selected-path`, `selected-status`, `selected-size`, `selected-modified`, `selected-is-folder`, `selected-tracked`, `selected-sensitive`, `selected-can-record`, `details-version`, `history-title`, `chain-text`, `history-note`, `versions: [VersionItem]`, `history-available`, `diff-title`, `diff-totals`, `diff-note`, `diff-lines: [DiffItem]`, `init-overlay`, `init-path`, `about-visible`.
 - Every property listed above is an `in-out` property of `AppWindow`.
 - `workspace-root`, `truncated`, `selected-sensitive` and the `sensitive` and `local` fields of `VersionItem` are set but have no visible text, because the string list defines none for them. Sensitivity is shown only inside the availability and status texts that the kernel model provides.
 
@@ -136,6 +143,7 @@ The window offers browsing, recording of a regular file (the first version of an
 
 - `export global Palette` (light only): background `#f4f5f0`, surface `#ffffff`, border `#dde2d6`, accent `#4f6b55`, text `#1f2a22`, muted `#58634f`, selected row `#e6eee2`, added background `#e3f1e5`, added text `#1d5a2c`, removed background `#f7e4e0`, removed text `#8a2b1f`, danger `#a33a2b`, overlay `#1f2a2280`.
 - `export struct FileItem { name, relative-path, is-folder, is-link, tracked, can-record, size-text, modified-text, status-text }`.
+- `export struct DriveItem { path, label, status-text }`.
 - `export struct VersionItem { label, time-text, actor, reason, size-text, sections-text, hash-short, availability-text, sensitive, local, current, can-compare }`.
 - `export struct DiffItem { kind: int, old-no: string, new-no: string, text: string }`, where `kind` is 0 for context, 1 for added, 2 for removed and 3 for a gap.
 
@@ -157,7 +165,8 @@ Every `Text` element sets its `color` explicitly.
 
 - Menu bar: `帮助` with the item `关于 LADON Explorer`, which calls `open-about()`.
 - Top bar on the surface colour: the label `工作区`, a path field bound to `workspace-path`, and the buttons `打开` (calls `open-workspace`) and `初始化` (calls `request-init`).
-- Left navigation, 180 px wide on the surface colour: `浏览` (page 0) and `版本历史` (page 1, enabled when `history-available` is true).
+- Left navigation, 180 px wide on the surface colour: `浏览` (page 0) and `版本历史` (page 1, enabled when `history-available` is true), and the entry `此电脑` (This PC), which calls `show-this-pc()`.
+- This PC page (page 2): one row for each item of `drives`, in order. A row calls `open-drive(path)` with its `path` when it is clicked, and shows the `label` and `status-text` of its item.
 - Browse page:
   - a breadcrumb card with the button `上一级` and the text `工作区 /` at the root, `工作区 / {current-dir}` below the root, or `未打开工作区` when no workspace is open;
   - a header row with the labels `名称`, `大小`, `修改时间` and `状态`;
@@ -195,6 +204,7 @@ Every `Text` element sets its `color` explicitly.
 - The window never reads an archive key or token and never archives, restores or scans.
 - The window runs without a console, so text written to standard error is not shown. Every user-visible result appears in the window itself.
 - The file list refreshes by polling every two seconds while it is shown (a `Timer` in `app.slint`). A file added to or removed from the open folder appears within about two seconds, and a change made and undone within one interval may not appear. Owner: window. Planned change: directory change notifications from the kernel.
+- The This PC page shows no capacity and no drive type.
 
 ## Change Notes
 

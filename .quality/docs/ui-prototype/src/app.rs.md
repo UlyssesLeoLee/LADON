@@ -2,13 +2,13 @@
 
 Source: `ui-prototype/src/app.rs`
 
-Source-SHA256: `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`
+Source-SHA256: `9883ad2ddb7152cac3f1d56c5ac95a67be7572b87e5140fde8bf06178edaff9a`
 
 ## Responsibility
 
-`app.rs` is the only module of the desktop window that calls the LADON kernel (`ladon_explorer`). It requires the `kernel` feature. It translates one `Command` from the window into kernel operations on the single open workspace of the process and returns exactly one `Reply`. It enforces the path rules of the window, the command preconditions, and the mapping of every failure to a fixed Simplified Chinese message.
+`app.rs` is the only module of the desktop window that calls the LADON kernel (`ladon_explorer`). It requires the `kernel` feature. It translates one `Command` from the window into kernel operations on the single open workspace of the process and returns exactly one `Reply`. `ListDrives` is the exception: it reads the drive letters of the machine and needs no workspace. It enforces the path rules of the window, the command preconditions, and the mapping of every failure to a fixed Simplified Chinese message.
 
-All commands run on one dedicated operating-system thread with a current-thread Tokio runtime. The Turso database and the content store are therefore accessed by one thread only. The module performs browsing, recording, version history and text diff. It never calls restore, scan, archive or any storage provider, and it never reads `LADON_ARCHIVE_KEY_HEX` or any token. It renders nothing.
+All commands run on one dedicated operating-system thread with a current-thread Tokio runtime. The Turso database and the content store are therefore accessed by one thread only. The module performs browsing, drive listing, recording, version history and text diff. It never calls restore, scan, archive or any storage provider, and it never reads `LADON_ARCHIVE_KEY_HEX` or any token. It renders nothing.
 
 ## Dependencies
 
@@ -17,10 +17,10 @@ All commands run on one dedicated operating-system thread with a current-thread 
   - `archive::CasStore`: `has` and `evict` (synchronous).
   - `store::Store`: `list_files`, `find_path`, `versions`, `version`, `events` and `verify_chain` (async reads).
   - Used by the tests only: `Store::new`, `Store::mark_deleted`, `CasStore::new` and the `cas` field's `evict`.
-- Window model (`crate::model`): `check_component`, `validate_relative`, `PathProblem`, `RawEntry`, `EntryKind`, `LedgerRow`, `browse_rows`, `BrowseRow`, `VersionInput`, `version_rows`, `VersionRow`, `diff_lines`, `DiffResult`, `strip_extended_prefix`, `is_drive_root` and `same_directory`. The types `BrowseRow`, `VersionRow` and `DiffResult` implement `Debug`, which `Reply` requires.
+- Window model (`crate::model`): `check_component`, `validate_relative`, `PathProblem`, `RawEntry`, `EntryKind`, `LedgerRow`, `browse_rows`, `BrowseRow`, `VersionInput`, `version_rows`, `VersionRow`, `diff_lines`, `DiffResult`, `strip_extended_prefix`, `drive_rows`, `DriveRow` and `same_directory`. The types `BrowseRow`, `VersionRow`, `DiffResult` and `DriveRow` implement `Debug`, which `Reply` requires.
 - `chrono::{FixedOffset, Local}`: the offset argument of `browse_rows` and `version_rows` is the local offset read when the command runs.
 - Standard library and Tokio: `runtime::Builder::new_current_thread` with `enable_all`, `std::sync::mpsc`, `std::thread`, `std::panic::catch_unwind`, `std::fs`, `std::time`, `std::path::{Component, Prefix}`, and `std::os::windows::fs::MetadataExt` for the reparse-point attribute.
-- Consumers: `main.rs` creates one `Worker`, sends `Command` values and applies each `Reply` on the user-interface thread. `tests/it_slice_a.rs` calls `handle` and `Worker`.
+- Consumers: `main.rs` creates one `Worker`, sends `Command` values and applies each `Reply` on the user-interface thread. The window's start page, This PC, shows the rows of the `Drives` reply. `tests/it_slice_a.rs` calls `handle` and `Worker`.
 
 ## Public Contract
 
@@ -40,6 +40,7 @@ All commands run on one dedicated operating-system thread with a current-thread 
   - `Capture { relative_path: String }`: records the current content of one file as actor `human` and reason `gui-capture`.
   - `LoadHistory { relative_path: String }`: loads the versions and chain status of one file.
   - `LoadDiff { older_version_id: String, newer_version_id: String }`: computes a line diff between two versions of one file.
+  - `ListDrives`: lists the drive roots of the machine. It needs no workspace and never fails.
 - `pub enum DiffBlock { Binary, NotUtf8, TooLarge, Cold }` (derives `Debug, Clone, Copy, PartialEq, Eq`).
 - `pub enum FailKind { NoWorkspace, InvalidPath, NotFound, NotConfirmed, Refused, Kernel, Internal }` (derives `Debug, Clone, Copy, PartialEq, Eq`).
 - `pub enum Reply` (derives `Debug`):
@@ -51,6 +52,7 @@ All commands run on one dedicated operating-system thread with a current-thread 
   - `Diff { older_version_id: String, newer_version_id: String, diff: model::DiffResult }`.
   - `DiffUnavailable { older_version_id: String, newer_version_id: String, reason: DiffBlock }`.
   - `Failed { kind: FailKind, message: String, detail: Option<String> }`. `detail` is `None` in every reply produced by this module.
+  - `Drives { drives: Vec<model::DriveRow> }`: the reply to `ListDrives`, built with `model::drive_rows` from the drive letters that are present.
 - `pub struct State` holds the open engine, or none, and the rule-file modification time. Its fields are private. `State::new() -> State` returns a state without a workspace.
 - `pub struct Worker` holds the sending side of the command channel. Its field is private.
 
@@ -70,7 +72,7 @@ All messages are `pub const` `&str` values with these exact texts (21 constants)
 - `MSG_INVALID_PATH` = `该路径无效，或包含链接、重解析点，或位于工作区之外，已拒绝访问。`
 - `MSG_NOT_FOUND` = `找不到该文件、文件夹或版本。`
 - `MSG_NOT_CONFIRMED` = `需要先确认才能初始化该文件夹。`
-- `MSG_ROOT_REFUSED` = `不能把磁盘根目录或用户主目录本身作为工作区，请选择其中的子文件夹。`
+- `MSG_ROOT_REFUSED` = `不能把用户主目录本身作为工作区，请选择其中的子文件夹。`
 - `MSG_RULE_FILE_REFUSED` = `规则文件 .LADONignore 不作为历史记录对象。`
 - `MSG_INTERNAL_REFUSED` = `内部目录 .ladon 和 .git 不作为历史记录对象。`
 - `MSG_RULE_PARSE_FAILED` = `规则文件 .LADONignore 无法解析，已停止记录。请先修正该文件。`
@@ -90,7 +92,7 @@ All messages are `pub const` `&str` values with these exact texts (21 constants)
 
 ### Path rules
 
-Relative paths, for every command except `Open` and `Init`:
+Relative paths, for every command except `ListDrives`, `Open` and `Init`:
 
 - The input goes through `model::validate_relative`. `Absolute`, `Traversal` and `Invalid` give `Failed { kind: InvalidPath, message: MSG_INVALID_PATH }`. `Internal` gives `Failed { kind: Refused, message: MSG_INTERNAL_REFUSED }`.
 - The validated path, with `/` separators, is the value used for ledger lookups and for the walk.
@@ -107,9 +109,9 @@ Root candidates, used by `Open` and `Init` in this order:
 
 1. The path must be absolute and must not contain a NUL character; otherwise `InvalidPath`.
 2. A device-namespace prefix (`\\.\`) gives `InvalidPath`. A verbatim prefix (`\\?\`) and UNC paths are accepted; canonicalisation resolves them, and every later check still applies. After the drive or root prefix, one leading `\` or `/` and one trailing `\` or `/` are removed. The rest is split on `\` and `/`. Each component is checked with `model::check_component`: `Internal` gives `Refused` with `MSG_INTERNAL_REFUSED`, and any other problem gives `InvalidPath`. An empty component gives `InvalidPath`.
-3. The path is rebuilt from its components, which drops a trailing separator, so that the entry checked last is the entry the path names. Its ancestors are then read with `symlink_metadata`, from the top down, skipping the empty path and prefix-only ancestors (a drive, or a UNC share on its own). A symbolic link or reparse point gives `InvalidPath`. A missing ancestor or path gives `NotFound` with `MSG_NOT_FOUND`. Any other I/O error gives `Kernel` with the command's message (`MSG_OPEN_FAILED` for `Open`, `MSG_INIT_FAILED` for `Init`). The path itself must be a directory, otherwise `InvalidPath`.
+3. The path is rebuilt from its components, which drops a trailing separator, so that the entry checked last is the entry the path names. Its ancestors are then read with `symlink_metadata`, from the top down, skipping the empty path and prefix-only ancestors (a drive, or a UNC share on its own). A symbolic link or reparse point gives `InvalidPath`. A missing ancestor or path gives `NotFound` with `MSG_NOT_FOUND`. Any other I/O error gives `Kernel` with the command's message (`MSG_OPEN_FAILED` for `Open`, `MSG_INIT_FAILED` for `Init`). The path itself must be a directory, otherwise `InvalidPath`. For a drive root such as `C:\`, the only step is the root itself.
 4. The path is canonicalised; an error gives `Kernel` with the command's message.
-5. A canonical path that is a drive root (`model::is_drive_root`), or that matches the profile directory, gives `Refused` with `MSG_ROOT_REFUSED`. The profile directory is compared with `model::same_directory`. When `USERPROFILE` cannot be canonicalised, the value as set is used. When `USERPROFILE` is unset, no path matches the profile rule.
+5. A canonical path that matches the profile directory gives `Refused` with `MSG_ROOT_REFUSED`. A drive root is accepted. The profile directory is compared with `model::same_directory`. When `USERPROFILE` cannot be canonicalised, the value as set is used. When `USERPROFILE` is unset, no path matches the profile rule.
 6. The entries `.ladon`, `.ladon/meta.turso`, `.ladon/cas` and `.LADONignore` under the candidate are read with `symlink_metadata`, in this order. A symbolic link or reparse point gives `InvalidPath`. A missing entry is skipped. Any other I/O error gives `Kernel` with the command's message. `initialised` is true when `.ladon/meta.turso` exists.
 7. The display path is the canonical path with the verbatim prefix removed by `model::strip_extended_prefix`.
 
@@ -120,10 +122,10 @@ Capture, file containment:
 
 ### Command rules
 
-Precondition: every command except `Open` and `Init` needs an open workspace. Without one the reply is `Failed { kind: NoWorkspace, message: MSG_NO_WORKSPACE }`, and no path is examined.
+Precondition: every command except `ListDrives`, `Open` and `Init` needs an open workspace. Without one the reply is `Failed { kind: NoWorkspace, message: MSG_NO_WORKSPACE }`, and no path is examined.
 
 - `Open { path }`: root candidate checks with `MSG_OPEN_FAILED` as the I/O message. When `initialised` is false, the reply is `NeedsInit { path }` with the display path, and the state is unchanged. Otherwise the rule-file modification time (absent when the file cannot be read) is read first, then `Engine::open` runs. An error gives `Kernel` with `MSG_OPEN_FAILED`, and the state is unchanged. A success stores the engine and the modification time and replies `Opened { root }`, whose window effects are listed at `Reply`.
-- `Init { path, confirmed }`: `confirmed == false` gives `NotConfirmed` with `MSG_NOT_CONFIRMED`, and no path is examined. Root candidate checks follow with `MSG_INIT_FAILED` as the I/O message. When `initialised` is true, the command behaves as `Open`. Otherwise the rule-file modification time is read first, then `Engine::init` runs. An error gives `Kernel` with `MSG_INIT_FAILED`, and the state is unchanged. A success stores the engine and the modification time and replies `Opened { root }`, whose window effects are listed at `Reply`.
+- `Init { path, confirmed }`: `confirmed == false` gives `NotConfirmed` with `MSG_NOT_CONFIRMED`, and no path is examined. Root candidate checks follow with `MSG_INIT_FAILED` as the I/O message. When `initialised` is true, the command behaves as `Open`. Otherwise the rule-file modification time is read first, then `Engine::init` runs. On a drive root it creates `.ladon` and `.LADONignore` in the drive root. An error gives `Kernel` with `MSG_INIT_FAILED`, and the state is unchanged. A success stores the engine and the modification time and replies `Opened { root }`, whose window effects are listed at `Reply`.
 - `ListFolder { relative_dir }`:
   - The path passes the relative-path rules and the walk, then the canonical folder is read.
   - Each entry is classified from `symlink_metadata`: a symbolic link or reparse point is `Link`; a directory is `Directory`; a regular file is `File`; anything else is `Other`.
@@ -153,6 +155,7 @@ Precondition: every command except `Open` and `Init` needs an open workspace. Wi
   - The contents are loaded with `engine.load_version(id, None)`, the older one first. A read error gives `Kernel` with `MSG_DIFF_FAILED`. After both contents are loaded, a content longer than `DIFF_LIMIT_BYTES` gives `DiffUnavailable { reason: TooLarge }`.
   - A zero byte in either content gives `DiffUnavailable { reason: Binary }`. Invalid UTF-8 in either content gives `DiffUnavailable { reason: NotUtf8 }`.
   - Otherwise `model::diff_lines(older, newer, DIFF_MAX_LINES, DIFF_TIMEOUT)` runs and the reply is `Diff { older_version_id, newer_version_id, diff }`. The `truncated` and `approximate` flags are those of the `DiffResult`.
+- `ListDrives`: probes the drive letters `A` to `Z` in order. A letter is present when `X:\` is a directory (`Path::is_dir`). For each present letter, `initialised` is true when `X:\.ladon\meta.turso`, read with `symlink_metadata`, is a regular file that is neither a symbolic link nor a reparse point. The `(letter, initialised)` pairs of the present letters are passed to `model::drive_rows`, and the reply is `Drives { drives }`. The command needs no workspace, never fails and writes nothing.
 
 Cross-cutting rules:
 
@@ -175,11 +178,12 @@ Cross-cutting rules:
 - Only Simplified Chinese messages exist (NFR-015 is not met in this release).
 - Files that carry the Windows reparse-point attribute, such as on-demand cloud-synced files, are listed as links and cannot be recorded.
 - The window never reads an archive key or token and never archives, restores or scans.
+- A folder listing that meets an entry it cannot read replies `Failed` with `MSG_LIST_FAILED` for the whole listing, as for any folder, including a drive root.
 
 ## Change Notes
 
 - The root candidate rules refuse a NUL character and a device-namespace prefix as `InvalidPath` before any file system call. Verbatim and UNC prefixes are accepted.
 - Rebuilding the path from its components before the link checks makes a trailing separator irrelevant, so a junction named with a trailing separator is checked as the entry it names.
-- The drive-root and profile refusal runs before the owned-entry checks, so no entry inside those two directories is read.
+- The profile-directory refusal runs before the owned-entry checks, so no entry inside that directory is read.
 - A ledger read that finds no row after a successful capture is a failed read of the version number and gives `Kernel` with `MSG_CAPTURE_FAILED`.
 - The module holds no state beyond the open engine and the rule-file modification time. A text diff that reaches `DIFF_TIMEOUT` is reported through the `approximate` flag of `DiffResult`.
