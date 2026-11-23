@@ -2,7 +2,7 @@
 
 Source: `ui-prototype/src/model.rs`
 
-Source-SHA256: `f925dcd46a93b08f25fe197d486fc997fa59e9b124783e0501e1259120a71d40`
+Source-SHA256: `751e5c6c2b5e043362125cd4e7600be8714c71306fc5e3e262b18ee08ae9f08e`
 
 ## Responsibility
 
@@ -99,6 +99,10 @@ Functions:
 - `pub fn tree_collapse(rows: &mut Vec<TreeRow>, index: usize) -> bool`: when the row at `index` exists and is expanded, removes the following rows whose `depth` is greater than its depth, marks it not expanded, and returns true. Otherwise it changes nothing and returns false.
 - `pub fn drive_root_of(path: &str) -> Option<String>`: for a path that starts with an ASCII letter, a colon and a backslash, or is exactly `X:`, returns `X:\`. Any other path gives None.
 - `pub fn relative_in_root(root: &str, path: &str) -> Option<String>`: when `path` equals `root` or starts with it (ASCII case-insensitive), returns the rest of `path` with `\` replaced by `/` and a leading `/` removed; the root itself gives the empty string. Any other input gives None.
+
+- `pub fn check_new_name(name: &str) -> Result<(), &'static str>`: accepts a name for a new file, folder or rename. The name must not be empty, must not be longer than 255 characters, must not contain a control character or any of `\ / : * ? " < > |`, must not end with a dot or a space, and must not be a Windows device name (`CON`, `PRN`, `AUX`, `NUL`, `COM1` to `COM9`, `LPT1` to `LPT9`, with or without an extension; compared without case). The errors are `MSG_NAME_INVALID` (`名称无效：不能为空，不能包含 \ / : * ? " < > |，不能以点或空格结尾，不能是系统保留名。`) for every case.
+- `pub fn capacity_text(total: Option<u64>, free: Option<u64>) -> String`: `可用 {free} / 共 {total}` using `format_bytes`; `容量未知` when either value is `None`.
+- `DriveRow` gains `total_bytes: Option<u64>` and `free_bytes: Option<u64>`. `drive_rows` sets both to `None`.
 
 ## Change Notes
 

@@ -2,7 +2,7 @@
 
 Source: `ui-prototype/src/app.rs`
 
-Source-SHA256: `73888b2cc4f20fd66530bacd0bbf55f5e5b9605b06bf0c1aa28aaca10b538452`
+Source-SHA256: `56b69283e2f7573abe928464c3e64a58ffe769ad451e061c8c9904d836cd4805`
 
 ## Responsibility
 
@@ -69,7 +69,7 @@ All commands run on one dedicated operating-system thread with a current-thread 
 
 ### Messages
 
-All messages are `pub const` `&str` values with these exact texts (22 constants):
+All messages are `pub const` `&str` values with these exact texts (35 constants):
 
 - `MSG_NO_WORKSPACE` = `请先打开或初始化一个工作区。`
 - `MSG_INVALID_PATH` = `该路径无效，或包含链接、重解析点，或位于工作区之外，已拒绝访问。`
@@ -83,6 +83,19 @@ All messages are `pub const` `&str` values with these exact texts (22 constants)
 - `MSG_INIT_FAILED` = `无法初始化该文件夹。请检查该文件夹的写入权限。`
 - `MSG_DRIVE_INIT_FAILED` = `无法初始化该驱动器。请检查写入权限；访问系统盘等受保护位置时，请以管理员身份运行 LADON。`
 - `MSG_LIST_FAILED` = `无法读取该文件夹。`
+- `MSG_OPEN_FILE_FAILED` = `无法用关联程序打开该文件。`
+- `MSG_NAME_EXISTS` = `同名的文件或文件夹已存在。`
+- `MSG_RENAME_TRACKED` = `已记录历史的文件或文件夹暂不能重命名。`
+- `MSG_DELETE_FAILED` = `无法移入回收站，请稍后重试。`
+- `MSG_NAS_FOLDER_INVALID` = `请输入一个已存在的 NAS 文件夹的绝对路径。`
+- `MSG_ARCHIVE_KEY_MISSING` = `未设置归档密钥（环境变量 LADON_ARCHIVE_KEY_HEX）。`
+- `MSG_TOKEN_MISSING` = `未设置 Google Drive 访问令牌（环境变量 LADON_GOOGLE_ACCESS_TOKEN）。`
+- `MSG_ARCHIVE_REFUSED` = `该内容被标记为敏感，不能发送到外部位置。`
+- `MSG_ARCHIVE_FAILED` = `无法归档该版本，请稍后重试。`
+- `MSG_RESTORE_DIVERGED` = `当前文件在工作区之外被修改，已停止恢复。请先记录当前版本后再恢复。`
+- `MSG_RESTORE_COLD` = `该版本的内容不在本地，请先选择归档位置。`
+- `MSG_RESTORE_FAILED` = `无法恢复该版本。`
+- `MSG_SETTINGS_FAILED` = `无法保存设置，请检查 LADON 设置文件夹的写入权限。`
 - `MSG_CAPTURE_FAILED` = `无法记录该文件，请稍后重试。`
 - `MSG_HISTORY_FAILED` = `无法读取该文件的历史。`
 - `MSG_DIFF_FAILED` = `无法读取这两个版本的内容。`
@@ -175,6 +188,31 @@ Cross-cutting rules:
 - After a guarded panic the worker keeps running, and the next command is processed normally.
 - When the runtime cannot be built, the worker keeps running and answers every command with the internal failure reply.
 - The reply callback runs outside `guard`. A panic in the callback ends the thread, and later `send` calls return `false`.
+
+### Basic file operations
+
+These commands run in the open workspace. Every path is a workspace-relative path with `/` separators, checked by `checked_relative` and by the walk to its parent folder. A path whose last component is `.LADONignore`, or that has a `.ladon` or `.git` component, is refused. A link or reparse point is refused with `InvalidPath`.
+
+- `OpenFile { relative_path }`: the path must name a regular file (`NotFound` when missing, `InvalidPath` for a folder or a link). The absolute path is passed as one argument to `explorer.exe`, which opens it with the program associated with its extension. The child process is not waited for, and its output is discarded. Reply `FileOpened { relative_path }`. A failure to start the process gives `Failed { kind: Kernel, message: MSG_OPEN_FILE_FAILED }`.
+- `CreateFolder { relative_dir, name }`: `relative_dir` is walked as for `ListFolder`. `name` must pass `model::check_new_name`; a failed check gives `Failed { kind: InvalidPath, message: MSG_NAME_INVALID }`. An existing entry with the same name gives `Failed { kind: Refused, message: MSG_NAME_EXISTS }`. The folder is created with `fs::create_dir` (not recursive). Reply `Created { relative_path }`.
+- `RenamePath { relative_path, new_name }`: the source must exist and must not be a link. A source that is tracked, and a folder with any tracked file below it, gives `Failed { kind: Refused, message: MSG_RENAME_TRACKED }`, because the ledger keys files by path. The new name is checked as in `CreateFolder`; an existing target gives `MSG_NAME_EXISTS`. The rename is `fs::rename` within the same parent. Reply `Renamed { relative_path }` with the new relative path.
+- `DeletePath { relative_path }`: the source must exist and must not be a link. The entry is moved to the Recycle Bin by `SHFileOperationW` with `FO_DELETE` and `FOF_ALLOWUNDO | FOF_SILENT`; the call takes the path as a double-null-terminated wide string. A tracked file is marked deleted in the ledger with `store.mark_deleted` after the move. A failed move gives `Failed { kind: Kernel, message: MSG_DELETE_FAILED }`. Reply `Deleted { relative_path }`.
+
+### Drive capacity
+
+`model::DriveRow` has two more fields, `total_bytes` and `free_bytes`, both `Option<u64>`. `model::drive_rows` sets both to `None`. `ListDrives` fills them with `GetDiskFreeSpaceExW` for each present drive root: `total_bytes` is the total size and `free_bytes` the free space available to the caller. A failed call leaves both `None`.
+
+### Settings and archive targets
+
+Settings are stored in `nas-folder.txt` in the folder given by the environment variable `LADON_SETTINGS_DIR`, or `%LOCALAPPDATA%\LADON` when that variable is unset. The file holds one absolute folder path as its first line.
+
+- `LoadSettings`: reply `Settings { nas_folder: Option<String>, google_token_set: bool }`. `nas_folder` is the stored path when the file exists and names an existing folder, otherwise `None`. `google_token_set` is true when the environment variable `LADON_GOOGLE_ACCESS_TOKEN` is set and not empty; its value is never read into a reply or a message.
+- `SetNasFolder { path }`: `path` must be absolute, existing and a folder, otherwise `Failed { kind: InvalidPath, message: MSG_NAS_FOLDER_INVALID }`. The file is written by a temporary file and a rename. Reply `Settings` as for `LoadSettings`.
+
+`ArchiveTarget` is `Nas { folder: String }` or `GoogleDrive`.
+
+- `ArchiveVersion { version_id, target }`: the archive key must be set in `LADON_ARCHIVE_KEY_HEX`, otherwise `Failed { kind: Kernel, message: MSG_ARCHIVE_KEY_MISSING }`. `Nas` uses `FilesystemProvider::new("nas", folder)`; the folder must pass the `SetNasFolder` check. `GoogleDrive` uses `provider_from_env("google_drive", None)`; a missing token gives `MSG_TOKEN_MISSING`. The archive runs through `Engine::archive_version(version_id, provider, false)`. A `PolicyDenied` error from the kernel (a sensitive version or a sensitive file) gives `Refused` with `MSG_ARCHIVE_REFUSED`; any other failure gives `Kernel` with `MSG_ARCHIVE_FAILED`. Reply `Archived { version_id, provider: String, locator: String }`.
+- `RestoreVersion { version_id, target: Option<ArchiveTarget> }`: runs `Engine::restore(version_id, true, provider)`, with the provider built from `target` when it is given. The window sends this command only after the user confirms the restore. A diverged live file gives `MSG_RESTORE_DIVERGED`. Cold content with no provider gives `MSG_RESTORE_COLD`. Other failures give `MSG_RESTORE_FAILED`. Reply `Restored { relative_path, version_no }`.
 
 ## Known Limitations
 

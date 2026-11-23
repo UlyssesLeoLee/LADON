@@ -2,7 +2,7 @@
 
 Source: `ui-prototype/src/model.rs`
 
-Source-SHA256: `f925dcd46a93b08f25fe197d486fc997fa59e9b124783e0501e1259120a71d40`
+Source-SHA256: `751e5c6c2b5e043362125cd4e7600be8714c71306fc5e3e262b18ee08ae9f08e`
 
 ## Test Strategy
 
@@ -36,6 +36,9 @@ Requirement coverage: REQ-009 (binary detection TC-602; version rows, sections a
 | TC-654 | `drive_tree_rows` with the drives `C:\` labelled `本地磁盘 (C:)` and `D:\` labelled `本地磁盘 (D:)`; `child_path` with the parent `C:\` and the name `docs`, and with the parent `C:\docs` and the name `a.txt`. | Two rows with depth 0, names equal to the labels, paths `C:\` and `D:\`, and expanded false. The child paths are `C:\docs` and `C:\docs\a.txt`. | src/model.rs::ut_654_tree_rows_and_child_paths |
 | TC-655 | Rows `C:\` and `D:\` at depth 0. `tree_expand` at index 0 with the names `a` and `b`; `tree_expand` at index 0 again; `tree_index` for `c:\` and for `C:\A`; `tree_collapse` at index 0; `tree_collapse` at index 1. | The first expansion returns true and gives the rows `C:\`, `C:\a` and `C:\b` at depth 1 and then `D:\`, with the first row expanded. The second expansion returns false and changes nothing. `tree_index` finds index 0 for `c:\` and index 1 for `C:\A`. The collapse returns true and leaves `C:\` and `D:\`. Collapsing `D:\`, which is not expanded, returns false. | src/model.rs::ut_655_tree_expand_and_collapse |
 | TC-656 | `drive_root_of` with `C:\docs\x`, `C:\`, `C:` and `\\server\share`; `relative_in_root` with the root `C:\` and the paths `C:\docs\x`, `C:\` and `D:\x`, and the root `D:\` with the path `C:\x`. | `drive_root_of` gives `C:\`, `C:\`, `C:\` and None. `relative_in_root` gives `docs/x`, the empty string, and None for the path on another drive. | src/model.rs::ut_656_drive_root_and_relative_path |
+| TC-657 | `check_new_name` with the names `新建文件夹`, `a.txt`, the empty string, `a/b`, `a:b`, `CON`, `con.txt`, `NUL`, `COM1`, `LPT9`, `trail.`, `trail ` and a name of 256 characters. | `新建文件夹` and `a.txt` are accepted. The empty string, `a/b`, `a:b`, `CON`, `con.txt`, `NUL`, `COM1`, `LPT9`, `trail.`, `trail ` and the 256-character name are refused with MSG_NAME_INVALID. | src/model.rs::ut_657_check_new_name |
+| TC-658 | `capacity_text` with `Some(4 GB)` and `Some(10 GB)`, with `None` for the total, and with `None` for the free space. | `可用 4.0 GB / 共 10.0 GB` in the first case, using `format_bytes`; `容量未知` in the other two. | src/model.rs::ut_658_capacity_text |
+| TC-659 | `drive_rows` with the entries `('C', true)` and `('D', false)`. | Each row has `total_bytes` and `free_bytes` equal to None. | src/model.rs::ut_659_drive_rows_have_no_capacity |
 
 ## Boundary & Failure Cases
 

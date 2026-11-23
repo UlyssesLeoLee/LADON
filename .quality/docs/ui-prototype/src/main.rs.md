@@ -2,7 +2,7 @@
 
 Source: `ui-prototype/src/main.rs`
 
-Source-SHA256: `d92a0cdee5b84d3ad3db97dd2f62e9af0c4f0a203ee39a6e253c93d83188a7dd`
+Source-SHA256: `5640d75856a0eb3e67ba7d5c1aa241ab0cac0b2a60efca532b99cfefcc681b68`
 
 ## Responsibility
 
@@ -194,6 +194,31 @@ Every `Text` element sets its `color` explicitly.
   - Backspace goes up one folder when `current-dir` is not empty.
 - Navigation entries are zero-size `FocusScope`s that take focus when enabled and activate with Enter or Space.
 - Escape closes the about overlay when it is shown. The window-level `FocusScope` `keys` is enabled (`enabled: true`), because a disabled FocusScope cannot take focus and would never receive the Escape key that its focused descendants reject; `keys` receives the key events that its focused descendants reject and handles Escape for the overlays.
+
+### Basic file operations in the window
+
+- Double-click on a file row calls `open-file(relative-path)`, which sends `OpenFile`. Enter on a selected file row does the same. The context menu item `打开` on a file sends `OpenFile` for the menu row.
+- Toolbar `新建` opens the name dialog. The dialog has one text field and the buttons `确定` and `取消`. `确定` sends `CreateFolder { relative_dir: current-dir, name }` after the name passes the same check as in `model::check_new_name`, with the message shown in the dialog when it does not.
+- Context menu `重命名` opens the rename dialog for the menu row, with its current name in the field. `确定` sends `RenamePath`.
+- Context menu `删除` opens a confirmation dialog: `将 {name} 移入回收站。` with `确定` and `取消`. `确定` sends `DeletePath`.
+- After `Created`, `Renamed` and `Deleted`, the folder is listed again with `ListFolder` for `current-dir`, and the status shows the result.
+- Context menu items that have no action in this release are disabled.
+
+### Storage page and archive
+
+- On startup the window sends `LoadSettings`. The storage page shows the NAS folder, or `未设置`, with a text field and the button `保存`, which sends `SetNasFolder`. The Google Drive card shows `已设置令牌（环境变量）` or `未设置令牌`; no sign-in button exists.
+- Each version card on the history page has `归档到 NAS` (enabled when a NAS folder is set) and `归档到 Google Drive` (enabled when `google_token_set` is true). Each sends `ArchiveVersion` with the matching target.
+- Each version card has `恢复此版本`. It opens a confirmation dialog: `将把 {relative_path} 替换为 v{n} 的内容。替换前会先保存当前文件的版本。` with `确定` and `取消`. `确定` sends `RestoreVersion { version_id, target: None }` for a local version, or with the archive target for a cold version.
+- The drive list shows the capacity text of each drive from `model::capacity_text`.
+
+### Reply effects added by this release
+
+- `FileOpened { relative_path }`: the status reads `已用关联程序打开`.
+- `Created` and `Renamed`: the list is refreshed; the status reads `已新建文件夹` and `已重命名`.
+- `Deleted`: the list is refreshed; the status reads `已移入回收站`.
+- `Archived`: the status reads `已归档到 {provider}`; the history of the file is requested again.
+- `Restored`: the status reads `已恢复为 v{n}`; the list is refreshed.
+- `Settings`: updates the storage page and the archive buttons.
 
 ## Known Limitations
 
