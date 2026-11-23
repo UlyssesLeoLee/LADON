@@ -1,3 +1,4 @@
+#![windows_subsystem = "windows"]
 //! LADON Explorer window: the Slint markup in `ui/app.slint` wired to one `app::Worker`.
 //!
 //! The window sends at most one `app::Command` for each accepted user action and applies the
