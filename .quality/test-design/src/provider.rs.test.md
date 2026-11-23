@@ -6,7 +6,7 @@ Source-SHA256: `490aeb44f19e35242dad7b48fd24784deb230c6852214267002d71f5672b0f56
 
 ## Test Strategy
 
-Unit tests in `src/provider.rs` cover the filesystem round trip and the Drive identifier check. The token source of the Drive provider and `provider_from_env` are covered by `tests/it_google_oauth.rs`. No test makes a Drive request, because that needs an account.
+Unit tests in `src/provider.rs` cover the filesystem round trip and the Drive identifier check. The token source of the Drive provider and `provider_from_env` are covered by `tests/it_google_oauth.rs`. The sign-in folder is resolved through `google_oauth::settings_dir`, which TC-809 also checks. No test makes a Drive request, because that needs an account.
 
 ## Test Cases
 
