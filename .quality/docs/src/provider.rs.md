@@ -24,6 +24,7 @@ Source-SHA256: `490aeb44f19e35242dad7b48fd24784deb230c6852214267002d71f5672b0f56
 - `pub fn provider_from_env(kind, path) -> Result<Box<dyn StorageProvider>>`:
   - `local` and `nas` need `path`.
   - `google_drive`: uses `LADON_GOOGLE_ACCESS_TOKEN` when set and non-empty. Otherwise it uses the sign-in stored in the settings folder (`google_oauth::load_refresh_token`). When neither exists it fails with `Google Drive is not connected`.
+  - The sign-in is read from `google_oauth::settings_dir()`. The refresh token needs the client ID from `OAuthClient::from_env`; without it the provider fails with the same message.
   - The folder comes from `LADON_GOOGLE_FOLDER_ID`. `LADON_GOOGLE_MODE=appdata` selects the application data folder.
 - Drive file IDs are validated against `A-Z a-z 0-9 _ -`, at most 256 characters.
 - The resumable upload location must start with `https://www.googleapis.com/` or `https://www.google.com/`.

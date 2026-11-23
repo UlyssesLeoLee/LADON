@@ -46,6 +46,7 @@ Source-SHA256: `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
   5. Parses the callback, exchanges the code, and returns the refresh token.
   - Without a request in time the result is `sign-in timed out`.
   - When Google returns no refresh token the result is `Google did not return a refresh token; revoke the access of LADON in the Google account and sign in again`.
+- `pub fn settings_dir() -> Option<PathBuf>`: the folder that holds the sign-in. It is the value of `LADON_SETTINGS_DIR` when that variable is set, otherwise `%LOCALAPPDATA%\LADON`. `None` when neither is available.
 - `pub fn token_path(settings_dir: &Path) -> PathBuf`: `settings_dir/google-token.bin`.
 - `pub fn save_refresh_token(settings_dir: &Path, refresh_token: &str) -> Result<()>`: writes the protected bytes to a temporary file and renames it over the token file. The protection is the current-user DPAPI scope with the description `LADON Google Drive`. Off Windows the result is `protected storage is available on Windows only`.
 - `pub fn load_refresh_token(settings_dir: &Path) -> Result<Option<String>>`: `None` when the file is absent. An unreadable file fails with `stored sign-in is unreadable`.

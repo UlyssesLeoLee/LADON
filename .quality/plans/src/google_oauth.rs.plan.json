@@ -5,7 +5,7 @@
   "prepared_branch": "fix/compile-errors",
   "technical_design": ".quality/docs/src/google_oauth.rs.md",
   "test_design": ".quality/test-design/src/google_oauth.rs.test.md",
-  "prepared_technical_design_sha256": "3f6643ed92a267d59e26c471a87eff3383a838249a1776393df98b062ecf9224",
-  "prepared_test_design_sha256": "ebca5d70cc7d7f8dc40392c0a06c470d19df1d92d3ec861baa923201a350b28f",
+  "prepared_technical_design_sha256": "1201420060159ea11a66cecacae9c1bf7b1fc24e5fce6784242fb10425cdcd1e",
+  "prepared_test_design_sha256": "f6ebb918c13e1a028857a93f8fcb04c2e01eca4ccf243cdaac3732883f02ba4a",
   "prepared_related_design_sha256": {}
 }
