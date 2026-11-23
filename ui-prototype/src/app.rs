@@ -32,7 +32,7 @@ pub const MSG_INVALID_PATH: &str =
 pub const MSG_NOT_FOUND: &str = "找不到该文件、文件夹或版本。";
 pub const MSG_NOT_CONFIRMED: &str = "需要先确认才能初始化该文件夹。";
 pub const MSG_ROOT_REFUSED: &str =
-    "不能把磁盘根目录或用户主目录本身作为工作区，请选择其中的子文件夹。";
+    "不能把用户主目录本身作为工作区，请选择其中的子文件夹。";
 pub const MSG_RULE_FILE_REFUSED: &str = "规则文件 .LADONignore 不作为历史记录对象。";
 pub const MSG_INTERNAL_REFUSED: &str = "内部目录 .ladon 和 .git 不作为历史记录对象。";
 pub const MSG_RULE_PARSE_FAILED: &str =
@@ -71,6 +71,7 @@ pub enum Command {
     Capture { relative_path: String },
     LoadHistory { relative_path: String },
     LoadDiff { older_version_id: String, newer_version_id: String },
+    ListDrives,
 }
 
 /// Why a text diff is not shown.
@@ -109,6 +110,7 @@ pub enum Reply {
     },
     Diff { older_version_id: String, newer_version_id: String, diff: model::DiffResult },
     DiffUnavailable { older_version_id: String, newer_version_id: String, reason: DiffBlock },
+    Drives { drives: Vec<model::DriveRow> },
     Failed { kind: FailKind, message: String, detail: Option<String> },
 }
 
@@ -171,6 +173,7 @@ pub async fn handle(state: &mut State, command: Command) -> Reply {
         Command::LoadDiff { older_version_id, newer_version_id } => {
             load_diff(state, &older_version_id, &newer_version_id).await
         }
+        Command::ListDrives => list_drives(),
     }
 }
 
@@ -368,7 +371,7 @@ fn root_candidate(input: &str, io_message: &'static str) -> Result<Candidate, Re
     }
     let root = fs::canonicalize(&path).map_err(|_| failed(FailKind::Kernel, io_message))?;
     let shown = root.to_string_lossy().into_owned();
-    if model::is_drive_root(&shown) || is_profile_dir(&shown) {
+    if is_profile_dir(&shown) {
         return Err(failed(FailKind::Refused, MSG_ROOT_REFUSED));
     }
     let initialised = owned_entries_state(&root, io_message)?;
@@ -485,6 +488,28 @@ async fn init_workspace(state: &mut State, path: &str, confirmed: bool) -> Reply
         }
         Err(_) => failed(FailKind::Kernel, MSG_INIT_FAILED),
     }
+}
+
+/// Lists the drive letters present on this machine, with whether each drive root holds
+/// an initialised workspace. Writes nothing and never fails; a drive that is not
+/// present is left out.
+fn list_drives() -> Reply {
+    let mut pairs = Vec::new();
+    for letter in 'A'..='Z' {
+        let root_text = format!("{letter}:\\");
+        let root = Path::new(&root_text);
+        if root.is_dir() {
+            pairs.push((letter, drive_initialised(root)));
+        }
+    }
+    Reply::Drives { drives: model::drive_rows(&pairs) }
+}
+
+/// True when `root` holds the metadata database as a regular file that is neither a
+/// link nor a reparse point. Only that entry is checked.
+fn drive_initialised(root: &Path) -> bool {
+    fs::symlink_metadata(root.join(META_DB))
+        .is_ok_and(|meta| meta.is_file() && !is_link_or_reparse(&meta))
 }
 
 async fn list_folder(state: &State, relative_dir: &str) -> Reply {

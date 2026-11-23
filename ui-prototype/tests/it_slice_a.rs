@@ -302,14 +302,9 @@ async fn it_623_root_candidate_refusals() {
         app::MSG_INVALID_PATH,
     );
 
-    // The drive root and the user profile directory are refused.
-    let drive = &base_arg[..2];
-    let drive_root = Command::Open { path: format!("{drive}\\") };
-    assert_failed(
-        app::handle(&mut state, drive_root).await,
-        FailKind::Refused,
-        app::MSG_ROOT_REFUSED,
-    );
+    // The user profile directory is refused. A drive root has no refusal of its own: it
+    // takes the same owned-entry checks as any folder, so Open answers NeedsInit or
+    // Opened. It uses a separate state, and Init is never called on a real drive root.
     let profile = std::env::var("USERPROFILE").expect("USERPROFILE is set");
     let profile_root = Command::Open { path: display_of(Path::new(&profile)) };
     assert_failed(
@@ -317,6 +312,17 @@ async fn it_623_root_candidate_refusals() {
         FailKind::Refused,
         app::MSG_ROOT_REFUSED,
     );
+    #[cfg(windows)]
+    {
+        let drive_text = format!("{}\\", &base_arg[..2]);
+        let mut drive_state = State::new();
+        let drive_root = Command::Open { path: drive_text.clone() };
+        match app::handle(&mut drive_state, drive_root).await {
+            Reply::NeedsInit { path } => assert_eq!(path, drive_text),
+            Reply::Opened { root } => assert_eq!(root, drive_text),
+            other => panic!("expected NeedsInit or Opened, got {other:?}"),
+        }
+    }
     assert!(!root.join(".ladon").exists());
 }
 
@@ -1208,7 +1214,7 @@ fn it_645_constants_and_message_text() {
         (app::MSG_NOT_CONFIRMED, "需要先确认才能初始化该文件夹。"),
         (
             app::MSG_ROOT_REFUSED,
-            "不能把磁盘根目录或用户主目录本身作为工作区，请选择其中的子文件夹。",
+            "不能把用户主目录本身作为工作区，请选择其中的子文件夹。",
         ),
         (app::MSG_RULE_FILE_REFUSED, "规则文件 .LADONignore 不作为历史记录对象。"),
         (app::MSG_INTERNAL_REFUSED, "内部目录 .ladon 和 .git 不作为历史记录对象。"),
@@ -1238,5 +1244,51 @@ fn it_645_constants_and_message_text() {
     ];
     for (actual, expected) in messages {
         assert_eq!(actual, expected);
+    }
+}
+
+#[cfg(windows)]
+#[tokio::test]
+async fn it_646_list_drives() {
+    use std::os::windows::fs::MetadataExt;
+
+    /// FILE_ATTRIBUTE_REPARSE_POINT from the Windows file attribute set.
+    const REPARSE_POINT: u32 = 0x0000_0400;
+
+    let ws_dir = tempfile::tempdir().unwrap();
+    let workspace_text = display_of(ws_dir.path());
+    let workspace_root = format!("{}\\", workspace_text[..2].to_ascii_uppercase());
+
+    let mut state = State::new();
+    let drives = match app::handle(&mut state, Command::ListDrives).await {
+        Reply::Drives { drives } => drives,
+        other => panic!("expected Drives, got {other:?}"),
+    };
+    assert!(!drives.is_empty());
+    for row in &drives {
+        assert!(row.root.ends_with(":\\"), "root {} must end with :\\", row.root);
+    }
+    assert!(
+        drives.windows(2).all(|pair| pair[0].root < pair[1].root),
+        "rows must be sorted by letter and must not repeat a letter"
+    );
+
+    let system = std::env::var("SystemDrive").unwrap_or_else(|_| "C:".to_string());
+    let system_root = format!("{}\\", system.to_ascii_uppercase());
+    assert!(
+        drives.iter().any(|row| row.root == system_root),
+        "the system drive {system_root} must be listed"
+    );
+    assert!(
+        drives.iter().any(|row| row.root == workspace_root),
+        "the drive {workspace_root} of the test workspace must be listed"
+    );
+
+    for row in &drives {
+        let meta_path = Path::new(&row.root).join(".ladon").join("meta.turso");
+        let expected = fs::symlink_metadata(&meta_path)
+            .map(|meta| meta.is_file() && (meta.file_attributes() & REPARSE_POINT) == 0)
+            .unwrap_or(false);
+        assert_eq!(row.initialised, expected, "initialised flag of {}", row.root);
     }
 }

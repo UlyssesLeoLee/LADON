@@ -11,8 +11,8 @@ use ladon_ui_prototype::{app, model};
 use slint::{ComponentHandle, ModelRc, VecModel};
 
 slint::slint! {
-    import { AppWindow, FileItem, VersionItem, DiffItem } from "ui/app.slint";
-    export { AppWindow, FileItem, VersionItem, DiffItem }
+    import { AppWindow, FileItem, VersionItem, DiffItem, DriveItem } from "ui/app.slint";
+    export { AppWindow, FileItem, VersionItem, DiffItem, DriveItem }
 }
 
 const BUSY_STATUS: &str = "正在处理，请稍候。";
@@ -22,6 +22,8 @@ const UNCHANGED_STATUS: &str = "内容与最新版本相同，未新增版本";
 const NO_VERSIONS_NOTE: &str = "该文件还没有版本。";
 /// Status text of an untracked file in `model::browse_rows`.
 const UNTRACKED_STATUS: &str = "未记录";
+/// Status text shown on the This PC page after the drive list arrives.
+const DRIVES_STATUS: &str = "选择一个驱动器打开；未初始化的驱动器需先初始化。";
 
 /// State that exists only on the user-interface thread.
 #[derive(Default)]
@@ -88,6 +90,10 @@ fn main() -> Result<(), slint::PlatformError> {
     });
     UI.with(|state| state.borrow_mut().worker = Some(worker));
 
+    // The window opens on the This PC page, which lists the drive roots.
+    window.set_page(2);
+    send_command(&window, app::Command::ListDrives);
+
     window.run()
 }
 
@@ -106,6 +112,25 @@ fn wire_callbacks(window: &AppWindow) {
         move |path| {
             with_window(&weak, |ui| {
                 send_command(ui, app::Command::Open { path: path.to_string() });
+            });
+        }
+    });
+
+    window.on_open_drive({
+        let weak = weak.clone();
+        move |path| {
+            with_window(&weak, |ui| {
+                ui.set_workspace_path(path.clone());
+                send_command(ui, app::Command::Open { path: path.to_string() });
+            });
+        }
+    });
+
+    window.on_show_this_pc({
+        let weak = weak.clone();
+        move || {
+            with_window(&weak, |ui| {
+                send_command(ui, app::Command::ListDrives);
             });
         }
     });
@@ -286,6 +311,19 @@ fn apply_reply(ui: &AppWindow, reply: app::Reply) {
             ui.set_diff_lines(ModelRc::new(VecModel::from(Vec::<DiffItem>::new())));
         }
         app::Reply::Failed { message, .. } => set_status(ui, &message, true),
+        app::Reply::Drives { drives } => {
+            let items: Vec<DriveItem> = drives
+                .into_iter()
+                .map(|row| DriveItem {
+                    path: row.root.into(),
+                    label: row.label.into(),
+                    status_text: model::drive_status_text(row.initialised).into(),
+                })
+                .collect();
+            ui.set_drives(ModelRc::new(VecModel::from(items)));
+            ui.set_page(2);
+            set_status(ui, DRIVES_STATUS, false);
+        }
     }
 }
 

@@ -36,6 +36,12 @@ export struct DiffItem {
     text: string,
 }
 
+export struct DriveItem {
+    path: string,
+    label: string,
+    status-text: string,
+}
+
 // One checklist row in the document-task view.
 component TaskRow inherits Rectangle {
     in property <string> label;
@@ -206,7 +212,7 @@ component CaptionButton inherits Rectangle {
 }
 
 export component AppWindow inherits Window {
-    title: "LADON Explorer";
+    title: "LADON";
     icon: @image-url("../../logo/logo/png/LADON_logo_256x256.png");
     preferred-width: 1180px;
     preferred-height: 760px;
@@ -251,6 +257,7 @@ export component AppWindow inherits Window {
     in-out property <string> init-path: "";
     in-out property <bool> about-visible: false;
     in-out property <bool> history-available: false;
+    in-out property <[DriveItem]> drives: [];
 
     callback open-workspace(string);
     callback request-init(string);
@@ -266,10 +273,12 @@ export component AppWindow inherits Window {
     callback open-about();
     callback close-about();
     callback refresh-folder();
+    callback open-drive(string);
+    callback show-this-pc();
 
     // View state that only the window itself uses.
     property <int> section: 0;
-    property <int> nav-index: 1;
+    property <int> nav-index: 2;
     property <bool> sidebar-collapsed: false;
     property <bool> chat-open: false;
     property <int> chat-tab: 0;
@@ -296,32 +305,42 @@ export component AppWindow inherits Window {
     function show-files() {
         root.page = 0;
         root.section = 0;
-        root.nav-index = 1;
+        root.nav-index = 2;
     }
 
     function nav-pick(i: int) {
         root.nav-index = i;
-        if (i == 0 || i == 1 || i == 2) {
+        if (i == 0) {
+            root.page = 2;
+            root.show-this-pc();
+        } else if (i == 1 || i == 2 || i == 3) {
             root.page = 0;
             root.section = 0;
-        } else if (i == 3) {
-            root.page = 0;
-            root.section = 1;
         } else if (i == 4) {
             root.page = 0;
-            root.section = 2;
+            root.section = 1;
         } else if (i == 5) {
             root.page = 0;
-            root.section = 3;
+            root.section = 2;
         } else if (i == 6) {
+            root.page = 0;
+            root.section = 3;
+        } else if (i == 7) {
             if (root.history-available) {
                 root.page = 1;
             }
-        } else if (i == 7) {
+        } else if (i == 8) {
             root.page = 0;
             root.section = 4;
         }
         root.close-overlays();
+    }
+
+    // Leaving This PC for the browse page must not keep the This PC entry highlighted.
+    changed page => {
+        if (root.page == 0 && root.nav-index == 0) {
+            root.nav-index = 2;
+        }
     }
 
     changed selected => {
@@ -400,7 +419,7 @@ export component AppWindow inherits Window {
                         image-fit: contain;
                     }
                     Text {
-                        text: "LADON Explorer";
+                        text: "LADON";
                         font-size: 13px;
                         font-weight: 600;
                         color: Palette.text;
@@ -446,7 +465,7 @@ export component AppWindow inherits Window {
                         TouchArea {
                             width: 100%;
                             height: 100%;
-                            clicked => { root.page = 0; root.section = 1; root.nav-index = 3; }
+                            clicked => { root.page = 0; root.section = 1; root.nav-index = 4; }
                         }
                     }
                     Text {
@@ -592,12 +611,75 @@ export component AppWindow inherits Window {
                     side-list := NavList {
                         width: 100%;
                         height: 100%;
-                        labels: ["快速访问", "文件浏览", "搜索", "文档任务", "FileSpace", "云盘存储", "版本历史", "LADON Ignore"];
-                        glyphs: ["快", "文", "搜", "任", "F", "云", "历", "I"];
-                        active: root.page == 1 ? 6 : root.nav-index;
+                        labels: ["此电脑", "快速访问", "文件浏览", "搜索", "文档任务", "FileSpace", "云盘存储", "版本历史", "LADON Ignore"];
+                        glyphs: ["此", "快", "文", "搜", "任", "F", "云", "历", "I"];
+                        active: root.page == 1 ? 7 : (root.page == 2 ? 0 : root.nav-index);
                         expanded: !root.sidebar-collapsed;
                         history-ok: root.history-available;
                         picked(i) => { root.nav-pick(i); }
+                    }
+                }
+
+                // This PC: the drive roots. Opening one makes it the workspace.
+                if root.page == 2 : VerticalLayout {
+                    horizontal-stretch: 1;
+                    padding: 16px;
+                    spacing: 12px;
+                    Text { text: "此电脑"; font-size: 18px; font-weight: 600; color: Palette.text; }
+                    Rectangle {
+                        vertical-stretch: 1;
+                        background: Palette.surface;
+                        border-radius: 10px;
+                        border-width: 1px;
+                        border-color: Palette.line;
+                        clip: true;
+
+                        ListView {
+                            width: 100%;
+                            height: 100%;
+                            for drive in root.drives : Rectangle {
+                                height: 44px;
+                                background: drive-ta.has-hover ? Palette.hover : transparent;
+
+                                drive-ta := TouchArea {
+                                    width: 100%;
+                                    height: 100%;
+                                    clicked => { root.open-drive(drive.path); }
+                                }
+
+                                HorizontalLayout {
+                                    padding-left: 16px;
+                                    padding-right: 16px;
+                                    spacing: 12px;
+                                    Text {
+                                        text: drive.label;
+                                        font-size: 13px;
+                                        color: Palette.text;
+                                        vertical-alignment: center;
+                                        overflow: elide;
+                                        horizontal-stretch: 1;
+                                    }
+                                    Text {
+                                        text: drive.status-text;
+                                        font-size: 12px;
+                                        color: Palette.state-text;
+                                        vertical-alignment: center;
+                                    }
+                                }
+                            }
+                        }
+
+                        Text {
+                            visible: root.drives.length == 0;
+                            x: 0px;
+                            width: 100%;
+                            height: 100%;
+                            text: "没有可用的驱动器";
+                            font-size: 13px;
+                            color: Palette.header-text;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
                     }
                 }
 
@@ -622,7 +704,7 @@ export component AppWindow inherits Window {
                                 Btn {
                                     small: true;
                                     label: "文档任务";
-                                    clicked => { root.section = 1; root.nav-index = 3; }
+                                    clicked => { root.section = 1; root.nav-index = 4; }
                                 }
                                 Btn {
                                     small: true;
@@ -1487,9 +1569,9 @@ export component AppWindow inherits Window {
             hover-list := NavList {
                 width: 100%;
                 height: 100%;
-                labels: ["快速访问", "文件浏览", "搜索", "文档任务", "FileSpace", "云盘存储", "版本历史", "LADON Ignore"];
-                glyphs: ["快", "文", "搜", "任", "F", "云", "历", "I"];
-                active: root.page == 1 ? 6 : root.nav-index;
+                labels: ["此电脑", "快速访问", "文件浏览", "搜索", "文档任务", "FileSpace", "云盘存储", "版本历史", "LADON Ignore"];
+                glyphs: ["此", "快", "文", "搜", "任", "F", "云", "历", "I"];
+                active: root.page == 1 ? 7 : (root.page == 2 ? 0 : root.nav-index);
                 expanded: true;
                 history-ok: root.history-available;
                 picked(i) => { root.nav-pick(i); }
@@ -1525,7 +1607,7 @@ export component AppWindow inherits Window {
                     disabled: root.selected < 0 || !root.selected-tracked || root.selected-is-folder;
                     clicked => { root.open-history(); root.close-overlays(); }
                 }
-                MenuRow { label: "文档任务"; clicked => { root.section = 1; root.nav-index = 3; root.close-overlays(); } }
+                MenuRow { label: "文档任务"; clicked => { root.section = 1; root.nav-index = 4; root.close-overlays(); } }
                 MenuRow { label: "AI 标签"; clicked => { root.tag-open = true; root.menu-open = false; } }
                 MenuRow { label: "添加到敏感文件"; clicked => { root.close-overlays(); } }
                 Rectangle { height: 9px; }
@@ -1793,7 +1875,7 @@ export component AppWindow inherits Window {
                     padding: 20px;
                     spacing: 12px;
                     Text {
-                        text: "LADON Explorer";
+                        text: "LADON";
                         font-size: 18px;
                         font-weight: 600;
                         color: Palette.text;

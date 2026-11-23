@@ -5,7 +5,7 @@
 //! for display. It depends only on `chrono`, `similar` and `std`.
 
 use std::borrow::Cow;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::time::{Duration, Instant};
 
 use chrono::{DateTime, FixedOffset, Utc};
@@ -264,6 +264,44 @@ pub fn is_drive_root(path: &str) -> bool {
         [drive, b':'] => drive.is_ascii_alphabetic(),
         [drive, b':', b'\\' | b'/'] => drive.is_ascii_alphabetic(),
         _ => false,
+    }
+}
+
+/// One row of the This PC page: a drive root, its label, and whether that root is an
+/// initialised workspace.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DriveRow {
+    pub root: String,
+    pub label: String,
+    pub initialised: bool,
+}
+
+/// Builds the rows of the This PC page from drive letters and their initialised flags,
+/// sorted by letter. Characters that are not ASCII letters are skipped. Letters are
+/// compared without case, and a letter that repeats keeps its first entry.
+pub fn drive_rows(entries: &[(char, bool)]) -> Vec<DriveRow> {
+    let mut first: BTreeMap<char, bool> = BTreeMap::new();
+    for &(letter, initialised) in entries {
+        if letter.is_ascii_alphabetic() {
+            first.entry(letter.to_ascii_uppercase()).or_insert(initialised);
+        }
+    }
+    first
+        .into_iter()
+        .map(|(letter, initialised)| DriveRow {
+            root: format!("{letter}:\\"),
+            label: format!("本地磁盘 ({letter}:)"),
+            initialised,
+        })
+        .collect()
+}
+
+/// Status text of a drive row on the This PC page.
+pub fn drive_status_text(initialised: bool) -> &'static str {
+    if initialised {
+        "已是工作区"
+    } else {
+        "未初始化"
     }
 }
 
@@ -1234,5 +1272,27 @@ mod tests {
         let zero_timeout = diff_lines("a\n", "b\n", 100, Duration::ZERO);
         assert!(zero_timeout.approximate);
         assert_eq!((zero_timeout.added, zero_timeout.removed), (1, 1));
+    }
+
+    #[test]
+    fn ut_619_drive_rows_and_status() {
+        let rows = drive_rows(&[('d', false), ('C', true), ('1', true), ('C', false)]);
+        assert_eq!(
+            rows,
+            vec![
+                DriveRow {
+                    root: r"C:\".to_string(),
+                    label: "本地磁盘 (C:)".to_string(),
+                    initialised: true,
+                },
+                DriveRow {
+                    root: r"D:\".to_string(),
+                    label: "本地磁盘 (D:)".to_string(),
+                    initialised: false,
+                },
+            ]
+        );
+        assert_eq!(drive_status_text(true), "已是工作区");
+        assert_eq!(drive_status_text(false), "未初始化");
     }
 }
