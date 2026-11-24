@@ -66,25 +66,39 @@ jobs:
       - name: Assemble package folder and zip
         shell: pwsh
         run: |
-          ./packaging/windows/Build-Package.ps1 `
-            -Binary "target/release/ladon.exe" `
-            -GuiBinary "ui-prototype/target/release/ladon-gui.exe" `
-            -OutDir "dist" `
-            -Version "$env:VERSION"
+          try {
+            ./packaging/windows/Build-Package.ps1 `
+              -Binary "target/release/ladon.exe" `
+              -GuiBinary "ui-prototype/target/release/ladon-gui.exe" `
+              -OutDir "dist" `
+              -Version "$env:VERSION" *>&1 | Tee-Object -FilePath package.log
+          } catch {
+            $tail = ((Get-Content package.log -Tail 30 -ErrorAction SilentlyContinue) + $_.Exception.Message) -join "`n"
+            Write-Host ("::error title=package::" + (($tail -replace '%','%25' -replace "`r",'') -replace "`n",'%0A'))
+            exit 1
+          }
 
       - name: Install WiX 5
         shell: pwsh
         run: |
           dotnet tool install --global wix --version 5.0.2
-          "$env:USERPROFILE\.dotnet\tools" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          "$env:USERPROFILE\.dotnet	ools" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          & "$env:USERPROFILE\.dotnet	ools\wix.exe" extension add -g WixToolset.UI.wixext/5.0.2
+          & "$env:USERPROFILE\.dotnet	ools\wix.exe" extension list -g
 
       - name: Build MSI
         shell: pwsh
         run: |
-          ./packaging/windows/msi/build-msi.ps1 `
-            -SourceDir "dist/LADON-$env:VERSION-Setup" `
-            -Version "$env:VERSION" `
-            -OutDir "dist"
+          try {
+            ./packaging/windows/msi/build-msi.ps1 `
+              -SourceDir "dist/LADON-$env:VERSION-Setup" `
+              -Version "$env:VERSION" `
+              -OutDir "dist" *>&1 | Tee-Object -FilePath msi.log
+          } catch {
+            $tail = ((Get-Content msi.log -Tail 40 -ErrorAction SilentlyContinue) + $_.Exception.Message) -join "`n"
+            Write-Host ("::error title=msi::" + (($tail -replace '%','%25' -replace "`r",'') -replace "`n",'%0A'))
+            exit 1
+          }
 
       - name: Checksums
         shell: pwsh
