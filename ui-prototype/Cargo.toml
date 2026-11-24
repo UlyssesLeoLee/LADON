@@ -1,8 +1,8 @@
 [package]
 name = "ladon-ui-prototype"
-version = "0.0.2"
+version = "0.0.3"
 edition = "2021"
-license = "MIT"
+license = "AGPL-3.0"
 
 [lib]
 path = "src/lib.rs"
@@ -30,7 +30,18 @@ ladon-explorer = { path = "..", optional = true }
 slint = { version = "1.19", optional = true }
 tokio = { version = "1", features = ["rt", "macros", "time", "fs", "sync"], optional = true }
 
+[[test]]
+name = "it_settings"
+path = "tests/it_settings.rs"
+required-features = ["kernel"]
+
+[[test]]
+name = "it_archive_nas"
+path = "tests/it_archive_nas.rs"
+required-features = ["kernel"]
+
 [dev-dependencies]
 tempfile = "3"
+i-slint-backend-testing = "=1.19.0"
 
 [workspace]

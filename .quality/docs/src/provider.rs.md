@@ -2,7 +2,7 @@
 
 Source: `src/provider.rs`
 
-Source-SHA256: `490aeb44f19e35242dad7b48fd24784deb230c6852214267002d71f5672b0f56`
+Source-SHA256: `8c967893eb36e88745c0238eef2707640f15870f99b983c8750efe2809b9a8dc`
 
 ## Responsibility
 
@@ -18,9 +18,9 @@ Source-SHA256: `490aeb44f19e35242dad7b48fd24784deb230c6852214267002d71f5672b0f56
 - `pub struct FilesystemProvider`: `new(name, root)`. Objects are written to `root/<first two hex digits>/<hash>.ladon`.
 - `pub struct GoogleDriveProvider { pub folder_id: Option<String>, pub use_appdata: bool }`. It is built by:
   - `GoogleDriveProvider::new(access_token, folder_id)`: a fixed access token from the environment. An empty token fails with `OAuth access token required`.
-  - `GoogleDriveProvider::from_sign_in(refresh_token, folder_id)`: refreshes the access token with `google_oauth::refresh_access_token` before each request.
+  - `GoogleDriveProvider::from_sign_in(refresh_token, folder_id)`: refreshes the access token with `google_oauth::refresh_access_token` before each request. The client ID comes from `OAuthClient::from_env`; without it construction fails.
   - `set_appdata(enabled)`: the application data folder and a regular folder are mutually exclusive.
-- Token source of a Drive request: a fixed token is used as it is. A sign-in refreshes the token first. A refresh failure fails the request and names no token.
+- Token source of a Drive request: a fixed token is used as it is. A sign-in refreshes the token first. A refresh failure fails the request and names no token. An upload uses one token for both its session request and its content request.
 - `pub fn provider_from_env(kind, path) -> Result<Box<dyn StorageProvider>>`:
   - `local` and `nas` need `path`.
   - `google_drive`: uses `LADON_GOOGLE_ACCESS_TOKEN` when set and non-empty. Otherwise it uses the sign-in stored in the settings folder (`google_oauth::load_refresh_token`). When neither exists it fails with `Google Drive is not connected`.

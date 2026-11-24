@@ -11,6 +11,7 @@ use ladon_ui_prototype::{app, model};
 use slint::{ComponentHandle, ModelRc, VecModel};
 
 slint::slint! {
+    #[edition = "1.19"]
     import { AppWindow, FileItem, VersionItem, DiffItem, DriveItem, TreeItem } from "ui/app.slint";
     export { AppWindow, FileItem, VersionItem, DiffItem, DriveItem, TreeItem }
 }
@@ -41,6 +42,10 @@ struct UiState {
     /// Relative folder that the next `Opened` reply lists. Set by `tree-open` for a drive root that
     /// is not the open workspace.
     pending_folder: Option<String>,
+    /// Relative path of the file whose versions the history page shows.
+    history_path: Option<String>,
+    /// Set by a restore until the history reload that it queues is answered. Commands sent meanwhile are refused.
+    history_reload: bool,
 }
 
 thread_local! {
@@ -130,6 +135,64 @@ fn wire_callbacks(window: &AppWindow) {
         move |index| with_window(&weak, |ui| tree_open(ui, index))
     });
 
+    window.on_open_file({
+        let weak = weak.clone();
+        move |path| {
+            with_window(&weak, |ui| {
+                send_command(ui, app::Command::OpenFile { relative_path: path.to_string() });
+            });
+        }
+    });
+
+    window.on_create_folder({
+        let weak = weak.clone();
+        move |name| {
+            with_window(&weak, |ui| {
+                let relative_dir = ui.get_current_dir().to_string();
+                send_command(ui, app::Command::CreateFolder { relative_dir, name: name.to_string() });
+            });
+        }
+    });
+
+    window.on_rename_selected({
+        let weak = weak.clone();
+        move |new_name| {
+            with_window(&weak, |ui| {
+                let relative_path = ui.get_selected_path().to_string();
+                send_command(ui, app::Command::RenamePath { relative_path, new_name: new_name.to_string() });
+            });
+        }
+    });
+
+    window.on_delete_selected({
+        let weak = weak.clone();
+        move || {
+            with_window(&weak, |ui| {
+                let relative_path = ui.get_selected_path().to_string();
+                send_command(ui, app::Command::DeletePath { relative_path });
+            });
+        }
+    });
+
+    window.on_set_nas_folder({
+        let weak = weak.clone();
+        move |path| {
+            with_window(&weak, |ui| {
+                send_command(ui, app::Command::SetNasFolder { path: path.to_string() });
+            });
+        }
+    });
+
+    window.on_archive_version({
+        let weak = weak.clone();
+        move |index, target| with_window(&weak, |ui| archive_version(ui, index, &target))
+    });
+
+    window.on_restore_version({
+        let weak = weak.clone();
+        move |index| with_window(&weak, |ui| restore_version(ui, index))
+    });
+
     window.on_show_this_pc({
         let weak = weak.clone();
         move || {
@@ -202,7 +265,7 @@ fn send_command(ui: &AppWindow, command: app::Command) -> bool {
     if ui.get_worker_stopped() {
         return false;
     }
-    if ui.get_busy() || silent_in_flight() {
+    if ui.get_busy() || follow_up_in_flight() {
         set_status(ui, BUSY_STATUS, false);
         return false;
     }
@@ -228,13 +291,15 @@ fn apply_reply(ui: &AppWindow, reply: app::Reply) {
     ui.set_busy(false);
     let history_pending = UI.with(|state| std::mem::take(&mut state.borrow_mut().history_pending));
     let silent = UI.with(|state| std::mem::take(&mut state.borrow_mut().silent_refresh));
+    // The history reload follows the silent listing, so the first reply after that listing answers it.
+    let reload = !silent && UI.with(|state| std::mem::take(&mut state.borrow_mut().history_reload));
     let pending_folder = UI.with(|state| state.borrow_mut().pending_folder.take());
 
     match reply {
         app::Reply::Opened { root } => {
             ui.set_workspace_root(root.into());
             ui.set_workspace_open(true);
-            ui.set_page(0);
+            ui.invoke_show_files();
             clear_history(ui);
             clear_folder(ui);
             set_status(ui, OPENED_STATUS, false);
@@ -264,7 +329,7 @@ fn apply_reply(ui: &AppWindow, reply: app::Reply) {
             send_command(ui, app::Command::ListFolder { relative_dir: folder });
         }
         app::Reply::History { relative_path, versions, chain_valid, event_count } => {
-            if history_pending {
+            if history_pending || reload {
                 show_history_page(ui, relative_path, versions, chain_valid, event_count);
             } else {
                 show_current_version(ui, &relative_path, &versions, chain_valid, event_count);
@@ -290,6 +355,29 @@ fn apply_reply(ui: &AppWindow, reply: app::Reply) {
             ui.set_diff_note(app::diff_block_message(reason).into());
             ui.set_diff_lines(ModelRc::new(VecModel::from(Vec::<DiffItem>::new())));
         }
+        app::Reply::FileOpened { .. } => set_status(ui, "已用关联程序打开", false),
+        app::Reply::Created { .. } => {
+            set_status(ui, "已新建文件夹", false);
+            refresh_folder(ui);
+        }
+        app::Reply::Renamed { .. } => {
+            set_status(ui, "已重命名", false);
+            refresh_folder(ui);
+        }
+        app::Reply::Deleted { .. } => {
+            set_status(ui, "已移入回收站", false);
+            refresh_folder(ui);
+        }
+        app::Reply::Archived { provider, .. } => set_status(ui, &format!("已归档到 {provider}"), false),
+        app::Reply::Restored { relative_path, version_no } => {
+            set_status(ui, &format!("已恢复为 v{version_no}"), false);
+            refresh_folder(ui);
+            reload_history_after_restore(ui, relative_path);
+        }
+        app::Reply::Settings { nas_folder, google_token_set } => {
+            ui.set_nas_folder(nas_folder.unwrap_or_default().into());
+            ui.set_google_token_set(google_token_set);
+        }
         app::Reply::Failed { message, .. } => set_status(ui, &message, true),
         app::Reply::Drives { drives } => {
             let tree = model::drive_tree_rows(&drives);
@@ -299,6 +387,7 @@ fn apply_reply(ui: &AppWindow, reply: app::Reply) {
                     path: row.root.into(),
                     label: row.label.into(),
                     status_text: model::drive_status_text(row.initialised).into(),
+                    capacity_text: model::capacity_text(row.total_bytes, row.free_bytes).into(),
                 })
                 .collect();
             ui.set_drives(ModelRc::new(VecModel::from(items)));
@@ -307,6 +396,7 @@ fn apply_reply(ui: &AppWindow, reply: app::Reply) {
             ui.set_drive_selected(-1);
             ui.set_page(2);
             set_status(ui, DRIVES_STATUS, false);
+            send_command(ui, app::Command::LoadSettings);
         }
         app::Reply::Subfolders { path, names } => {
             let changed = UI.with(|state| {
@@ -321,6 +411,41 @@ fn apply_reply(ui: &AppWindow, reply: app::Reply) {
             }
         }
     }
+}
+
+/// Archives the version at `index` of the history page. The NAS target needs a NAS folder that is set.
+fn archive_version(ui: &AppWindow, index: i32, target: &str) {
+    let Ok(index) = usize::try_from(index) else {
+        return;
+    };
+    let version_id = UI.with(|state| state.borrow().versions.get(index).map(|row| row.version_id.clone()));
+    let Some(version_id) = version_id else {
+        return;
+    };
+    let target = if target == "nas" {
+        let folder = ui.get_nas_folder().to_string();
+        if folder.is_empty() {
+            return;
+        }
+        app::ArchiveTarget::Nas { folder }
+    } else {
+        app::ArchiveTarget::GoogleDrive
+    };
+    send_command(ui, app::Command::ArchiveVersion { version_id, target });
+}
+
+/// Restores the version at `index` of the history page. When a NAS folder is set, cold content is read from it.
+fn restore_version(ui: &AppWindow, index: i32) {
+    let Ok(index) = usize::try_from(index) else {
+        return;
+    };
+    let version_id = UI.with(|state| state.borrow().versions.get(index).map(|row| row.version_id.clone()));
+    let Some(version_id) = version_id else {
+        return;
+    };
+    let folder = ui.get_nas_folder().to_string();
+    let target = (!folder.is_empty()).then(|| app::ArchiveTarget::Nas { folder });
+    send_command(ui, app::Command::RestoreVersion { version_id, target });
 }
 
 /// Rebuilds the `tree-items` model of the window from `UiState.tree`.
@@ -381,7 +506,7 @@ fn tree_open(ui: &AppWindow, index: i32) {
     };
     if ui.get_workspace_open() && model::same_directory(ui.get_workspace_root().as_str(), &root) {
         if send_command(ui, app::Command::ListFolder { relative_dir: relative }) {
-            ui.set_page(0);
+            ui.invoke_show_files();
         }
     } else {
         UI.with(|state| state.borrow_mut().pending_folder = Some(relative));
@@ -393,22 +518,46 @@ fn tree_open(ui: &AppWindow, index: i32) {
 
 /// Lists the open folder again without a message, when no command is in flight.
 fn refresh_folder(ui: &AppWindow) {
-    let busy = ui.get_busy() || silent_in_flight();
+    let busy = ui.get_busy() || follow_up_in_flight();
     if !model::should_refresh(busy, ui.get_worker_stopped(), ui.get_workspace_open()) {
         return;
     }
     let command = app::Command::ListFolder { relative_dir: ui.get_current_dir().to_string() };
     UI.with(|state| state.borrow_mut().silent_refresh = true);
-    let sent = UI.with(|state| state.borrow().worker.as_ref().is_some_and(|worker| worker.send(command)));
-    if !sent {
+    if !queue_command(ui, command) {
         UI.with(|state| state.borrow_mut().silent_refresh = false);
-        ui.set_worker_stopped(true);
     }
 }
 
-/// Whether a silent refresh is in flight. Commands sent meanwhile are refused.
-fn silent_in_flight() -> bool {
-    UI.with(|state| state.borrow().silent_refresh)
+/// Reloads the versions of the history page after a restore of the file that page shows. The reload is
+/// queued behind the listing that `refresh_folder` queued, so the worker answers the listing first.
+fn reload_history_after_restore(ui: &AppWindow, relative_path: String) {
+    let shown = UI.with(|state| state.borrow().history_path.as_deref() == Some(relative_path.as_str()));
+    if ui.get_page() != 1 || !shown {
+        return;
+    }
+    UI.with(|state| state.borrow_mut().history_reload = true);
+    if !queue_command(ui, app::Command::LoadHistory { relative_path }) {
+        UI.with(|state| state.borrow_mut().history_reload = false);
+    }
+}
+
+/// Queues a command without waiting for `busy` to clear. Returns whether it was queued. A command that
+/// cannot be queued means the worker has stopped.
+fn queue_command(ui: &AppWindow, command: app::Command) -> bool {
+    let sent = UI.with(|state| state.borrow().worker.as_ref().is_some_and(|worker| worker.send(command)));
+    if !sent {
+        ui.set_worker_stopped(true);
+    }
+    sent
+}
+
+/// Whether a silent refresh or a history reload is in flight. Commands sent meanwhile are refused.
+fn follow_up_in_flight() -> bool {
+    UI.with(|state| {
+        let state = state.borrow();
+        state.silent_refresh || state.history_reload
+    })
 }
 
 /// Applies the listing of a silent refresh. A listing equal to the one shown changes nothing.
@@ -416,7 +565,9 @@ fn silent_in_flight() -> bool {
 /// selection stays on the same path when that row still exists.
 fn apply_silent_listing(ui: &AppWindow, rows: Vec<model::BrowseRow>, truncated: bool) {
     let changed = UI.with(|state| model::listing_changed(&state.borrow().rows, &rows));
-    if !changed {
+    // The truncation notice also depends on the flag. A listing that gains one row past the limit keeps
+    // the same kept rows, so only the flag changes.
+    if !changed && ui.get_truncated() == truncated {
         return;
     }
     let details = ui.get_details_version();
@@ -461,7 +612,11 @@ fn show_history_page(
     ui.set_history_note(note.into());
     ui.set_versions(ModelRc::new(VecModel::from(items)));
     clear_diff(ui);
-    UI.with(|state| state.borrow_mut().versions = versions);
+    UI.with(|state| {
+        let mut state = state.borrow_mut();
+        state.versions = versions;
+        state.history_path = Some(relative_path);
+    });
     ui.set_page(1);
 }
 
@@ -526,7 +681,11 @@ fn clear_history(ui: &AppWindow) {
     ui.set_chain_text("".into());
     ui.set_history_note("".into());
     ui.set_versions(ModelRc::new(VecModel::from(Vec::<VersionItem>::new())));
-    UI.with(|state| state.borrow_mut().versions.clear());
+    UI.with(|state| {
+        let mut state = state.borrow_mut();
+        state.versions.clear();
+        state.history_path = None;
+    });
     clear_diff(ui);
 }
 

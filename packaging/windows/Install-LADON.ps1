@@ -15,7 +15,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2.0
-$Version = '0.0.2'
+$Version = '0.0.3'
 $AppName = 'LADON'
 
 . (Join-Path $PSScriptRoot 'LADON-Common.ps1')
@@ -201,7 +201,7 @@ $p0.Controls.Add((New-Label ("欢迎使用 $AppName $Version（试用构建）`r
   "LADON 是事件驱动的文件历史与治理内核，本安装包提供命令行程序 ladon：记录文件每次稳定保存的版本与事件链、按 .LADONignore 阻止敏感内容外传、支持加密归档与恢复。`r`n`r`n" +
   "· 按当前用户安装，不需要管理员权限，可随时卸载。`r`n" +
   "· 安装完成后会运行一次自检，并可创建示例工作区供你试用。`r`n`r`n" +
-  "试用提示：这是试用构建。根 crate 的自动化测试 104 项通过，手工系统测试与用户验收尚未执行。请不要用它管理重要数据，先在示例工作区里试用。") 24 12 590 280))
+  "试用提示：这是试用构建。根 crate 的自动化测试 167 项于 2026-11-24 通过（debug 构建），手工系统测试与用户验收尚未执行。请不要用它管理重要数据，先在示例工作区里试用。") 24 12 590 280))
 
 # 页 1：选项
 $p1 = New-Page
@@ -303,7 +303,7 @@ if ($ScreenshotDir) {
   $form.Show()
   for ($i = 0; $i -lt 4; $i++) {
     Show-Page $i
-    if ($i -eq 2) { $logBox.Text = "安装目录：示例`r`n  复制 ladon.exe`r`n自检通过：ladon 0.0.2" }
+    if ($i -eq 2) { $logBox.Text = "安装目录：示例`r`n  复制 ladon.exe`r`n自检通过：ladon 0.0.3" }
     if ($i -eq 3) { $lblDone.Text = "安装完成。`r`n`r`n程序位置：示例`r`n已加入用户 PATH。`r`n示例工作区：示例（内有 QUICKSTART.txt）`r`n`r`n卸载：开始菜单「卸载 LADON」。"; $cbOpen.Visible = $true }
     [System.Windows.Forms.Application]::DoEvents(); Start-Sleep -Milliseconds 300; [System.Windows.Forms.Application]::DoEvents()
     $bmp = New-Object System.Drawing.Bitmap($form.Width, $form.Height)

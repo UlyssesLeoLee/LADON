@@ -1,7 +1,7 @@
 //! CLI: native local-first entry point. GUI remains optional and independent.
 use anyhow::{anyhow,bail,Context,Result};
 use clap::{Parser,Subcommand};
-use ladon_explorer::{engine::Engine,model::FileRecord,nema,policy::LadonPolicy,provider::{provider_from_env,StorageProvider},search,tagging,workspace::FileSpace};
+use ladon_explorer::{engine::{normalise_relative,Engine},google_oauth,model::FileRecord,nema,policy::{is_root_rule_event,needs_full_scan,LadonPolicy},provider::{provider_from_env,StorageProvider},search,tagging,workspace::FileSpace};
 use notify::{RecursiveMode,Watcher};
 use similar::{ChangeTag,TextDiff};
 use std::{collections::HashSet,fs,io::Read,path::{Path,PathBuf},sync::mpsc,time::Duration};
@@ -41,6 +41,10 @@ enum Command {
     #[command(hide=true)]
     ShellHostInternal{file:PathBuf},
     FileSpace,
+    /// Signs this user in to Google Drive. The refresh token is stored in protected form.
+    GoogleLogin,
+    /// Removes the stored Google Drive sign-in.
+    GoogleLogout,
 }
 
 #[tokio::main]
@@ -76,11 +80,14 @@ async fn main()->Result<()> {
     }
     match cli.cmd {
         Command::Init=>{let e=Engine::init(&cli.root).await?;println!("Initialized: {}",e.root.display());}
+        Command::GoogleLogin=>google_login().await?,
+        Command::GoogleLogout=>google_logout()?,
         other=>{
             let engine=Engine::open(&cli.root).await?;
             match other {
                 Command::Init=>unreachable!(),
                 Command::ShellMenu{..}|Command::ShellHostInternal{..}=>unreachable!(),
+                Command::GoogleLogin|Command::GoogleLogout=>unreachable!(),
                 Command::AgentCapabilities=>println!("{}",serde_json::to_string_pretty(&ladon_explorer::agent_api::capabilities())?),
                 Command::AgentList{folder,limit}=>{
                     let api=ladon_explorer::agent_api::AgentApi{engine:&engine};
@@ -174,8 +181,36 @@ async fn main()->Result<()> {
     Ok(())
 }
 
+async fn google_login()->Result<()>{
+    let dir=google_oauth::settings_dir().context("no settings folder: set LOCALAPPDATA or LADON_SETTINGS_DIR")?;
+    let client=google_oauth::OAuthClient::from_env()?;
+    // The authorization URL carries the state value, so it is opened but never printed.
+    let refresh=google_oauth::login(&client,|url|{
+        println!("Complete the Google Drive sign-in in the browser. Waiting up to five minutes.");
+        open_in_browser(url);
+    },Duration::from_secs(300)).await?;
+    google_oauth::save_refresh_token(&dir,&refresh)?;
+    println!("Google Drive sign-in saved");
+    Ok(())
+}
+
+fn google_logout()->Result<()>{
+    let dir=google_oauth::settings_dir().context("no settings folder: set LOCALAPPDATA or LADON_SETTINGS_DIR")?;
+    google_oauth::delete_refresh_token(&dir)?;
+    println!("Google Drive sign-in removed");
+    Ok(())
+}
+
+// rundll32 receives the address as one argument, so the query string is not split by a shell.
+fn open_in_browser(url:&str){
+    #[cfg(windows)]
+    let _=std::process::Command::new("rundll32.exe").arg("url.dll,FileProtocolHandler").arg(url).spawn();
+    #[cfg(not(windows))]
+    let _=url;
+}
+
 async fn resolve_record(engine:&Engine,path:&Path)->Result<FileRecord>{
-    let rel=if path.is_absolute(){path.strip_prefix(&engine.root)?.to_string_lossy().to_string()}else{path.to_string_lossy().to_string()};
+    let rel=if path.is_absolute(){engine.relative_for_input(path)?}else{normalise_relative(&path.to_string_lossy())};
     engine.file_by_path(&rel).await
 }
 
@@ -194,8 +229,8 @@ async fn tag_folder(engine:&Engine,presets:&str,description:&str,endpoint:Option
         let content=String::from_utf8_lossy(&buf);
         let mut tags=tagging::heuristic_tags(&rel,&content);
         if let (Some(url),Some(model))=(endpoint,model){
-            // Sensitive files may only be sent to a loopback local model if explicitly requested.
-            if policy.excluded(entry.path())? && !tagging::local_endpoint(url)? {
+            // Sensitive files, and copies of their content at other paths, may only be sent to a loopback local model if explicitly requested.
+            if (policy.excluded(entry.path())? || engine.content_is_excluded(&file.current_hash).await?) && !tagging::local_endpoint(url)? {
                 eprintln!("skipped remote AI tagging for excluded file: {}",rel);
             } else {
                 tags.extend(tagging::ai_tags(url,model,&format!("{}; dimensions: {}",description,presets),&rel,&content).await?);
@@ -218,18 +253,27 @@ async fn watch(engine:&Engine,actor:&str)->Result<()> {
         let mut paths:HashSet<PathBuf>=event.paths.into_iter().collect();
         std::thread::sleep(Duration::from_millis(350));
         while let Ok(next)=rx.try_recv(){for p in next?.paths{paths.insert(p);}}
+        let mut full_scan=false;
         for path in paths {
             if path.components().any(|c|c.as_os_str()==".ladon"||c.as_os_str()==".git"){continue;}
-            if path.file_name().map(|s|s==".LADONignore").unwrap_or(false){if let Err(err)=engine.reload_policy(){eprintln!("policy reload failed, check external-transfer protections: {err:#}");}
+            if is_root_rule_event(&engine.root,&path)||path.file_name().map(|s|s==".LADONignore").unwrap_or(false){if let Err(err)=engine.reload_policy(){eprintln!("policy reload failed, check external-transfer protections: {err:#}");}
                 else {println!("policy reloaded: {}",path.display());}
                 continue;}
-            if path.is_file(){
+            let is_file=path.is_file();
+            full_scan|=needs_full_scan(&path,is_file,&engine.root);
+            if is_file{
                 if let Err(e)=engine.capture(&path,actor,"filesystem stable save").await{eprintln!("capture warning {}: {e:#}",path.display());}
             } else if let Ok(relative)=path.strip_prefix(&engine.root){
                 let rel=relative.to_string_lossy().replace('\\',"/");
                 if let Some(f)=engine.store.find_path(&rel).await? {
                     if let Err(e)=engine.store.mark_deleted(&f,actor,"watcher removal").await{eprintln!("delete warning: {e:#}");}
                 }
+            }
+        }
+        if full_scan {
+            match engine.scan(actor).await {
+                Ok(results)=>println!("full scan after watch event: scanned {}",results.len()),
+                Err(err)=>eprintln!("scan warning: {err:#}"),
             }
         }
     }

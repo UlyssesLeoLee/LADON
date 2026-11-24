@@ -1,5 +1,6 @@
 /target/
 /ui-prototype/target/
+/target-gui/
 /.ladon/
 **/.ladon/
 *.sqlite

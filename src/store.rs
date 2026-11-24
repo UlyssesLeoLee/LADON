@@ -143,6 +143,14 @@ impl Store {
         let mut r=conn.query("SELECT COUNT(*) FROM versions WHERE content_hash=?1 AND sensitive=1",[hash]).await?;
         Ok(r.next().await?.map(|row|row.get::<i64>(0).unwrap_or(0)>0).unwrap_or(false))
     }
+    /// Every tracked path that has held `hash`, including paths that were later moved or deleted.
+    pub async fn paths_for_hash(&self,hash:&str)->Result<Vec<String>> {
+        let conn=self.connect().await?;
+        let mut r=conn.query("SELECT DISTINCT f.relative_path FROM versions v JOIN resources f ON f.id=v.file_id WHERE v.content_hash=?1 ORDER BY f.relative_path",[hash]).await?;
+        let mut out=Vec::new();
+        while let Some(row)=r.next().await?{out.push(row.get::<String>(0)?);}
+        Ok(out)
+    }
     pub async fn set_tags(&self,file_id:&str,tags:&[String],source:&str,rule_version:&str)->Result<()> {
         let mut conn=self.connect().await?;let tx=conn.transaction().await?;
         let now=Utc::now().to_rfc3339();

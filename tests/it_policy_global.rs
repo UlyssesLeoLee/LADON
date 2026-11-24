@@ -18,10 +18,10 @@ fn tc513_global_ignore_file_applies() {
     assert!(policy.excluded(&root.join("x.secret")).unwrap());
     assert!(!policy.excluded(&root.join("x.md")).unwrap());
 
-    // A variable that names a file which does not exist is ignored, not an error.
+    // A variable that names a file which does not exist fails the load; the rules are never dropped.
     std::env::set_var("LADON_GLOBAL_IGNORE", rules.path().join("missing.ignore"));
-    let policy = LadonPolicy::load(&root).unwrap();
-    assert!(!policy.excluded(&root.join("x.secret")).unwrap());
+    let err = LadonPolicy::load(&root).err().expect("a missing global rule file must fail the load");
+    assert!(format!("{err:#}").contains("missing.ignore"), "the error must name the file: {err:#}");
 
     std::env::remove_var("LADON_GLOBAL_IGNORE");
     let policy = LadonPolicy::load(&root).unwrap();

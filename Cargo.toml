@@ -1,9 +1,9 @@
 [package]
 name = "ladon-explorer"
-version = "0.0.2"
+version = "0.0.3"
 edition = "2021"
 rust-version = "1.85"
-license = "MIT"
+license = "AGPL-3.0"
 description = "Event-driven file history and governance kernel for LADON"
 
 [[bin]]
@@ -21,7 +21,7 @@ ignore = "0.4"
 notify = "8"
 rand = "0.8"
 regex = "1"
-reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls-native-roots"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.10"

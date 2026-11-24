@@ -2,7 +2,7 @@
 
 Source: `src/main.rs`
 
-Source-SHA256: `0157a7bc33f8567c64d2f4a89a5f804c0d3292f7177f03aa85d32850e58b4df1`
+Source-SHA256: `426480dffa98a8695fcc16ce10882fa115edb229f6c80ff3b7905c4eafc7c08e`
 
 ## Responsibility
 
@@ -10,7 +10,7 @@ Source-SHA256: `0157a7bc33f8567c64d2f4a89a5f804c0d3292f7177f03aa85d32850e58b4df1
 
 ## Commands added for Google Drive
 
-- `google-login`: runs `google_oauth::login` with the client from `OAuthClient::from_env`. The authorization URL is opened with `explorer.exe`. The timeout is five minutes. On success the refresh token is saved with `save_refresh_token` in the settings folder, and the command prints `Google Drive sign-in saved`.
+- `google-login`: runs `google_oauth::login` with the client from `OAuthClient::from_env`. The authorization URL is opened with `rundll32 url.dll,FileProtocolHandler` and is not printed. The command prints `Complete the Google Drive sign-in in the browser. Waiting up to five minutes.` before it waits. The timeout is five minutes. On success the refresh token is saved with `save_refresh_token` in the settings folder, and the command prints `Google Drive sign-in saved`.
 - `google-logout`: deletes the stored sign-in with `delete_refresh_token` and prints `Google Drive sign-in removed`.
 - Neither command needs a workspace. Neither prints a token, a code or a URL that contains a state value.
 - The settings folder is `LADON_SETTINGS_DIR`, or `%LOCALAPPDATA%\LADON` when that variable is unset.

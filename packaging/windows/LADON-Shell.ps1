@@ -10,7 +10,7 @@ if (-not $ws) { $ws = [Environment]::GetFolderPath('MyDocuments') }
 Set-Location -LiteralPath $ws
 $Host.UI.RawUI.WindowTitle = 'LADON 命令行'
 Write-Host ''
-Write-Host 'LADON Explorer 试用命令行（试用构建，请勿用于重要数据）' -ForegroundColor Cyan
+Write-Host 'LADON 试用命令行（试用构建，请勿用于重要数据）' -ForegroundColor Cyan
 Write-Host ('当前目录：' + $ws)
 Write-Host ''
 $qs = Join-Path $dir 'QUICKSTART.txt'

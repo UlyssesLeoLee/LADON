@@ -2,7 +2,7 @@
 
 Source: `src/provider.rs`
 
-Source-SHA256: `490aeb44f19e35242dad7b48fd24784deb230c6852214267002d71f5672b0f56`
+Source-SHA256: `8c967893eb36e88745c0238eef2707640f15870f99b983c8750efe2809b9a8dc`
 
 ## Test Strategy
 

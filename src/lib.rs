@@ -7,6 +7,7 @@ pub mod model;
 pub mod nema;
 pub mod policy;
 pub mod provider;
+pub mod google_oauth;
 pub mod search;
 pub mod store;
 pub mod tagging;

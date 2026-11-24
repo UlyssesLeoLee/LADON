@@ -12,7 +12,7 @@ pub struct Layout {pub sidebar_width:f32,pub content_width:f32,pub inspector_wid
 pub fn compute(input:LayoutInput)->Layout {
     let w=input.viewport_width.max(320.0);let h=input.viewport_height.max(280.0);
     let side=match input.sidebar{Sidebar::Expanded=>if w<800.0 {185.0} else {236.0},Sidebar::Icons=>60.0,Sidebar::Hidden=>0.0};
-    let dock=match input.chat{Chat::Collapsed=>54.0,Chat::Expanded=>h.mul_add(0.46,0.0).clamp(220.0,h*0.65),Chat::Hidden=>0.0};
+    let dock=match input.chat{Chat::Collapsed=>54.0,Chat::Expanded=>{let min=220.0;h.mul_add(0.46,0.0).clamp(min,(h*0.65).max(min))},Chat::Hidden=>0.0};
     let inspector=if input.inspector&&w-side>700.0 {(w*0.27).clamp(285.0,390.0)}else{0.0};
     Layout{sidebar_width:side,content_width:(w-side-inspector).max(0.0),inspector_width:inspector,
         chat_height:dock,hover_overlay_width:if input.hover_preview&&input.sidebar==Sidebar::Icons {206.0}else{0.0},
@@ -29,5 +29,6 @@ pub fn status_opacity(idle_ms:u64,critical:bool,hovered:bool)->f32 {
  #[test]fn ut_ui_reflow_fills_space(){let a=compute(x(Sidebar::Expanded));let b=compute(x(Sidebar::Icons));assert!((b.content_width-a.content_width-(a.sidebar_width-b.sidebar_width)).abs()<0.1);}
  #[test]fn ut_ui_hover_does_not_resize(){let mut a=x(Sidebar::Icons);a.hover_preview=true;assert_eq!(compute(a).content_width,compute(x(Sidebar::Icons)).content_width);assert!(compute(a).hover_overlay_width>0.0);}
  #[test]fn ut_ui_chat_bottom_height(){let mut a=x(Sidebar::Icons);a.chat=Chat::Expanded;assert!(compute(a).chat_height>200.0);}
+ #[test]fn ut_ui_chat_height_small_window_no_panic(){let mut a=x(Sidebar::Icons);a.viewport_height=100.0;a.chat=Chat::Expanded;let c=compute(a).chat_height;assert!(c.is_finite());assert!(c>=220.0);}
  #[test]fn ut_ui_status_warning_stays(){assert_eq!(status_opacity(20000,true,false),1.0);assert_eq!(status_opacity(20000,false,false),0.0);}
 }

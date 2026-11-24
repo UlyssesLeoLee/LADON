@@ -303,8 +303,9 @@ async fn it_623_root_candidate_refusals() {
     );
 
     // The user profile directory is refused. A drive root has no refusal of its own: it
-    // takes the same owned-entry checks as any folder, so Open answers NeedsInit or
-    // Opened. It uses a separate state, and Init is never called on a real drive root.
+    // takes the same owned-entry checks as any folder, so Open answers NeedsInit, Opened,
+    // or the open refusal when an initialised root has no rule file. It uses a separate
+    // state, and Init is never called on a real drive root.
     let profile = std::env::var("USERPROFILE").expect("USERPROFILE is set");
     let profile_root = Command::Open { path: display_of(Path::new(&profile)) };
     assert_failed(
@@ -320,7 +321,8 @@ async fn it_623_root_candidate_refusals() {
         match app::handle(&mut drive_state, drive_root).await {
             Reply::NeedsInit { path } => assert_eq!(path, drive_text),
             Reply::Opened { root } => assert_eq!(root, drive_text),
-            other => panic!("expected NeedsInit or Opened, got {other:?}"),
+            // An initialised root without a rule file is never opened with an empty rule set.
+            other => assert_failed(other, FailKind::Kernel, app::MSG_OPEN_FAILED),
         }
     }
     assert!(!root.join(".ladon").exists());
@@ -1123,6 +1125,35 @@ async fn it_641_kernel_failures_report_messages() {
     assert!(!blocked.join(".LADONignore").exists());
 }
 
+#[tokio::test]
+async fn it_663_missing_rule_file_refuses_capture() {
+    let base = tempfile::tempdir().unwrap();
+    let root = canonical(base.path());
+    fs::write(root.join("notes.md"), "rules\n").unwrap();
+    let mut state = State::new();
+    assert!(matches!(run_init(&mut state, &root).await, Reply::Opened { .. }));
+
+    // With the root rule file gone, capture refuses and records nothing.
+    let rule = root.join(".LADONignore");
+    let rule_time = fs::metadata(&rule).unwrap().modified().unwrap();
+    fs::remove_file(&rule).unwrap();
+    assert_failed(
+        run_capture(&mut state, "notes.md").await,
+        FailKind::Refused,
+        app::MSG_RULE_PARSE_FAILED,
+    );
+    let (_, rows, _) = folder(run_list(&mut state, "").await);
+    assert_eq!(row(&rows, "notes.md").status_text, "未记录");
+
+    // A rule file restored with its earlier time reloads the rules, so the capture succeeds.
+    fs::write(&rule, "# restored\n").unwrap();
+    set_mtime(&rule, rule_time);
+    assert!(matches!(
+        run_capture(&mut state, "notes.md").await,
+        Reply::Captured { version_no: 1, changed: true, .. }
+    ));
+}
+
 #[test]
 fn it_642_worker_one_reply_per_command_in_order() {
     let base = tempfile::tempdir().unwrap();
@@ -1467,4 +1498,99 @@ async fn it_653_list_subfolders_refusals() {
         FailKind::NotFound,
         app::MSG_NOT_FOUND,
     );
+}
+
+#[tokio::test]
+async fn it_654_open_file_refusals() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = canonical(tmp.path());
+    fs::write(dir.join("notes.md"), "x").unwrap();
+    fs::create_dir(dir.join("sub")).unwrap();
+    let mut state = State::new();
+    assert!(matches!(run_init(&mut state, &dir).await, Reply::Opened { .. }));
+    let open = |path: &str| Command::OpenFile { relative_path: path.to_string() };
+    assert_failed(app::handle(&mut state, open("sub")).await, FailKind::InvalidPath, app::MSG_INVALID_PATH);
+    assert_failed(app::handle(&mut state, open("missing.md")).await, FailKind::NotFound, app::MSG_NOT_FOUND);
+    assert_failed(app::handle(&mut state, open(".LADONignore")).await, FailKind::Refused, app::MSG_RULE_FILE_REFUSED);
+    assert_failed(app::handle(&mut state, open(".ladon/meta.turso")).await, FailKind::Refused, app::MSG_INTERNAL_REFUSED);
+}
+
+#[tokio::test]
+async fn it_655_create_folder() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = canonical(tmp.path());
+    let mut state = State::new();
+    assert!(matches!(run_init(&mut state, &dir).await, Reply::Opened { .. }));
+    let create = |name: &str| Command::CreateFolder { relative_dir: String::new(), name: name.to_string() };
+    match app::handle(&mut state, create("新建文件夹")).await {
+        Reply::Created { relative_path } => assert_eq!(relative_path, "新建文件夹"),
+        other => panic!("expected Created, got {other:?}"),
+    }
+    assert!(dir.join("新建文件夹").is_dir());
+    assert_failed(app::handle(&mut state, create("新建文件夹")).await, FailKind::Refused, app::MSG_NAME_EXISTS);
+    assert_failed(app::handle(&mut state, create("a/b")).await, FailKind::InvalidPath, model::MSG_NAME_INVALID);
+    assert_failed(app::handle(&mut state, create("CON")).await, FailKind::InvalidPath, model::MSG_NAME_INVALID);
+    assert_failed(app::handle(&mut state, create(".ladon")).await, FailKind::Refused, app::MSG_INTERNAL_REFUSED);
+    assert_failed(app::handle(&mut state, create(&"a".repeat(256))).await, FailKind::InvalidPath, model::MSG_NAME_INVALID);
+    let mut fresh = State::new();
+    assert_failed(app::handle(&mut fresh, create("x")).await, FailKind::NoWorkspace, app::MSG_NO_WORKSPACE);
+}
+
+#[tokio::test]
+async fn it_656_rename_path() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = canonical(tmp.path());
+    fs::write(dir.join("draft.txt"), "d").unwrap();
+    fs::write(dir.join("notes.md"), "one").unwrap();
+    fs::create_dir(dir.join("docs")).unwrap();
+    fs::write(dir.join("docs/one.txt"), "1").unwrap();
+    let mut state = State::new();
+    assert!(matches!(run_init(&mut state, &dir).await, Reply::Opened { .. }));
+    assert!(matches!(run_capture(&mut state, "notes.md").await, Reply::Captured { .. }));
+    assert!(matches!(run_capture(&mut state, "docs/one.txt").await, Reply::Captured { .. }));
+    let rename = |path: &str, name: &str| Command::RenamePath { relative_path: path.to_string(), new_name: name.to_string() };
+    match app::handle(&mut state, rename("draft.txt", "final.txt")).await {
+        Reply::Renamed { relative_path } => assert_eq!(relative_path, "final.txt"),
+        other => panic!("expected Renamed, got {other:?}"),
+    }
+    assert!(dir.join("final.txt").is_file());
+    assert_failed(app::handle(&mut state, rename("notes.md", "n2.md")).await, FailKind::Refused, app::MSG_RENAME_TRACKED);
+    assert_failed(app::handle(&mut state, rename("docs", "docs2")).await, FailKind::Refused, app::MSG_RENAME_TRACKED);
+    assert_failed(app::handle(&mut state, rename("final.txt", "notes.md")).await, FailKind::Refused, app::MSG_NAME_EXISTS);
+}
+
+#[tokio::test]
+async fn it_657_delete_path_refusals() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = canonical(tmp.path());
+    fs::write(dir.join("keep.txt"), "k").unwrap();
+    let mut state = State::new();
+    assert!(matches!(run_init(&mut state, &dir).await, Reply::Opened { .. }));
+    let delete = |path: &str| Command::DeletePath { relative_path: path.to_string() };
+    assert_failed(app::handle(&mut state, delete("missing.txt")).await, FailKind::NotFound, app::MSG_NOT_FOUND);
+    assert_failed(app::handle(&mut state, delete(".ladon")).await, FailKind::Refused, app::MSG_INTERNAL_REFUSED);
+    #[cfg(windows)]
+    {
+        let outside = tempfile::tempdir().unwrap();
+        make_junction(&dir.join("link"), &canonical(outside.path()));
+        assert_failed(app::handle(&mut state, delete("link")).await, FailKind::InvalidPath, app::MSG_INVALID_PATH);
+    }
+    assert!(dir.join("keep.txt").is_file());
+}
+
+#[cfg(windows)]
+#[tokio::test]
+async fn it_658_list_drives_capacity() {
+    let mut state = State::new();
+    let drives = match app::handle(&mut state, Command::ListDrives).await {
+        Reply::Drives { drives } => drives,
+        other => panic!("expected Drives, got {other:?}"),
+    };
+    let system = drives
+        .iter()
+        .find(|row| row.root.eq_ignore_ascii_case("C:\\"))
+        .expect("C: is listed");
+    let total = system.total_bytes.expect("total size of C:");
+    let free = system.free_bytes.expect("free space of C:");
+    assert!(free <= total);
 }

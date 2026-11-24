@@ -1,0 +1,92 @@
+name: release
+on:
+  push:
+    tags:
+      - 'v*'
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Resolve version from tag
+        shell: pwsh
+        run: |
+          $v = "${{ github.ref_name }}".TrimStart('v')
+          "VERSION=$v" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Kernel tests
+        run: cargo test --locked --all-targets --no-fail-fast
+
+      - name: GUI tests
+        run: cargo test --locked --manifest-path ui-prototype/Cargo.toml --no-default-features --features kernel --no-fail-fast
+
+      - name: Build release binaries
+        run: |
+          cargo build --release --locked --bin ladon
+          cargo build --release --locked --manifest-path ui-prototype/Cargo.toml --bin ladon-gui
+
+      - name: Assemble package folder and zip
+        shell: pwsh
+        run: |
+          ./packaging/windows/Build-Package.ps1 `
+            -Binary "target/release/ladon.exe" `
+            -GuiBinary "ui-prototype/target/release/ladon-gui.exe" `
+            -OutDir "dist" `
+            -Version "$env:VERSION"
+
+      - name: Install WiX 5
+        shell: pwsh
+        run: |
+          dotnet tool install --global wix --version 5.0.2
+          "$env:USERPROFILE\.dotnet\tools" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+
+      - name: Build MSI
+        shell: pwsh
+        run: |
+          ./packaging/windows/msi/build-msi.ps1 `
+            -SourceDir "dist/LADON-$env:VERSION-Setup" `
+            -Version "$env:VERSION" `
+            -OutDir "dist"
+
+      - name: Checksums
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem -LiteralPath dist -File -Filter "LADON-$env:VERSION-*" | Where-Object { $_.Extension -in '.msi', '.zip' } | Sort-Object Name
+          $files | ForEach-Object {
+            '{0}  {1}' -f (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLower(), $_.Name
+          } | Set-Content -LiteralPath "dist/SHA256SUMS-$env:VERSION.txt" -Encoding ASCII
+          Get-Content -LiteralPath "dist/SHA256SUMS-$env:VERSION.txt"
+
+      - name: Release notes from CHANGELOG
+        shell: pwsh
+        run: |
+          $header = "## $env:VERSION "
+          $out = @()
+          $on = $false
+          foreach ($l in (Get-Content -LiteralPath CHANGELOG.md -Encoding UTF8)) {
+            if ($l.StartsWith('## ')) {
+              if ($on) { break }
+              if ($l.StartsWith($header)) { $on = $true; continue }
+            }
+            if ($on) { $out += $l }
+          }
+          if ($out.Count -eq 0) { throw "no CHANGELOG section for $env:VERSION" }
+          $out | Set-Content -LiteralPath release-notes.md -Encoding UTF8
+
+      - name: Publish prerelease
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v$env:VERSION" `
+            "dist/LADON-$env:VERSION-x64.msi" `
+            "dist/LADON-$env:VERSION-Setup.zip" `
+            "dist/SHA256SUMS-$env:VERSION.txt" `
+            --title "LADON $env:VERSION（试用构建）" `
+            --notes-file release-notes.md `
+            --prerelease `
+            --verify-tag

@@ -2,7 +2,7 @@
 
 Source: `src/google_oauth.rs`
 
-Source-SHA256: `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`
+Source-SHA256: `4cf5b483493fe0a1c63ec332f1a6d6227c4c6a0e265bfb7845c7f6aca5caa4c5`
 
 ## Responsibility
 
@@ -23,6 +23,7 @@ Source-SHA256: `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 
 - `pub struct OAuthClient { pub client_id: String, pub client_secret: Option<String> }`
   - `OAuthClient::from_env() -> Result<OAuthClient>`: reads the two variables. A missing or blank client ID fails with `LADON_GOOGLE_CLIENT_ID is not set`.
+  - `OAuthClient` implements `Debug` with the client secret shown as `<redacted>`.
 - `pub const SCOPE: &str = "https://www.googleapis.com/auth/drive.file";`
 - `pub fn new_code_verifier() -> String`: 64 characters from `A-Z a-z 0-9 - . _ ~`, drawn from `rand::thread_rng`.
 - `pub fn code_challenge(verifier: &str) -> String`: `base64url(SHA-256(verifier))` without padding.
@@ -41,8 +42,8 @@ Source-SHA256: `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 - `pub async fn login(client: &OAuthClient, open_url: impl FnOnce(&str), timeout: Duration) -> Result<String>`:
   1. Binds `127.0.0.1` on an ephemeral port. The redirect URI is `http://127.0.0.1:<port>/`.
   2. Generates the verifier and a 32-character state.
-  3. Calls `open_url` with the authorization URL.
-  4. Waits up to `timeout` for one connection. The connection is answered with a fixed HTML page, and the listener is closed after one request.
+  3. Starts accepting on the listener, then calls `open_url` with the authorization URL. Accepting starts before the URL is opened, so the redirect is not missed.
+  4. Waits up to `timeout` for one connection. The connection is answered with a fixed HTML page and its request line is passed on. The listener is closed after that one request. When no connection arrives before the deadline, accepting stops.
   5. Parses the callback, exchanges the code, and returns the refresh token.
   - Without a request in time the result is `sign-in timed out`.
   - When Google returns no refresh token the result is `Google did not return a refresh token; revoke the access of LADON in the Google account and sign in again`.

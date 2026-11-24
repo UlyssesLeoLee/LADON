@@ -16,6 +16,9 @@ use chrono::{FixedOffset, Local};
 use ladon_explorer::engine::Engine;
 
 use crate::model;
+use ladon_explorer::provider::{provider_from_env, FilesystemProvider, StorageProvider};
+use std::ffi::c_void;
+use std::ptr;
 
 /// Largest version content loaded for a text diff, in bytes.
 pub const DIFF_LIMIT_BYTES: u64 = 2 * 1024 * 1024;
@@ -53,9 +56,22 @@ pub const MSG_DIFF_TOO_LARGE: &str = "文件超过 2 MiB，不显示文本差异
 pub const MSG_DIFF_COLD: &str = "该版本的内容不在本地，暂不能比较。";
 pub const MSG_DIFF_APPROXIMATE: &str = "差异计算超过 2 秒，结果可能不是最小改动。";
 pub const MSG_DIFF_TRUNCATED: &str = "差异超过 4000 行，仅显示前 4000 行。";
+pub const MSG_OPEN_FILE_FAILED: &str = "无法用关联程序打开该文件。";
+pub const MSG_NAME_EXISTS: &str = "同名的文件或文件夹已存在。";
+pub const MSG_RENAME_TRACKED: &str = "已记录历史的文件或文件夹暂不能重命名。";
+pub const MSG_DELETE_FAILED: &str = "无法移入回收站，请稍后重试。";
+pub const MSG_NAS_FOLDER_INVALID: &str = "请输入一个已存在的 NAS 文件夹的绝对路径。";
+pub const MSG_SETTINGS_FAILED: &str = "无法保存设置，请检查 LADON 设置文件夹的写入权限。";
+pub const MSG_ARCHIVE_KEY_MISSING: &str = "未设置归档密钥（环境变量 LADON_ARCHIVE_KEY_HEX）。";
+pub const MSG_TOKEN_MISSING: &str = "未设置 Google Drive 访问令牌（环境变量 LADON_GOOGLE_ACCESS_TOKEN）。";
+pub const MSG_ARCHIVE_REFUSED: &str = "该内容被标记为敏感，不能发送到外部位置。";
+pub const MSG_ARCHIVE_FAILED: &str = "无法归档该版本，请稍后重试。";
+pub const MSG_RESTORE_DIVERGED: &str = "当前文件在工作区之外被修改，已停止恢复。请先记录当前版本后再恢复。";
+pub const MSG_RESTORE_COLD: &str = "该版本的内容不在本地，请先选择归档位置。";
+pub const MSG_RESTORE_FAILED: &str = "无法恢复该版本。";
 
 /// Name of the rule file in the workspace root.
-const RULE_FILE: &str = ".LADONignore";
+const RULE_FILE: &str = model::RULE_FILE_NAME;
 /// Metadata database of a workspace, relative to its root.
 const META_DB: &str = ".ladon/meta.turso";
 /// Entries that the kernel owns under a workspace root, checked in this order.
@@ -68,6 +84,15 @@ const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x0000_0400;
 const FILE_ATTRIBUTE_HIDDEN: u32 = 0x0000_0002;
 #[cfg(windows)]
 const FILE_ATTRIBUTE_SYSTEM: u32 = 0x0000_0004;
+
+/// Where a version is archived to, or restored from.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ArchiveTarget {
+    /// A folder that the filesystem provider writes encrypted objects into.
+    Nas { folder: String },
+    /// Google Drive, with the access token read from `LADON_GOOGLE_ACCESS_TOKEN`.
+    GoogleDrive,
+}
 
 /// One request from the window.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -83,6 +108,22 @@ pub enum Command {
     OpenDrive { path: String },
     /// Lists the folders directly under one absolute directory path.
     ListSubfolders { path: String },
+    /// Opens a file of the workspace with the program associated with its extension.
+    OpenFile { relative_path: String },
+    /// Creates one folder in an existing folder of the workspace.
+    CreateFolder { relative_dir: String, name: String },
+    /// Renames a file or folder within its parent folder.
+    RenamePath { relative_path: String, new_name: String },
+    /// Moves a file or folder of the workspace to the Recycle Bin.
+    DeletePath { relative_path: String },
+    /// Reads the settings: the NAS folder and whether the Google Drive token is set.
+    LoadSettings,
+    /// Stores the NAS folder in the settings.
+    SetNasFolder { path: String },
+    /// Archives one version to a target.
+    ArchiveVersion { version_id: String, target: ArchiveTarget },
+    /// Restores one version over its file. `target` is the archive to read cold content from.
+    RestoreVersion { version_id: String, target: Option<ArchiveTarget> },
 }
 
 /// Why a text diff is not shown.
@@ -125,6 +166,20 @@ pub enum Reply {
     /// The reply to `ListSubfolders`: the request path as given and the folder names, sorted by
     /// their lowercased text.
     Subfolders { path: String, names: Vec<String> },
+    /// Reply to `OpenFile`: the program was started.
+    FileOpened { relative_path: String },
+    /// Reply to `CreateFolder`.
+    Created { relative_path: String },
+    /// Reply to `RenamePath`, with the new relative path.
+    Renamed { relative_path: String },
+    /// Reply to `DeletePath`.
+    Deleted { relative_path: String },
+    /// Reply to `ArchiveVersion`.
+    Archived { version_id: String, provider: String, locator: String },
+    /// Reply to `RestoreVersion`, with the version number now current.
+    Restored { relative_path: String, version_no: i64 },
+    /// Reply to `LoadSettings` and `SetNasFolder`.
+    Settings { nas_folder: Option<String>, google_token_set: bool },
     Failed { kind: FailKind, message: String, detail: Option<String> },
 }
 
@@ -190,6 +245,14 @@ pub async fn handle(state: &mut State, command: Command) -> Reply {
         Command::ListDrives => list_drives(),
         Command::OpenDrive { path } => open_drive(state, &path).await,
         Command::ListSubfolders { path } => list_subfolders(&path),
+        Command::OpenFile { relative_path } => open_file(state, &relative_path),
+        Command::CreateFolder { relative_dir, name } => create_folder(state, &relative_dir, &name),
+        Command::RenamePath { relative_path, new_name } => rename_path(state, &relative_path, &new_name).await,
+        Command::DeletePath { relative_path } => delete_path(state, &relative_path).await,
+        Command::LoadSettings => settings_reply(),
+        Command::SetNasFolder { path } => set_nas_folder(&path),
+        Command::ArchiveVersion { version_id, target } => archive_version(state, &version_id, &target).await,
+        Command::RestoreVersion { version_id, target } => restore_version(state, &version_id, target.as_ref()).await,
     }
 }
 
@@ -586,7 +649,14 @@ fn list_drives() -> Reply {
             pairs.push((letter, drive_initialised(root)));
         }
     }
-    Reply::Drives { drives: model::drive_rows(&pairs) }
+    let mut drives = model::drive_rows(&pairs);
+    for row in &mut drives {
+        if let Some((free, total)) = drive_capacity(&row.root) {
+            row.total_bytes = Some(total);
+            row.free_bytes = Some(free);
+        }
+    }
+    Reply::Drives { drives }
 }
 
 /// True when `root` holds the metadata database as a regular file that is neither a
@@ -594,6 +664,429 @@ fn list_drives() -> Reply {
 fn drive_initialised(root: &Path) -> bool {
     fs::symlink_metadata(root.join(META_DB))
         .is_ok_and(|meta| meta.is_file() && !is_link_or_reparse(&meta))
+}
+
+/// Relative path of `name` inside `parent`, where `parent` is "" for the workspace root.
+fn join_relative(parent: &str, name: &str) -> String {
+    if parent.is_empty() {
+        name.to_string()
+    } else {
+        format!("{parent}/{name}")
+    }
+}
+
+/// Absolute path of an existing entry of the open workspace. The entry must not be a link or
+/// reparse point, and its parent folder must be reachable without links. The rule file and the
+/// internal folders are refused. The path is validated like every other workspace path.
+fn existing_entry(engine: &Engine, relative: &str) -> Result<PathBuf, Reply> {
+    let relative = checked_relative(relative)?;
+    if relative.is_empty() {
+        return Err(invalid_path());
+    }
+    let (parent, name) = split_parent(&relative);
+    if name.eq_ignore_ascii_case(RULE_FILE) {
+        return Err(failed(FailKind::Refused, MSG_RULE_FILE_REFUSED));
+    }
+    let dir = walk(&engine.root, &components_of(parent), MSG_LIST_FAILED)?;
+    let path = dir.join(name);
+    match fs::symlink_metadata(&path) {
+        Ok(meta) => {
+            if is_link_or_reparse(&meta) {
+                return Err(invalid_path());
+            }
+            Ok(path)
+        }
+        Err(err) if err.kind() == io::ErrorKind::NotFound => Err(failed(FailKind::NotFound, MSG_NOT_FOUND)),
+        Err(_) => Err(failed(FailKind::Kernel, MSG_LIST_FAILED)),
+    }
+}
+
+/// Opens a regular file with the program that Windows associates with its extension. The
+/// process is started with the file path as one argument and is not waited for.
+fn open_file(state: &State, relative: &str) -> Reply {
+    let engine = match workspace(state) {
+        Ok(engine) => engine,
+        Err(reply) => return reply,
+    };
+    let path = match existing_entry(engine, relative) {
+        Ok(path) => path,
+        Err(reply) => return reply,
+    };
+    match fs::metadata(&path) {
+        Ok(meta) if meta.is_file() => {}
+        Ok(_) => return invalid_path(),
+        Err(_) => return failed(FailKind::NotFound, MSG_NOT_FOUND),
+    }
+    let shown = display_path(&path);
+    let started = if cfg!(windows) {
+        std::process::Command::new("explorer.exe").arg(&shown).spawn()
+    } else {
+        std::process::Command::new("xdg-open").arg(&shown).spawn()
+    };
+    match started {
+        Ok(child) => {
+            drop(child);
+            Reply::FileOpened { relative_path: relative.to_string() }
+        }
+        Err(_) => failed(FailKind::Kernel, MSG_OPEN_FILE_FAILED),
+    }
+}
+
+/// Creates one folder in an existing folder of the open workspace. The name is checked as a
+/// Windows file name, and an entry with the same name is never replaced.
+fn create_folder(state: &State, relative_dir: &str, name: &str) -> Reply {
+    let engine = match workspace(state) {
+        Ok(engine) => engine,
+        Err(reply) => return reply,
+    };
+    let relative = match checked_relative(relative_dir) {
+        Ok(relative) => relative,
+        Err(reply) => return reply,
+    };
+    if let Err(message) = model::check_new_name(name) {
+        return failed(FailKind::InvalidPath, message);
+    }
+    if name.eq_ignore_ascii_case(".ladon") || name.eq_ignore_ascii_case(".git") {
+        return failed(FailKind::Refused, MSG_INTERNAL_REFUSED);
+    }
+    let dir = match walk(&engine.root, &components_of(&relative), MSG_LIST_FAILED) {
+        Ok(dir) => dir,
+        Err(reply) => return reply,
+    };
+    let target = dir.join(name);
+    match fs::symlink_metadata(&target) {
+        Ok(_) => return failed(FailKind::Refused, MSG_NAME_EXISTS),
+        Err(err) if err.kind() == io::ErrorKind::NotFound => {}
+        Err(_) => return failed(FailKind::Kernel, MSG_LIST_FAILED),
+    }
+    match fs::create_dir(&target) {
+        Ok(()) => Reply::Created { relative_path: join_relative(&relative, name) },
+        Err(err) if err.kind() == io::ErrorKind::AlreadyExists => failed(FailKind::Refused, MSG_NAME_EXISTS),
+        Err(_) => failed(FailKind::Kernel, MSG_LIST_FAILED),
+    }
+}
+
+/// True when the ledger holds a current file at `relative` or below it.
+async fn tracked_at_or_below(engine: &Engine, relative: &str) -> Result<bool, Reply> {
+    let prefix = format!("{relative}/");
+    let files = engine
+        .store
+        .list_files()
+        .await
+        .map_err(|_| failed(FailKind::Kernel, MSG_LIST_FAILED))?;
+    Ok(files
+        .iter()
+        .any(|f| !f.deleted && (f.relative_path == relative || f.relative_path.starts_with(&prefix))))
+}
+
+/// Renames a file or folder within its parent folder. A path with a tracked file at or below it is
+/// refused, because the ledger is keyed by path.
+async fn rename_path(state: &State, relative: &str, new_name: &str) -> Reply {
+    let engine = match workspace(state) {
+        Ok(engine) => engine,
+        Err(reply) => return reply,
+    };
+    let relative = match checked_relative(relative) {
+        Ok(relative) => relative,
+        Err(reply) => return reply,
+    };
+    let path = match existing_entry(engine, &relative) {
+        Ok(path) => path,
+        Err(reply) => return reply,
+    };
+    if let Err(message) = model::check_new_name(new_name) {
+        return failed(FailKind::InvalidPath, message);
+    }
+    if new_name.eq_ignore_ascii_case(".ladon") || new_name.eq_ignore_ascii_case(".git") {
+        return failed(FailKind::Refused, MSG_INTERNAL_REFUSED);
+    }
+    match tracked_at_or_below(engine, &relative).await {
+        Ok(false) => {}
+        Ok(true) => return failed(FailKind::Refused, MSG_RENAME_TRACKED),
+        Err(reply) => return reply,
+    }
+    let (parent, _) = split_parent(&relative);
+    let Some(dir) = path.parent() else {
+        return invalid_path();
+    };
+    let target = dir.join(new_name);
+    match fs::symlink_metadata(&target) {
+        Ok(_) => return failed(FailKind::Refused, MSG_NAME_EXISTS),
+        Err(err) if err.kind() == io::ErrorKind::NotFound => {}
+        Err(_) => return failed(FailKind::Kernel, MSG_LIST_FAILED),
+    }
+    match fs::rename(&path, &target) {
+        Ok(()) => Reply::Renamed { relative_path: join_relative(parent, new_name) },
+        Err(_) => failed(FailKind::Kernel, MSG_LIST_FAILED),
+    }
+}
+
+#[cfg(windows)]
+#[repr(C)]
+struct ShFileOpStructW {
+    hwnd: *mut c_void,
+    w_func: u32,
+    p_from: *const u16,
+    p_to: *const u16,
+    f_flags: u16,
+    f_any_operations_aborted: i32,
+    h_name_mappings: *mut c_void,
+    lpsz_progress_title: *const u16,
+}
+
+#[cfg(windows)]
+#[link(name = "shell32")]
+extern "system" {
+    fn SHFileOperationW(lp_file_op: *mut ShFileOpStructW) -> i32;
+}
+
+#[cfg(windows)]
+const FO_DELETE: u32 = 0x0003;
+#[cfg(windows)]
+const FOF_ALLOWUNDO: u16 = 0x0040;
+#[cfg(windows)]
+const FOF_NOCONFIRMATION: u16 = 0x0010;
+#[cfg(windows)]
+const FOF_SILENT: u16 = 0x0004;
+#[cfg(windows)]
+const FOF_WANTNUKEWARNING: u16 = 0x4000;
+#[cfg(windows)]
+const RECYCLE_FLAGS: u16 = FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_SILENT | FOF_WANTNUKEWARNING;
+
+/// Moves one file or folder to the Recycle Bin. The shell confirmation is off because the window
+/// asks the user before it sends the command. An item that cannot be recycled is still deleted
+/// only after the shell prompt (FOF_WANTNUKEWARNING); a cancelled prompt returns false.
+#[cfg(windows)]
+fn move_to_recycle_bin(path: &Path) -> bool {
+    let mut wide: Vec<u16> = display_path(path).encode_utf16().collect();
+    wide.push(0);
+    wide.push(0);
+    let mut op = ShFileOpStructW {
+        hwnd: ptr::null_mut(),
+        w_func: FO_DELETE,
+        p_from: wide.as_ptr(),
+        p_to: ptr::null(),
+        f_flags: RECYCLE_FLAGS,
+        f_any_operations_aborted: 0,
+        h_name_mappings: ptr::null_mut(),
+        lpsz_progress_title: ptr::null(),
+    };
+    // SAFETY: `op` and the wide buffer, which is double-null-terminated, outlive the call.
+    let result = unsafe { SHFileOperationW(&mut op) };
+    result == 0 && op.f_any_operations_aborted == 0
+}
+
+#[cfg(not(windows))]
+fn move_to_recycle_bin(_path: &Path) -> bool {
+    false
+}
+
+/// Moves a file or folder of the open workspace to the Recycle Bin. Tracked files below the
+/// path are marked deleted in the ledger after the move.
+async fn delete_path(state: &State, relative: &str) -> Reply {
+    let engine = match workspace(state) {
+        Ok(engine) => engine,
+        Err(reply) => return reply,
+    };
+    let relative = match checked_relative(relative) {
+        Ok(relative) => relative,
+        Err(reply) => return reply,
+    };
+    let path = match existing_entry(engine, &relative) {
+        Ok(path) => path,
+        Err(reply) => return reply,
+    };
+    let files = match engine.store.list_files().await {
+        Ok(files) => files,
+        Err(_) => return failed(FailKind::Kernel, MSG_LIST_FAILED),
+    };
+    let prefix = format!("{relative}/");
+    let tracked: Vec<_> = files
+        .into_iter()
+        .filter(|f| !f.deleted && (f.relative_path == relative || f.relative_path.starts_with(&prefix)))
+        .collect();
+    if !move_to_recycle_bin(&path) {
+        return failed(FailKind::Kernel, MSG_DELETE_FAILED);
+    }
+    for file in &tracked {
+        if engine.store.mark_deleted(file, "human", "moved to recycle bin").await.is_err() {
+            return failed(FailKind::Kernel, MSG_DELETE_FAILED);
+        }
+    }
+    Reply::Deleted { relative_path: relative }
+}
+
+/// Free and total bytes of the volume of a drive root, or None when the call fails.
+#[cfg(windows)]
+fn drive_capacity(root: &str) -> Option<(u64, u64)> {
+    #[link(name = "kernel32")]
+    extern "system" {
+        fn GetDiskFreeSpaceExW(
+            lp_directory_name: *const u16,
+            lp_free_bytes_available: *mut u64,
+            lp_total_number_of_bytes: *mut u64,
+            lp_total_number_of_free_bytes: *mut u64,
+        ) -> i32;
+    }
+    let mut wide: Vec<u16> = root.encode_utf16().collect();
+    wide.push(0);
+    let mut free_to_caller: u64 = 0;
+    let mut total: u64 = 0;
+    let mut total_free: u64 = 0;
+    // SAFETY: the wide string is null-terminated and the output pointers are valid for writes.
+    let ok = unsafe { GetDiskFreeSpaceExW(wide.as_ptr(), &mut free_to_caller, &mut total, &mut total_free) };
+    (ok != 0).then_some((free_to_caller, total))
+}
+
+#[cfg(not(windows))]
+fn drive_capacity(_root: &str) -> Option<(u64, u64)> {
+    None
+}
+
+/// Folder that holds the LADON settings: `LADON_SETTINGS_DIR` when set, otherwise `%LOCALAPPDATA%\LADON`.
+fn settings_dir() -> Option<PathBuf> {
+    if let Some(dir) = std::env::var_os("LADON_SETTINGS_DIR") {
+        return Some(PathBuf::from(dir));
+    }
+    std::env::var_os("LOCALAPPDATA").map(|dir| PathBuf::from(dir).join("LADON"))
+}
+
+/// The NAS folder stored in the settings, when it still exists.
+fn stored_nas_folder() -> Option<String> {
+    let text = fs::read_to_string(settings_dir()?.join("nas-folder.txt")).ok()?;
+    let first = text.lines().next()?.trim().to_string();
+    let path = Path::new(&first);
+    (path.is_absolute() && path.is_dir()).then_some(first)
+}
+
+/// The settings as the window shows them. The token is only tested for presence, never read into a reply.
+fn settings_reply() -> Reply {
+    Reply::Settings {
+        nas_folder: stored_nas_folder(),
+        google_token_set: std::env::var_os("LADON_GOOGLE_ACCESS_TOKEN").is_some_and(|value| !value.is_empty()),
+    }
+}
+
+/// Stores the NAS folder. The file is written to a temporary name and then renamed.
+fn set_nas_folder(path: &str) -> Reply {
+    let folder = Path::new(path);
+    if !folder.is_absolute() || !folder.is_dir() {
+        return failed(FailKind::InvalidPath, MSG_NAS_FOLDER_INVALID);
+    }
+    let Some(dir) = settings_dir() else {
+        return failed(FailKind::Kernel, MSG_SETTINGS_FAILED);
+    };
+    let target = dir.join("nas-folder.txt");
+    let temp = dir.join("nas-folder.txt.tmp");
+    let written = fs::create_dir_all(&dir)
+        .and_then(|()| fs::write(&temp, format!("{path}\n")))
+        .and_then(|()| fs::rename(&temp, &target));
+    match written {
+        Ok(()) => settings_reply(),
+        Err(_) => failed(FailKind::Kernel, MSG_SETTINGS_FAILED),
+    }
+}
+
+/// Provider of an archive target. A NAS folder must exist; the Google Drive token must be set.
+fn provider_for(target: &ArchiveTarget) -> Result<Box<dyn StorageProvider>, Reply> {
+    match target {
+        ArchiveTarget::Nas { folder } => {
+            let path = PathBuf::from(folder);
+            if !path.is_absolute() || !path.is_dir() {
+                return Err(failed(FailKind::InvalidPath, MSG_NAS_FOLDER_INVALID));
+            }
+            Ok(Box::new(FilesystemProvider::new("nas", path)))
+        }
+        ArchiveTarget::GoogleDrive => {
+            if std::env::var_os("LADON_GOOGLE_ACCESS_TOKEN").is_none_or(|value| value.is_empty()) {
+                return Err(failed(FailKind::Kernel, MSG_TOKEN_MISSING));
+            }
+            provider_from_env("google_drive", None).map_err(|_| failed(FailKind::Kernel, MSG_ARCHIVE_FAILED))
+        }
+    }
+}
+
+/// Archives one version to the target. Sensitive content is refused by the kernel policy.
+/// The root rule file is reloaded first, so a rule edited after open or the last capture applies here.
+async fn archive_version(state: &mut State, version_id: &str, target: &ArchiveTarget) -> Reply {
+    let State { engine, rule_mtime } = state;
+    let Some(engine) = engine.as_ref() else {
+        return failed(FailKind::NoWorkspace, MSG_NO_WORKSPACE);
+    };
+    if std::env::var_os("LADON_ARCHIVE_KEY_HEX").is_none_or(|value| value.is_empty()) {
+        return failed(FailKind::Kernel, MSG_ARCHIVE_KEY_MISSING);
+    }
+    let provider = match provider_for(target) {
+        Ok(provider) => provider,
+        Err(reply) => return reply,
+    };
+    let mtime = rule_file_mtime(&engine.root);
+    if engine.reload_policy().is_err() {
+        // Cleared, so the next capture reloads the rules even if the file returns with its earlier time.
+        *rule_mtime = None;
+        return failed(FailKind::Refused, MSG_RULE_PARSE_FAILED);
+    }
+    *rule_mtime = mtime;
+    match engine.archive_version(version_id, provider.as_ref(), false).await {
+        Ok(object) => Reply::Archived {
+            version_id: version_id.to_string(),
+            provider: object.provider,
+            locator: object.provider_locator,
+        },
+        Err(err) => {
+            let text = format!("{err:#}");
+            if text.contains("sensitive") || text.contains("denies external") {
+                failed(FailKind::Refused, MSG_ARCHIVE_REFUSED)
+            } else if text.contains("unknown version") {
+                failed(FailKind::NotFound, MSG_NOT_FOUND)
+            } else {
+                failed(FailKind::Kernel, MSG_ARCHIVE_FAILED)
+            }
+        }
+    }
+}
+
+/// Restores a version over its file. The window sends this only after the user confirmed it.
+async fn restore_version(state: &State, version_id: &str, target: Option<&ArchiveTarget>) -> Reply {
+    let engine = match workspace(state) {
+        Ok(engine) => engine,
+        Err(reply) => return reply,
+    };
+    let provider = match target.map(provider_for).transpose() {
+        Ok(provider) => provider,
+        Err(reply) => return reply,
+    };
+    let version = match engine.store.version(version_id).await {
+        Ok(Some(version)) => version,
+        Ok(None) => return failed(FailKind::NotFound, MSG_NOT_FOUND),
+        Err(_) => return failed(FailKind::Kernel, MSG_RESTORE_FAILED),
+    };
+    let relative = match engine.store.list_files().await {
+        Ok(files) => files.into_iter().find(|f| f.id == version.file_id).map(|f| f.relative_path),
+        Err(_) => None,
+    };
+    let Some(relative) = relative else {
+        return failed(FailKind::NotFound, MSG_NOT_FOUND);
+    };
+    match engine.restore(version_id, true, provider.as_deref()).await {
+        Ok(_) => {
+            let version_no = match engine.store.find_path(&relative).await {
+                Ok(Some(file)) => file.version_no,
+                _ => version.number,
+            };
+            Reply::Restored { relative_path: relative, version_no }
+        }
+        Err(err) => {
+            let text = format!("{err:#}");
+            if text.contains("changed outside ledger") {
+                failed(FailKind::Refused, MSG_RESTORE_DIVERGED)
+            } else if text.contains("historical content is cold") {
+                failed(FailKind::Refused, MSG_RESTORE_COLD)
+            } else {
+                failed(FailKind::Kernel, MSG_RESTORE_FAILED)
+            }
+        }
+    }
 }
 
 async fn list_folder(state: &State, relative_dir: &str) -> Reply {
@@ -684,6 +1177,11 @@ async fn capture_file(state: &mut State, relative_path: &str) -> Reply {
         None => return invalid_path(),
     };
     let mtime = rule_file_mtime(&engine.root);
+    if mtime.is_none() {
+        // A missing root rule file refuses the capture. Cleared, so a restored file reloads the rules.
+        *rule_mtime = None;
+        return failed(FailKind::Refused, MSG_RULE_PARSE_FAILED);
+    }
     if mtime != *rule_mtime {
         if engine.reload_policy().is_err() {
             return failed(FailKind::Refused, MSG_RULE_PARSE_FAILED);
@@ -814,5 +1312,20 @@ async fn load_diff(state: &State, older_id: &str, newer_id: &str) -> Reply {
         older_version_id: older_id.to_string(),
         newer_version_id: newer_id.to_string(),
         diff,
+    }
+}
+
+#[cfg(all(test, windows))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn recycle_flags_keep_undo_and_ask_before_a_permanent_delete() {
+        assert_ne!(RECYCLE_FLAGS & FOF_ALLOWUNDO, 0, "recycle flags must allow undo");
+        assert_ne!(
+            RECYCLE_FLAGS & FOF_WANTNUKEWARNING,
+            0,
+            "recycle flags must ask before a permanent delete"
+        );
     }
 }

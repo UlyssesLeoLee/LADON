@@ -1,10 +1,10 @@
 ﻿# 组装 LADON 安装包：整理文件夹 + 校验和 + zip。安装向导入口是文件夹里的 Setup.cmd。
-# 用法：Build-Package.ps1 -Binary <ladon.exe 路径> [-GuiBinary <ladon-gui.exe 路径>] [-OutDir E:\LADON-dist] [-Version 0.0.2]
+# 用法：Build-Package.ps1 -Binary <ladon.exe 路径> [-GuiBinary <ladon-gui.exe 路径>] [-OutDir E:\LADON-dist] [-Version 0.0.3]
 param(
   [Parameter(Mandatory = $true)][string]$Binary,
   [string]$GuiBinary = '',
   [string]$OutDir = 'E:\LADON-dist',
-  [string]$Version = '0.0.2'
+  [string]$Version = '0.0.3'
 )
 $ErrorActionPreference = 'Stop'
 $here = $PSScriptRoot

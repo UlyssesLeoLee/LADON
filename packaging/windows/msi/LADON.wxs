@@ -1,0 +1,85 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  LADON per-user MSI. Installs to %LOCALAPPDATA%\Programs\LADON without
+  administrator rights, adds the install folder to the user PATH, and creates a Start menu
+  shortcut for the GUI. Build with build-msi.ps1 (requires WiX Toolset 5).
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+  <Package Name="LADON"
+           Manufacturer="LADON"
+           Language="2052"
+           Version="$(var.Version).0"
+           UpgradeCode="77898BD8-D944-4464-B457-8E8A8BFA5B0E"
+           Scope="perUser"
+           Compressed="yes">
+    <MajorUpgrade DowngradeErrorMessage="已安装更新版本的 LADON。" AllowSameVersionUpgrades="yes" />
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- Mondo UI: install, repair, change and remove. Running the MSI again while installed opens the maintenance dialogs. -->
+    <WixVariable Id="WixUILicenseRtf" Value="$(var.LicenseRtf)" />
+    <ui:WixUI Id="WixUI_Mondo" />
+
+    <Icon Id="AppIcon.ico" SourceFile="$(var.SourceDir)\LADON_Explorer.ico" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon.ico" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/UlyssesLeoLee/LADON" />
+
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="ProgramsFolder" Name="Programs">
+        <Directory Id="INSTALLFOLDER" Name="LADON">
+          <Component Id="CmpCli" Guid="DE7B81E8-B44F-4CFB-ADB7-BC0C75097239">
+            <File Id="FilCli" Source="$(var.SourceDir)\ladon.exe" KeyPath="yes" />
+            <Environment Id="PathEntry" Name="PATH" Value="[INSTALLFOLDER]" Action="set" Part="last" Permanent="no" System="no" />
+          </Component>
+          <Component Id="CmpGui" Guid="5FC91424-955F-4731-A15F-69E74F005F8D">
+            <File Id="FilGui" Source="$(var.SourceDir)\ladon-gui.exe" KeyPath="yes" />
+          </Component>
+          <Component Id="CmpLicense" Guid="*">
+            <File Id="FilLicense" Source="$(var.SourceDir)\LICENSE" KeyPath="yes" />
+          </Component>
+          <Component Id="CmpDefaultYaml" Guid="*">
+            <File Id="FilDefaultYaml" Source="$(var.SourceDir)\default.yaml" KeyPath="yes" />
+          </Component>
+          <Component Id="CmpIgnoreExample" Guid="*">
+            <File Id="FilIgnoreExample" Source="$(var.SourceDir)\LADONignore.example" KeyPath="yes" />
+          </Component>
+          <Component Id="CmpIcon" Guid="*">
+            <File Id="FilIcon" Source="$(var.SourceDir)\LADON_Explorer.ico" KeyPath="yes" />
+          </Component>
+          <Component Id="CmpReadme" Guid="*">
+            <File Id="FilReadme" Source="$(var.SourceDir)\README_TRIAL.txt" KeyPath="yes" />
+          </Component>
+          <Component Id="CmpQuickstart" Guid="*">
+            <File Id="FilQuickstart" Source="$(var.SourceDir)\QUICKSTART.txt" KeyPath="yes" />
+          </Component>
+        </Directory>
+      </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="AppMenuFolder" Name="LADON">
+        <Component Id="CmpStartMenu" Guid="C04FD383-911F-4C6C-A20B-E6CEB0770E76">
+          <Shortcut Id="StartMenuGui"
+                    Name="LADON"
+                    Description="LADON 图形界面"
+                    Target="[INSTALLFOLDER]ladon-gui.exe"
+                    WorkingDirectory="INSTALLFOLDER"
+                    Icon="AppIcon.ico" />
+          <RemoveFolder Id="RemoveAppMenuFolder" Directory="AppMenuFolder" On="uninstall" />
+          <RegistryValue Root="HKCU" Key="Software\LADON\Explorer" Name="Installed" Type="integer" Value="1" KeyPath="yes" />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+
+    <Feature Id="Complete" Title="LADON" Level="1">
+      <ComponentRef Id="CmpCli" />
+      <ComponentRef Id="CmpGui" />
+      <ComponentRef Id="CmpLicense" />
+      <ComponentRef Id="CmpDefaultYaml" />
+      <ComponentRef Id="CmpIgnoreExample" />
+      <ComponentRef Id="CmpIcon" />
+      <ComponentRef Id="CmpReadme" />
+      <ComponentRef Id="CmpQuickstart" />
+      <ComponentRef Id="CmpStartMenu" />
+    </Feature>
+  </Package>
+</Wix>

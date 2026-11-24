@@ -274,6 +274,10 @@ pub struct DriveRow {
     pub root: String,
     pub label: String,
     pub initialised: bool,
+    /// Total size of the volume in bytes, or None when the volume cannot be queried.
+    pub total_bytes: Option<u64>,
+    /// Space available to the caller in bytes, or None when the volume cannot be queried.
+    pub free_bytes: Option<u64>,
 }
 
 /// Builds the rows of the This PC page from drive letters and their initialised flags,
@@ -292,6 +296,8 @@ pub fn drive_rows(entries: &[(char, bool)]) -> Vec<DriveRow> {
             root: format!("{letter}:\\"),
             label: format!("本地磁盘 ({letter}:)"),
             initialised,
+            total_bytes: None,
+            free_bytes: None,
         })
         .collect()
 }
@@ -409,6 +415,52 @@ pub fn relative_in_root(root: &str, path: &str) -> Option<String> {
     let rest = &path[root.len()..];
     Some(rest.replace('\\', "/").trim_start_matches('/').to_string())
 }
+
+/// Message for a name that cannot be used for a new file, folder or rename.
+pub const MSG_NAME_INVALID: &str =
+    "名称无效：不能为空，不能包含 \\ / : * ? \" < > |，不能以点或空格结尾，不能是系统保留名。";
+
+const RESERVED_DEVICE_NAMES: [&str; 22] = [
+    "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8",
+    "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+];
+
+/// Name of the root rule file. It is never created, renamed or replaced from the GUI.
+pub const RULE_FILE_NAME: &str = ".LADONignore";
+
+/// Message for a name that is the root rule file (matched case-insensitively).
+pub const MSG_RULE_FILE_NAME: &str = "名称无效：不能使用规则文件名 .LADONignore。";
+
+/// Checks a name for a new file, folder or rename. The rules are those of Windows file names.
+pub fn check_new_name(name: &str) -> Result<(), &'static str> {
+    if name.is_empty() || name.chars().count() > 255 {
+        return Err(MSG_NAME_INVALID);
+    }
+    if name.chars().any(|c| c.is_control() || "\\/:*?\"<>|".contains(c)) {
+        return Err(MSG_NAME_INVALID);
+    }
+    if name.eq_ignore_ascii_case(RULE_FILE_NAME) {
+        return Err(MSG_RULE_FILE_NAME);
+    }
+    if name.ends_with('.') || name.ends_with(' ') {
+        return Err(MSG_NAME_INVALID);
+    }
+    // Windows ignores trailing spaces before the extension, so "CON .txt" is the reserved name CON.
+    let stem = name.split('.').next().unwrap_or("").trim_end_matches(' ');
+    if RESERVED_DEVICE_NAMES.iter().any(|reserved| reserved.eq_ignore_ascii_case(stem)) {
+        return Err(MSG_NAME_INVALID);
+    }
+    Ok(())
+}
+
+/// Capacity line of a drive row: available and total space, or an unknown-capacity text.
+pub fn capacity_text(total: Option<u64>, free: Option<u64>) -> String {
+    match (total, free) {
+        (Some(total), Some(free)) => format!("可用 {} / 共 {}", format_bytes(free), format_bytes(total)),
+        _ => "容量未知".to_string(),
+    }
+}
+
 
 /// Compares two directory paths after removing the extended-length prefix and
 /// one trailing separator from each. The comparison ignores ASCII case, and
@@ -1389,11 +1441,15 @@ mod tests {
                     root: r"C:\".to_string(),
                     label: "本地磁盘 (C:)".to_string(),
                     initialised: true,
+                    total_bytes: None,
+                    free_bytes: None,
                 },
                 DriveRow {
                     root: r"D:\".to_string(),
                     label: "本地磁盘 (D:)".to_string(),
                     initialised: false,
+                    total_bytes: None,
+                    free_bytes: None,
                 },
             ]
         );
@@ -1404,8 +1460,8 @@ mod tests {
     #[test]
     fn ut_654_tree_rows_and_child_paths() {
         let drives = vec![
-            DriveRow { root: "C:\\".into(), label: "本地磁盘 (C:)".into(), initialised: true },
-            DriveRow { root: "D:\\".into(), label: "本地磁盘 (D:)".into(), initialised: false },
+            DriveRow { root: "C:\\".into(), label: "本地磁盘 (C:)".into(), initialised: true, total_bytes: None, free_bytes: None },
+            DriveRow { root: "D:\\".into(), label: "本地磁盘 (D:)".into(), initialised: false, total_bytes: None, free_bytes: None },
         ];
         let rows = drive_tree_rows(&drives);
         assert_eq!(rows.len(), 2);
@@ -1421,8 +1477,8 @@ mod tests {
     #[test]
     fn ut_655_tree_expand_and_collapse() {
         let mut rows = drive_tree_rows(&[
-            DriveRow { root: "C:\\".into(), label: "C".into(), initialised: true },
-            DriveRow { root: "D:\\".into(), label: "D".into(), initialised: false },
+            DriveRow { root: "C:\\".into(), label: "C".into(), initialised: true, total_bytes: None, free_bytes: None },
+            DriveRow { root: "D:\\".into(), label: "D".into(), initialised: false, total_bytes: None, free_bytes: None },
         ]);
         let names = vec!["a".to_string(), "b".to_string()];
         assert!(tree_expand(&mut rows, 0, &names));
@@ -1449,5 +1505,48 @@ mod tests {
         assert_eq!(relative_in_root("C:\\", "C:\\docs\\x").as_deref(), Some("docs/x"));
         assert_eq!(relative_in_root("C:\\", "C:\\").as_deref(), Some(""));
         assert_eq!(relative_in_root("D:\\", "C:\\x"), None);
+    }
+}
+
+#[cfg(test)]
+mod name_and_capacity_tests {
+    use super::*;
+
+    #[test]
+    fn ut_657_check_new_name() {
+        assert!(check_new_name("新建文件夹").is_ok());
+        assert!(check_new_name("a.txt").is_ok());
+        for bad in [
+            "", "a/b", "a:b", "CON", "con.txt", "NUL", "COM1", "LPT9", "trail.", "trail ",
+            "CON .txt", "Com1 .log",
+        ] {
+            assert_eq!(check_new_name(bad), Err(MSG_NAME_INVALID), "{bad}");
+        }
+        assert!(check_new_name("CONSOLE .txt").is_ok());
+        assert!(check_new_name("COM10 .txt").is_ok());
+        assert_eq!(check_new_name(&"a".repeat(256)), Err(MSG_NAME_INVALID));
+    }
+
+    #[test]
+    fn ut_658_capacity_text() {
+        assert_eq!(capacity_text(Some(10 * 1024 * 1024 * 1024), Some(4 * 1024 * 1024 * 1024)), "可用 4.0 GB / 共 10.0 GB");
+        assert_eq!(capacity_text(None, Some(1)), "容量未知");
+        assert_eq!(capacity_text(Some(1), None), "容量未知");
+    }
+
+    #[test]
+    fn ut_659_drive_rows_have_no_capacity() {
+        let rows = drive_rows(&[('C', true), ('D', false)]);
+        assert!(rows.iter().all(|row| row.total_bytes.is_none() && row.free_bytes.is_none()));
+    }
+
+    #[test]
+    fn ut_660_check_new_name_refuses_rule_file() {
+        for name in [".LADONignore", ".ladonignore", ".LadonIgnore"] {
+            let result = check_new_name(name);
+            assert!(result.is_err(), "rule file name must be refused: {name}");
+            let message = result.unwrap_err();
+            assert!(message.contains(".LADONignore"), "message must name the rule file: {message}");
+        }
     }
 }

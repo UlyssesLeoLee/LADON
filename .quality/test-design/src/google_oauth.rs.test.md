@@ -2,11 +2,11 @@
 
 Source: `src/google_oauth.rs`
 
-Source-SHA256: `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`
+Source-SHA256: `4cf5b483493fe0a1c63ec332f1a6d6227c4c6a0e265bfb7845c7f6aca5caa4c5`
 
 ## Test Strategy
 
-Integration tests in `tests/it_google_oauth.rs`. The pure functions (verifier, challenge, encoding, URL and callback parsing) are tested directly against their specified values. Storage is tested with a temporary folder and runs only on Windows, where DPAPI exists. The loopback login is tested with a real socket and a simulated browser on the same machine. The token endpoint is not contacted with real credentials, so the exchange step only checks that a failure names no secret.
+Integration tests in `tests/it_google_oauth.rs`. The pure functions (verifier, challenge, encoding, URL and callback parsing) are tested directly against their specified values. Storage is tested with a temporary folder and runs only on Windows, where DPAPI exists. The loopback login is tested with a real socket and a simulated browser on the same machine. The token endpoint is not contacted with real credentials, so the exchange step only checks that a failure names no secret. The success and failure paths of the token requests and of the login are tested in `src/google_oauth.rs` against a one-shot loopback mock endpoint (TC-816).
 
 ## Test Cases
 
@@ -19,15 +19,19 @@ Integration tests in `tests/it_google_oauth.rs`. The pure functions (verifier, c
 | TC-805 | Windows only. A temporary settings folder; `save_refresh_token` with `refresh-value-for-test`; the bytes of the token file; `load_refresh_token`; `delete_refresh_token` twice; `load_refresh_token` afterwards. | The token file exists and its bytes do not contain the plain value. The load returns the value. After deletion, the load returns `None`, and the second deletion succeeds. | tests/it_google_oauth.rs::tc805_protected_storage_round_trip |
 | TC-806 | `LADON_GOOGLE_CLIENT_ID` unset, then set to a blank value, then set to `id.apps`; `LADON_GOOGLE_CLIENT_SECRET` set to `s` in the last case. | The first two fail with `LADON_GOOGLE_CLIENT_ID is not set`. The last gives client ID `id.apps` and secret `Some("s")`. | tests/it_google_oauth.rs::tc806_client_from_environment |
 | TC-807 | Loopback login with a timeout of 200 ms and no request from the browser. | The result is `sign-in timed out`, and the call returns within 5 seconds. | tests/it_google_oauth.rs::tc807_login_times_out |
-| TC-808 | Loopback login with a 5-second timeout. The `open_url` callback parses the state from the URL and sends `GET /?code=test-code&state=<state> HTTP/1.1` to the redirect address, then reads the HTTP reply. | The reply is HTTP 200 with the fixed HTML page. The login then fails at the token exchange with a message that starts with `token exchange failed` or with the network error, and the message contains neither `test-code` nor the state. | tests/it_google_oauth.rs::tc808_loopback_receives_callback |
+| TC-808 | Loopback login with a 5-second timeout. The `open_url` callback parses the state from the URL and sends `GET /?code=test-code&state=<state> HTTP/1.1` to the redirect address, then reads the HTTP reply. | The reply is HTTP 200 with the fixed HTML page. The login then fails at the token exchange with a message that starts with `token exchange failed`, and the message contains neither `test-code` nor the state. | tests/it_google_oauth.rs::tc808_loopback_receives_callback |
 | TC-809 | `LADON_GOOGLE_ACCESS_TOKEN` unset and a settings folder with no stored sign-in: `provider_from_env("google_drive", None)`; then the environment token set to `static-token` and the same call. | The first fails with `Google Drive is not connected`. The second succeeds and makes no network request at construction. `settings_dir()` returns the `LADON_SETTINGS_DIR` value when that variable is set. | tests/it_google_oauth.rs::tc809_provider_token_source |
+| TC-816 | One-shot loopback mock endpoint. Token exchange answers 200 with both tokens; exchange answers 400 with a body that holds a detail value; refresh answers 200 with an access token and 401 for a refresh token; login with a simulated browser answers with a refresh token, then with no refresh token. | Exchange returns both tokens, and its `Debug` output hides them. The 400 reply fails with `token exchange failed (HTTP 400)`, and the detail value is absent. Refresh returns the access token. The 401 reply fails with `access token refresh failed` and names no refresh token. Login returns the refresh token. Login without a refresh token fails with the Google message. | src/google_oauth.rs::tests::ut_google_01_exchange_returns_tokens_without_printing_them to ut_google_06_login_without_refresh_token_is_refused |
+| TC-817 | `Debug` output of an `OAuthClient` with a secret. | The output shows the client ID and `<redacted>`, and does not show the secret. | src/google_oauth.rs::tests::ut_google_07_client_debug_hides_secret |
+| TC-818 | Off Windows only: `save_refresh_token` and `load_refresh_token` in an empty settings folder. | Saving fails with `protected storage is available on Windows only`. Loading returns `None`. | tests/it_google_oauth.rs::tc805_protected_storage_is_windows_only |
 
 ## Boundary & Failure Cases
 
 - An invalid percent escape, a bad UTF-8 result, and a state mismatch are all refused without a partial result (TC-802, TC-804).
 - A blank client ID is treated as missing (TC-806).
 - A token file that cannot be unprotected fails without exposing the content (see `stored sign-in is unreadable`).
-- Off Windows, saving a token fails with `protected storage is available on Windows only`.
+- Off Windows, saving a token fails with `protected storage is available on Windows only` (TC-818).
+- A stored sign-in that is empty after unprotecting is reported as `stored sign-in is unreadable`.
 
 ## Regression Scope
 

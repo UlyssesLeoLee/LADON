@@ -12,6 +12,6 @@ LADON 试用指南（在示例工作区里依次运行）
   ladon sensitive-add requirements.md   把一个文件加入敏感列表（写入 .LADONignore）
 
 说明
-  - 这是试用构建：根 crate 的自动化测试 104 项通过，手工系统测试与用户验收尚未执行。请先只用示例工作区，不要管理重要数据。
+  - 这是试用构建：根 crate 的自动化测试 167 项通过（2026-11-24，debug 构建），手工系统测试与用户验收尚未执行。请先只用示例工作区，不要管理重要数据。
   - 所有数据都保存在工作区的 .ladon 目录里，删掉该目录即可重置。
   - 如果 ignore-check 报 outside workspace，请传相对路径（如 secret.pem）。

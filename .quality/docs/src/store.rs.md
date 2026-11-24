@@ -2,7 +2,7 @@
 
 Source: `src/store.rs`
 
-Source-SHA256: `a36b22395a6703671e5d6be00f21435b92c8ce85f238e8d68dc614a4a3d92bee`
+Source-SHA256: `8a0eadfd5ab375e4eb41c452518f6de95c661faa52a38b74fd50e2abd0c432ae`
 
 ## Responsibility
 
@@ -12,11 +12,11 @@ Atomicity: `append_version` writes resources, versions and events inside one tra
 
 ## Dependencies
 
-- `turso` pinned to `=0.8.3` with `default-features = false` and `features = ["mimalloc"]`. The `fts` feature is not enabled: this module issues no full-text queries, and with `fts` enabled `turso_core` 0.8.3 fails on the stable toolchain with E0308 at `index_method/fts/directory.rs` line 345 (expected `Global`, found `DynAllocator`). `mimalloc` stays enabled as the default allocator.
+- `turso` pinned to `=0.8.3` with `default-features = false` and `features = ["mimalloc"]`. The crate's default features are `mimalloc` and `fts`; the `fts` feature is not enabled, because this module issues no full-text queries. `mimalloc` stays enabled as the default allocator.
 - `chrono` (UTC RFC 3339 timestamps), `uuid` v4 (record ids), `serde_json` (changed-section lists, hash-chain payload, JSON views), `anyhow` (errors).
 - `crate::crypto::digest` for the hash chain, `crate::model` record types (`FileRecord`, `VersionRecord`, `EventRecord`, `StorageObject`).
 - `sql/001_initial.sql` and `sql/002_collaboration_shell_agent.sql`, embedded with `include_str!` and executed statement by statement.
-- Downstream callers: `engine::Engine` (capture, scan, archive, restore), `agent_api::AgentApi` (history, folder listing), the `ladon` CLI.
+- Downstream callers: `engine::Engine` (capture, scan, archive, restore), `agent_api::AgentApi` (history, folder listing, remote read check), the `ladon` CLI, and the Slint GUI crate in `ui-prototype`, which calls `list_files`, `mark_deleted`, `version`, `find_path`, `versions`, `verify_chain` and `events` through `engine.store`.
 
 ## Public Contract
 
@@ -25,16 +25,16 @@ Parameter binding: every value passed to `params!` or a positional array is a `&
 Operations:
 
 - `Store::new(path)`; `init()` creates the parent directory, applies migration 1 and, when `schema_migrations` has no row for version 2, migration 2. Calling `init` repeatedly is safe, and migration 2 is applied once.
-- `find_path(path) -> Option<FileRecord>`, `list_files()` ordered by relative path, `latest_version(file_id)`, `version(version_id)`, `versions(file_id)` newest first, `events(file_id)` in ledger order. Unknown keys yield `None` or empty lists, never errors.
-- `append_version(PendingVersion) -> (file_id, version_id, event_id)`: creates the resource on first sight (version 1, event kind `created`), otherwise increments `version_no`. The event kind is `restored` when the previous row was deleted and `modified` otherwise. Returns the error `no content change` when the hash equals the stored hash of a non-deleted resource. The new event stores `ledger_prev_hash` (hash of the file's previous event, empty for the first) and `ledger_hash = event_hash(...)`.
+- `find_path(path) -> Result<Option<FileRecord>>`, `list_files()` ordered by relative path, `latest_version(file_id)`, `version(version_id)`, `versions(file_id)` newest first, `events(file_id)` in ledger order. Unknown keys yield `None` or empty lists, never errors.
+- `append_version(PendingVersion) -> Result<(file_id, version_id, event_id)>`: creates the resource on first sight (version 1, event kind `created`), otherwise increments `version_no`. The event kind is `restored` when the previous row was deleted and `modified` otherwise. Returns the error `no content change` when the hash equals the stored hash of a non-deleted resource. The new event stores `ledger_prev_hash` (hash of the file's previous event, empty for the first) and `ledger_hash = event_hash(...)`.
 - `mark_deleted(file, actor, reason)`: no-op when `file.deleted` is already true; otherwise sets `deleted = 1` and appends a `deleted` event bound to the latest version, extending the chain. Fails with `missing version` when the resource has no version.
-- `archive_record(StorageObject)` upserts on `(content_hash, provider)`, replacing the locator, the encrypted flag and `verified_at`; `archives(hash)` lists records newest `verified_at` first; `is_hash_sensitive(hash)` is true when any version with that content hash is flagged sensitive.
+- `archive_record(StorageObject)` upserts on `(content_hash, provider)`, replacing the locator, the encrypted flag and `verified_at`; `archives(hash)` lists records newest `verified_at` first; `is_hash_sensitive(hash)` is true when any version with that content hash is flagged sensitive. `paths_for_hash(hash)` returns the distinct `relative_path` values of every resource that has a version with that content hash, live or deleted, sorted ascending; `Engine::content_is_excluded` applies the current rules to each of them, and `Engine::archive_version`, `AgentApi::allow_remote_read` and the CLI `tag-folder` command reach them through that function. Known limitation: `LadonPolicy::excluded` does not normalise `..` components, so a path that contains a `..` component is not rejected by its outside-workspace check, whether the path is relative or an absolute path under the root.
 - `set_tags(file_id, tags, source, rule_version)` trims each tag, skips tags that are empty after trimming and tags longer than 80 bytes, and upserts on `(file_id, tag)`, replacing `source` and `rule_version` of an existing tag; `tags(file_id)` returns tags sorted ascending.
 - `add_annotation` and `create_task` (status `open`) each insert their record and then append a governance event (`annotation.created` or `task.created`, actor `human`). `add_governance_event(file_id, kind, subject_id, payload, actor)` returns the new event id. `governance_events(file_id)` returns the events in ledger order and `list_tasks(file_id)` returns the tasks ordered by `created_at`; both return JSON objects, with the keys `id`, `kind`, `subject_id`, `payload`, `actor` and `timestamp` for events, and `id`, `section`, `base_version_id`, `title`, `status`, `description` and `created_at` for tasks. `set_task_status` accepts only `open`, `analysis`, `approval`, `working`, `verification`, `done`, `cancelled` (error `invalid task state` otherwise, error `task missing` for an unknown id) and records a `task.state_changed` governance event.
-- `verify_chain(file_id) -> bool` recomputes every event hash in order and returns false at the first broken `ledger_prev_hash` link or hash mismatch.
+- `verify_chain(file_id) -> Result<bool>` recomputes every event hash in order and returns false at the first broken `ledger_prev_hash` link or hash mismatch.
 
 Invariants: `event_hash` is SHA-256 over the JSON serialisation of the 12-tuple `(prev, event id, file id, version id, kind, old path, new path, timestamp, actor, reason, previous hash, current hash)`. Version numbers per file are contiguous starting at 1.
 
 ## Change Notes
 
-Every `params!` call site in `append_version`, `mark_deleted`, `archive_record`, `set_tags`, `add_annotation`, `create_task`, `add_governance_event` and `set_task_status` binds `&str` or `i64` values only, which is what turso 0.8.3 accepts. The Cargo manifest carries the dependency feature set described under Dependencies, and no other module depends on turso directly. Query text, schema, transactions and the hash-chain format are those specified in this document.
+Every `params!` call site in `append_version`, `mark_deleted`, `archive_record`, `set_tags`, `add_annotation`, `create_task`, `add_governance_event` and `set_task_status` binds only `&str` or `i64` values, the types turso 0.8.3 accepts. Within `src/`, only `src/store.rs` uses the `turso` crate directly; the integration test `tests/it_store.rs` also calls the `turso` API directly (`turso::Builder`, `turso::params!`).

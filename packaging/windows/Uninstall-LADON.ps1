@@ -1,4 +1,4 @@
-﻿# LADON Explorer 卸载程序：只还原安装清单（install-manifest.json）里记录的内容。
+﻿# LADON 卸载程序：只还原安装清单（install-manifest.json）里记录的内容。
 param(
   [switch]$Silent,
   [switch]$RemoveSample,
@@ -12,10 +12,10 @@ $m = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Js
 
 if (-not $Silent) {
   Add-Type -AssemblyName System.Windows.Forms
-  $ans = [System.Windows.Forms.MessageBox]::Show("确定卸载 LADON Explorer 吗？`r`n`r`n安装目录：$($m.installDir)", 'LADON Explorer 卸载', 'YesNo', 'Question')
+  $ans = [System.Windows.Forms.MessageBox]::Show("确定卸载 LADON 吗？`r`n`r`n安装目录：$($m.installDir)", 'LADON 卸载', 'YesNo', 'Question')
   if ($ans -ne 'Yes') { exit 0 }
   if ($m.sampleCreated -and $m.sampleDir -and (Test-Path -LiteralPath $m.sampleDir)) {
-    $a2 = [System.Windows.Forms.MessageBox]::Show("是否同时删除示例工作区？`r`n$($m.sampleDir)`r`n`r`n选「否」将保留其中的文件和历史。", 'LADON Explorer 卸载', 'YesNo', 'Question', 'Button2')
+    $a2 = [System.Windows.Forms.MessageBox]::Show("是否同时删除示例工作区？`r`n$($m.sampleDir)`r`n`r`n选「否」将保留其中的文件和历史。", 'LADON 卸载', 'YesNo', 'Question', 'Button2')
     if ($a2 -eq 'Yes') { $RemoveSample = $true }
   }
 }
@@ -49,5 +49,5 @@ Say '文件已清理；稍后移除自身脚本，并在安装目录已空时移
 # 卸载脚本自己还在这个目录里：交给一个延迟执行的隐藏 cmd 在本进程退出后删除这两个脚本，再用不带 /s 的 rmdir 移除目录；目录里清单之外的文件不会被删除，此时 rmdir 会失败并保留目录。
 $cmdLine = "/c ping -n 3 127.0.0.1 >nul & del /q `"$InstallDir\Uninstall-LADON.ps1`" `"$InstallDir\LADON-Common.ps1`" & rmdir `"$InstallDir`""
 Start-Process -FilePath "$env:SystemRoot\System32\cmd.exe" -ArgumentList $cmdLine -WindowStyle Hidden
-if (-not $Silent) { [void][System.Windows.Forms.MessageBox]::Show('LADON Explorer 已卸载。', 'LADON Explorer 卸载') }
+if (-not $Silent) { [void][System.Windows.Forms.MessageBox]::Show('LADON 已卸载。', 'LADON 卸载') }
 Say 'UNINSTALL OK'

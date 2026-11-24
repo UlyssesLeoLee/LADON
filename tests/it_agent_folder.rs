@@ -154,8 +154,43 @@ async fn tc407_allow_remote_read_respects_ignore_rules(){
     fs::write(tmp.path().join("ok.md"),"ok").unwrap();
     fs::write(tmp.path().join("secret.md"),"secret").unwrap();
     let api=AgentApi{engine:&engine};
-    api.allow_remote_read(Path::new("ok.md")).unwrap();
+    api.allow_remote_read(Path::new("ok.md")).await.unwrap();
     ladon_explorer::policy::add_sensitive(tmp.path(),&tmp.path().join("secret.md")).unwrap();
-    let err=api.allow_remote_read(Path::new("secret.md")).unwrap_err();
+    let err=api.allow_remote_read(Path::new("secret.md")).await.unwrap_err();
     assert!(err.to_string().contains("denies external data transfer"),"{err}");
+}
+
+#[tokio::test]
+async fn tc410_allow_remote_read_refuses_copy_of_excluded_content(){
+    let tmp=tempfile::tempdir().unwrap();
+    let root=tmp.path();
+    fs::write(root.join(".LADONignore"),"/contracts/\n").unwrap();
+    let engine=Engine::init(root).await.unwrap();
+    fs::create_dir_all(root.join("contracts")).unwrap();
+    let original=root.join("contracts").join("a.txt");
+    fs::write(&original,"contract terms v1").unwrap();
+    engine.capture(&original,"human","init").await.unwrap();
+
+    fs::create_dir_all(root.join("shared")).unwrap();
+    let copy=root.join("shared").join("a.txt");
+    fs::copy(&original,&copy).unwrap();
+    engine.capture(&copy,"human","copy").await.unwrap();
+
+    let api=AgentApi{engine:&engine};
+    let err=api.allow_remote_read(Path::new("shared/a.txt")).await
+        .expect_err("a copy of excluded content must not pass the remote read gate");
+    assert!(err.to_string().contains("denies external data transfer"),"{err}");
+
+    // A directory junction reaches the same bytes under a name the rules do not exclude.
+    #[cfg(windows)]
+    {
+        if make_dir_junction(&root.join("contracts"),&root.join("alias")) {
+            let err=api.allow_remote_read(Path::new("alias/a.txt")).await
+                .expect_err("content reached through a directory alias must not pass the remote read gate");
+            assert!(err.to_string().contains("denies external data transfer"),"{err}");
+        } else {
+            assert!(std::env::var_os("LADON_REQUIRE_LINK_TESTS").is_none(),"directory junctions are required but unavailable on this host");
+            eprintln!("directory junctions cannot be created here; skipping the alias case");
+        }
+    }
 }
