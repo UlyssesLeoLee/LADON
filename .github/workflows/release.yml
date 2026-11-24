@@ -3,6 +3,8 @@ on:
   push:
     tags:
       - 'v*'
+    branches:
+      - fix/compile-errors
 permissions:
   contents: write
 jobs:
@@ -12,22 +14,54 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
 
-      - name: Resolve version from tag
+      - name: Resolve version
         shell: pwsh
         run: |
-          $v = "${{ github.ref_name }}".TrimStart('v')
+          if ("${{ github.ref_type }}" -eq 'tag') {
+            $v = "${{ github.ref_name }}".TrimStart('v')
+          } else {
+            $v = ((Select-String -Path Cargo.toml -Pattern '^version\s*=\s*"([^"]+)"' | Select-Object -First 1).Matches[0].Groups[1].Value)
+          }
           "VERSION=$v" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          Write-Host "version $v"
 
       - name: Kernel tests
-        run: cargo test --locked --all-targets --no-fail-fast
+        shell: pwsh
+        run: |
+          cargo test --locked --all-targets --no-fail-fast 2>&1 | Tee-Object -FilePath kernel-test.log
+          if ($LASTEXITCODE -ne 0) {
+            $errs = (Select-String -Path kernel-test.log -Pattern '^error|error\[|FAILED|panicked|^failures:|LNK[0-9]+' | Select-Object -First 25 | ForEach-Object { $_.Line }) -join "`n"
+            $tail = (Get-Content kernel-test.log -Tail 40) -join "`n"
+            foreach ($m in @($errs, $tail)) { Write-Host ("::error title=kernel tests::" + (($m -replace '%','%25' -replace "`r",'') -replace "`n",'%0A')) }
+            exit 1
+          }
 
       - name: GUI tests
-        run: cargo test --locked --manifest-path ui-prototype/Cargo.toml --no-default-features --features kernel --no-fail-fast
+        shell: pwsh
+        run: |
+          cargo test --locked --manifest-path ui-prototype/Cargo.toml --no-default-features --features kernel --no-fail-fast 2>&1 | Tee-Object -FilePath gui-test.log
+          if ($LASTEXITCODE -ne 0) {
+            $errs = (Select-String -Path gui-test.log -Pattern '^error|error\[|FAILED|panicked|^failures:|LNK[0-9]+' | Select-Object -First 25 | ForEach-Object { $_.Line }) -join "`n"
+            $tail = (Get-Content gui-test.log -Tail 40) -join "`n"
+            foreach ($m in @($errs, $tail)) { Write-Host ("::error title=gui tests::" + (($m -replace '%','%25' -replace "`r",'') -replace "`n",'%0A')) }
+            exit 1
+          }
 
       - name: Build release binaries
+        shell: pwsh
         run: |
-          cargo build --release --locked --bin ladon
-          cargo build --release --locked --manifest-path ui-prototype/Cargo.toml --bin ladon-gui
+          cargo build --release --locked --bin ladon 2>&1 | Tee-Object -FilePath build-kernel.log
+          if ($LASTEXITCODE -ne 0) {
+            $tail = (Get-Content build-kernel.log -Tail 40) -join "`n"
+            Write-Host ("::error title=kernel build::" + (($tail -replace '%','%25' -replace "`r",'') -replace "`n",'%0A'))
+            exit 1
+          }
+          cargo build --release --locked --manifest-path ui-prototype/Cargo.toml --bin ladon-gui 2>&1 | Tee-Object -FilePath build-gui.log
+          if ($LASTEXITCODE -ne 0) {
+            $tail = (Get-Content build-gui.log -Tail 40) -join "`n"
+            Write-Host ("::error title=gui build::" + (($tail -replace '%','%25' -replace "`r",'') -replace "`n",'%0A'))
+            exit 1
+          }
 
       - name: Assemble package folder and zip
         shell: pwsh
@@ -62,6 +96,7 @@ jobs:
           Get-Content -LiteralPath "dist/SHA256SUMS-$env:VERSION.txt"
 
       - name: Release notes from CHANGELOG
+        if: startsWith(github.ref, 'refs/tags/v')
         shell: pwsh
         run: |
           $header = "## $env:VERSION "
@@ -78,6 +113,7 @@ jobs:
           $out | Set-Content -LiteralPath release-notes.md -Encoding UTF8
 
       - name: Publish prerelease
+        if: startsWith(github.ref, 'refs/tags/v')
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
