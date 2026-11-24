@@ -395,7 +395,7 @@ mod tests {
             Err(err) => err,
         };
         assert_eq!(fs::read_to_string(&file).unwrap(), "live edit", "the rollback must not discard a live edit");
-        let backups: Vec<PathBuf> = fs::read_dir(restore_staging_dir(tmp.path()))
+        let backups: Vec<PathBuf> = fs::read_dir(restore_staging_dir(&e.root))
             .unwrap()
             .map(|entry| entry.unwrap().path())
             .filter(|path| path.file_name().unwrap().to_string_lossy().starts_with("x.ladon-backup-"))
@@ -433,7 +433,7 @@ mod tests {
             Err(err) => err,
         };
         assert_eq!(fs::read_to_string(&file).unwrap(), "user edit", "the rollback must not remove an edit written during rollback");
-        let backups: Vec<PathBuf> = fs::read_dir(restore_staging_dir(tmp.path()))
+        let backups: Vec<PathBuf> = fs::read_dir(restore_staging_dir(&e.root))
             .unwrap()
             .map(|entry| entry.unwrap().path())
             .filter(|path| path.file_name().unwrap().to_string_lossy().starts_with("x.ladon-backup-"))
@@ -535,7 +535,7 @@ mod tests {
             Ok(_) => panic!("a restore that cannot place the restored file must not report success"),
             Err(err) => err,
         };
-        let backups: Vec<PathBuf> = fs::read_dir(restore_staging_dir(tmp.path()))
+        let backups: Vec<PathBuf> = fs::read_dir(restore_staging_dir(&e.root))
             .unwrap()
             .map(|entry| entry.unwrap().path())
             .filter(|path| path.file_name().unwrap().to_string_lossy().starts_with("x.ladon-backup-"))
@@ -543,7 +543,7 @@ mod tests {
         assert_eq!(backups.len(), 1, "the pre-restore bytes must stay in a backup: {backups:?}");
         assert_eq!(fs::read_to_string(&backups[0]).unwrap(), "two");
         assert!(err.to_string().contains(&backups[0].display().to_string()), "{err}");
-        assert!(err.to_string().contains(&file.display().to_string()), "{err}");
+        assert!(err.to_string().contains(&e.root.join("x.txt").display().to_string()), "{err}");
         let events = e.store.events(&first.file_id).await.unwrap();
         let kinds: Vec<&str> = events.iter().map(|ev| ev.kind.as_str()).collect();
         assert_eq!(kinds, vec!["created", "modified"], "a restore that failed to place its file must not be recorded");
