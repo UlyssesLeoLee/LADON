@@ -42,6 +42,11 @@ Verification runs in the CI job `release.yml` (`cargo test --locked --all-target
 | No title or annotation text enters the chain; state strings are kept in plain text only for `task.state_changed` (IT-050) | TC-868 | Distinctive title and note; legal and illegal state payloads | No secret text in any stored field; payload shapes as listed |
 | Every legacy task has `dt.task.imported`; a re-import after an earlier binary changed the status leaves no status drift (IT-050, WBS WP05 acceptance) | TC-869 | Second run; raw status change; third run; legacy use after a backfill | Zero report on repeat; one imported event after drift; `status_drift` empty; chain intact; rows created by the earlier binary are imported |
 
+| Each service write is one transaction with its event (`write_with_event`); an `Update` that changes no row rolls back | TC-871, TC-872, TC-878 | Baseline insert and revoke; task and annotation edits; a stale update | Record and event appear together or not at all; the stale update returns `E_NOT_FOUND` with no event |
+| `ensure_anchor_clause` stores the clause fingerprint on creation and keeps an existing row unchanged | TC-870, TC-879 | Anchors created by the strict and the legacy path | Fingerprint columns set; repeated call returns the same id |
+| `schema_current` reports migration 4 without writing | TC-877 | Engine before and after `open` | `false` before migration, `true` after; no row written by the check |
+| Typed read rows (`baselines`, `tasks`, `annotations`) return every column the service reads | TC-873, TC-874, TC-876 | Tasks, annotations and baselines with and without revocation, `local_only` and proposals | Field values equal the written values; order by number and time |
+
 ## Boundary & Failure Cases
 
 - Counter values at 0 and at the first allocation (row absent) and the first increment (row present).

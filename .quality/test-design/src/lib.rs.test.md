@@ -16,6 +16,7 @@ Source-SHA256: `d445518d4496851133adc203cd7cfe0336787078fa14250bea19f54a2c25eb18
 | TC-830 | Build of the library with the `doctask_model` declaration present, and the model's own status and boundary tests. | The crate compiles with `doctask_model` declared, and the module is reachable as `ladon_explorer::doctask_model`. | src/doctask_model.rs::tests::tc830_status_strings_match_legacy_seven |
 | TC-860 | Build of the library with the `doctask_store` declaration present, and the store's rollback and chain tests. | The crate compiles with `doctask_store` declared, and the module is reachable as `ladon_explorer::doctask_store`. | tests/it_doctask_store.rs::it_049_second_statement_failure_rolls_back_first |
 | TC-840 | Build of the library with the `doctask_outline` declaration present, and the outline module's key-equality test. | The crate compiles with `doctask_outline` declared, and the module is reachable as `ladon_explorer::doctask_outline`. | src/doctask_outline.rs::tests::ut_147_outline_keys_match_section_hashes |
+| TC-870 | Build of the library with the `doctask_service` declaration present, and the service integration tests. | The crate compiles with `doctask_service` declared, and the module is reachable as `ladon_explorer::doctask_service`. | tests/it_doctask_service.rs::tc870_create_requires_baseline_and_pins_base_version |
 
 ## Boundary & Failure Cases
 

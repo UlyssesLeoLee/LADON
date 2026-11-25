@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "source": "src/doctask_service.rs",
+  "baseline_source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "prepared_branch": "fix/compile-errors",
+  "technical_design": ".quality/docs/src/doctask_service.rs.md",
+  "test_design": ".quality/test-design/src/doctask_service.rs.test.md",
+  "prepared_technical_design_sha256": "90560e473a41a9f56780766b7c0d729eb42c2ebd80efabbc65a7070fa09c5795",
+  "prepared_test_design_sha256": "eaf792877fccbb4883776013153e085d881e687a301495157aa59295df4a70e7",
+  "prepared_related_design_sha256": {}
+}
