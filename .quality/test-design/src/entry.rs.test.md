@@ -38,8 +38,14 @@ Acceptance items of WP00C, mapped to test cases:
 | TC-1029 | `shell-host-internal <file>` with `run_isolated_host` returning `ExecutedOrDismissed`, `ViewHistory`, `DocumentTask` and `OpenExplorer`. | Each returns `Ok(())`; `OpenExplorer` calls `open_in_explorer` with the canonical path. | src/entry.rs::tests::shell_host_results_are_mapped |
 | TC-1029 | `shell-host-internal <file>` with `MarkSensitive` in an initialised workspace. | Returns `Ok(())`; the policy reports the file excluded afterwards. | src/entry.rs::tests::shell_host_mark_sensitive_updates_policy |
 | TC-1029 | `shell-host-internal <file>` with `run_isolated_host` returning an error. | Returns `Reported` with code 1. | src/entry.rs::tests::shell_host_error_is_reported_with_code_one |
-| TC-1029 | `init` through `run` with `--root <dir>`; then `annotate` and `task` on an untracked file. | `init` creates the workspace (`Ok`); `annotate` and `task` return `file not found in ledger`. | src/entry.rs::tests::init_and_record_commands_through_run |
+| TC-1029 | `init` through `run` with `--root <dir>`; then `annotate` and `task` on an untracked file. | `init` creates the workspace (`Ok`); `annotate` and `task` return `Reported` with code 3 (`E_NOT_FOUND`); the error text is printed by `doctask_cli` on standard error. | src/entry.rs::tests::init_and_record_commands_through_run |
 | TC-1029 | `Cli::try_parse_from` with no subcommand, and with an unknown option. | Both return clap errors; no host call is made. | src/entry.rs::tests::cli_rejects_missing_and_unknown_arguments |
+| TC-938 | Source of the `Doc`, `Annotate` and `Task` arms of `run`/`command`, read in `tests/it_doctask_cli.rs::it_938_entry_arms_are_single_calls`. | Each arm is one call into `doctask_cli`; no SQL token in the arm. | tests/it_doctask_cli.rs::it_938_entry_arms_are_single_calls |
+
+## Change Notes
+
+- `doc` parsing and the `doc` branch are covered by `tests/it_doctask_cli.rs`, `tests/it_doctask_cli_binary.rs` and the unit tests of `src/doctask_cli.rs` (TC-930 to TC-939).
+- The `annotate` and `task` branches now call `doctask_cli`; their expected outcomes in this table are the ones above.
 
 ## Boundary & Failure Cases
 

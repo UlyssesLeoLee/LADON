@@ -19,7 +19,7 @@ Source-SHA256: `9a2b8b3ddff4b24648301e10fc962ca430e272e3796bdbbb5578cab40cda8379
 
 ### Command line
 
-`Cli` has the global option `--root <PATH>` (default `.`) and one subcommand `cmd`. The program name is `ladon` and the version is the package version. Subcommands keep their names, arguments, defaults and help text. `shell-host-internal` is hidden from the help output.
+`Cli` has the global option `--root <PATH>` (default `.`) and one subcommand `cmd`. The subcommand `doc` is `Command::Doc(DocArgs)`; its argument tree, options and exit codes are defined in `doctask_cli.rs`, and `entry.rs` only forwards it. The program name is `ladon` and the version is the package version. Subcommands keep their names, arguments, defaults and help text. `shell-host-internal` is hidden from the help output.
 
 `shell-menu` and `shell-host-internal` open no workspace (`shell-host-internal` opens one only for `MarkSensitive`). `init`, `google-login` and `google-logout` open none either. Every other command calls `Engine::open(--root)` before its own work.
 
@@ -122,12 +122,13 @@ pub struct SystemHost;
 
 The command prints `tagged <count> file(s)`.
 
-### Annotate and task
+### Doc, annotate and task
 
-- `annotate <file> [--section S] <text>`: resolves the record, takes its latest version and prints `annotation id: <id>`.
-- `task <file> [--section S] <title> [--description D]`: resolves the record, takes its latest version and prints `task id: <id>`.
+- `doc <…>`: the workspace is opened with `Engine::open(--root)`, then `doctask_cli::run_doc(engine, args, &SystemIo)` runs the command. It returns an exit code; a non-zero code is returned as `Reported { code }`, so `main_entry` exits with that code and prints nothing more. Its output and its errors are described in `doctask_cli.rs.md`.
+- `annotate <file> [--section S] <text> [--actor A]`: `doctask_cli::annotate_legacy(engine, actor, file, section, text, &SystemIo)` is the whole branch. It prints `annotation id: <id>` on standard output. A non-zero code is returned as `Reported`.
+- `task <file> [--section S] <title> [--description D] [--actor A]`: `doctask_cli::task_legacy(...)` is the whole branch. It prints `task id: <id>` on standard output and `任务编号 T-<n>，查看: ladon doc show T-<n>` on standard error. A non-zero code is returned as `Reported`.
 
-A file without a version returns the error `file has no version`.
+Neither branch contains SQL, store access or any other logic. `--actor` defaults to `human`. The legacy commands keep their positional arguments and the default section `ROOT`.
 
 ## Change Notes
 
@@ -135,3 +136,5 @@ A file without a version returns the error `file has no version`.
 - `Cli` and `Command` are public so that tests can parse arguments in process and `run` accepts a parsed command line.
 - A shell host failure is returned as `Reported` instead of ending the process inside the command logic.
 - The command logic of the former `main.rs` moved here without a change of output, exit status or argument definitions.
+- The `doc` command tree, its confirmation flow and its exit codes are in `doctask_cli`; `entry` holds one branch for `doc` and one branch each for `annotate` and `task`, all calling `doctask_cli`.
+- `annotate` and `task` write through the document-task service. Their output lines are unchanged; `task` adds one standard error line with the short handle.

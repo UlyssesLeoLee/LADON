@@ -22,6 +22,10 @@ Source-SHA256: `de00c5394d590e961438da903593adc447718ca4abecf690dab547411652e381
 | TC-910 | Build of the library with the `doctask_render` declaration present, and the render module's width and table tests. | The crate compiles with `doctask_render` declared, and the module is reachable as `ladon_explorer::doctask_render`. | src/doctask_render.rs::tests::ut_151_cjk_width_and_table_alignment |
 | TC-920 | Build of the library with the `doctask_report` declaration present, and the report module's NEMA round-trip tests. | The crate compiles with `doctask_report` declared, and the module is reachable as `ladon_explorer::doctask_report`. | src/doctask_report.rs::tests::tc920_nema_roundtrip_and_batches |
 
+## Module Declaration Check
+
+- `doctask_cli` is declared after `doctask_report`. Its check is the compilation of every test target and the tests named in `doctask_cli.rs.test.md` (TC-930 to TC-939).
+
 ## Boundary & Failure Cases
 
 - None; the file has no logic.
