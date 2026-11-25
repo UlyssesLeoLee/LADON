@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "source": "src/lib.rs",
-  "baseline_source_sha256": "5019b4afbbb718bbe2e27e81017f12919deb3625feba52bc000a852737e72d6b",
+  "baseline_source_sha256": "b5b2ca8e55c289ff85a6fe527855ddb9c8069836e511c9fa9db29aba4b13597e",
   "prepared_branch": "fix/compile-errors",
   "technical_design": ".quality/docs/src/lib.rs.md",
   "test_design": ".quality/test-design/src/lib.rs.test.md",
-  "prepared_technical_design_sha256": "d0f3994c0876cdcfbb0210d1990a7349f69047654905cddba95c4e5774ec6012",
-  "prepared_test_design_sha256": "b7dd759daa52310ade3fc9e43a345ee847aadd877b8a1bcd9120dbf883a3b604",
+  "prepared_technical_design_sha256": "725ca807be99ab2c3d7e72b144c85123e2595a02df6f699286e860eec4377878",
+  "prepared_test_design_sha256": "8fed7ce2f231b909c15a9f26014c89ee5a8d929f912139252e6068307498739d",
   "prepared_related_design_sha256": {}
 }
