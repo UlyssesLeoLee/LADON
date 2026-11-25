@@ -366,25 +366,17 @@ impl<'a> Reconciler<'a> {
             json!({
                 "from_anchor": anchor.id,
                 "to_anchor": new_anchor,
-                "from_version_id": task.base_version_id,
+                "from_version_id": anchor.base_version_id,
                 "to_version_id": baseline.version_id,
                 "section_key": clause.key,
             }),
         );
-        let writes = [
-            RowWrite::Update {
-                table: "doc_task_meta",
-                key: "task_id",
-                key_value: text(&task.id),
-                values: vec![("anchor_id", text(&new_anchor))],
-            },
-            RowWrite::Update {
-                table: "doc_tasks",
-                key: "id",
-                key_value: text(&task.id),
-                values: vec![("base_version_id", text(&baseline.version_id))],
-            },
-        ];
+        let writes = [RowWrite::Update {
+            table: "doc_task_meta",
+            key: "task_id",
+            key_value: text(&task.id),
+            values: vec![("anchor_id", text(&new_anchor))],
+        }];
         let records = self.ds.commit_step(None, &writes, &[step(event)]).await?;
         Ok(AnchorStep {
             anchor_id: new_anchor,

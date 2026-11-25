@@ -15,6 +15,10 @@ use std::{fs, path::Path};
 
 /// A body of two non-empty lines, long enough for the relocation floor.
 const PARA: &str = "Alpha clause body sentence one is long enough.\nAlpha clause body sentence two follows here.\n";
+/// A second body, distinct from `PARA`, for the section that must not match the first one.
+const PARA_B: &str = "Bravo clause body sentence one is long enough.
+Bravo clause body sentence two follows here.
+";
 
 fn owner() -> Caller {
     Caller::human("owner", SourceKind::Cli)
@@ -356,7 +360,7 @@ async fn tc903_orphaned_relocates_only_with_matching_subject() {
     baseline(&e, &file_id, &v1).await;
     let handle = make_task(&e, &file_id, "key:H1:A#1", "Review A").await;
 
-    let b_text = format!("# B\n{PARA}");
+    let b_text = format!("# B\n{PARA_B}");
     let (_, v2) = capture(&e, tmp.path(), "a.md", &b_text).await;
     let reviewer = Reconciler::open(&e, owner()).await.unwrap();
     reviewer.reconcile_all().await.unwrap();
@@ -605,8 +609,10 @@ async fn tc907_reconcile_is_idempotent_fills_legacy_fingerprints_and_rebases() {
         .into_iter()
         .next()
         .unwrap();
-    assert_eq!(task.base_version_id, v2);
     assert_eq!(task.anchor_id, step.anchor_id);
+    let rebased = anchor_of_task(&e, 1).await;
+    assert_eq!(rebased.id, step.anchor_id);
+    assert_eq!(rebased.base_version_id, v2);
     let again = reviewer.rebase(&handle, &v2, &v2_hash).await.unwrap();
     assert_eq!(again.event_seq, None);
     assert_eq!(again.anchor_id, step.anchor_id);
@@ -702,7 +708,8 @@ async fn tc909_section_overlap_threshold_and_rejection_is_final() {
         "only the four-of-five candidate is proposed"
     );
     assert_eq!(proposed[0].evidence, "section_overlap");
-    assert_eq!(proposed[0].score_permille, 800);
+    // Six outline entries: the ROOT entry (empty and equal in both files) and the five sections.
+    assert_eq!(proposed[0].score_permille, 833);
     let moved_id = e.store.find_path("moved.md").await.unwrap().unwrap().id;
     assert_eq!(proposed[0].new_file_id, moved_id);
 
