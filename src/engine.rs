@@ -1,8 +1,8 @@
-use crate::{archive::{CasStore,assert_under_workspace},crypto::{digest,load_archive_key,seal,open},diff,model::{CaptureResult,FileRecord,StorageObject},policy::{LadonPolicy,PendingPolicy},provider::StorageProvider,store::{PendingVersion,Store}};
+use crate::{archive::{CasStore,assert_under_workspace},crypto::{digest,load_archive_key,seal,open},diff,model::{CaptureResult,FileRecord,StorageObject,VersionRecord},policy::{LadonPolicy,PendingPolicy,RuleStamp},provider::StorageProvider,store::{PendingVersion,Store}};
 use anyhow::{anyhow,bail,Context,Result};
 use chrono::Utc;
 use sha2::{Digest,Sha256};
-use std::{collections::HashSet,fs,io::{self,Read},path::{Path,PathBuf},sync::{RwLock,atomic::{AtomicBool,Ordering}}};
+use std::{collections::HashSet,fs,io::{self,Read},path::{Path,PathBuf},sync::{Mutex,RwLock,atomic::{AtomicBool,AtomicUsize,Ordering}},time::{Duration,Instant}};
 
 const MAX_STRUCTURED_DIFF_BYTES:usize=8*1024*1024;
 const MAX_ARCHIVE_IN_MEMORY:usize=128*1024*1024;
@@ -68,7 +68,20 @@ fn copy_without_replacing(src:&Path,dst:&Path)->io::Result<()>{
     copied.map(|_|())
 }
 
-pub struct Engine { pub root:PathBuf,pub cas:CasStore,pub store:Store, policy:RwLock<PendingPolicy>, policy_valid:AtomicBool }
+/// Time after which a content-related call starts a background traversal for nested rule files.
+const NESTED_REFRESH_INTERVAL:Duration=Duration::from_secs(30);
+
+/// What `refresh_policy_if_stale` tracks between calls.
+struct RuleState {
+    /// Stamp of the root and global rule files when the rule set in force was started.
+    stamp:RuleStamp,
+    /// When the last traversal was started by `refresh_policy_if_stale`, or when the engine was opened.
+    last_scan:Instant,
+    /// A background traversal that has not been installed yet.
+    inflight:Option<PendingPolicy>,
+}
+
+pub struct Engine { pub root:PathBuf,pub cas:CasStore,pub store:Store, policy:RwLock<PendingPolicy>, policy_valid:AtomicBool, rules:Mutex<RuleState>, rule_traversals:AtomicUsize, nested_interval:Duration }
 
 impl Engine {
     pub async fn init(path:&Path)->Result<Self>{
@@ -80,16 +93,18 @@ impl Engine {
         let rule=root.join(".LADONignore");
         if !rule.exists() {fs::write(rule,include_str!("../config/examples/.LADONignore"))?;}
         LadonPolicy::check_root(&root)?;
+        let stamp=RuleStamp::read(&root);
         let policy=PendingPolicy::start(&root);
-        Ok(Self{root:root.clone(),cas:CasStore::new(root.join(".ladon/cas")),store,policy:RwLock::new(policy),policy_valid:AtomicBool::new(true)})
+        Ok(Self{root:root.clone(),cas:CasStore::new(root.join(".ladon/cas")),store,policy:RwLock::new(policy),policy_valid:AtomicBool::new(true),rules:Mutex::new(RuleState{stamp,last_scan:Instant::now(),inflight:None}),rule_traversals:AtomicUsize::new(0),nested_interval:NESTED_REFRESH_INTERVAL})
     }
     pub async fn open(path:&Path)->Result<Self>{
         let root=path.canonicalize().context("workspace does not exist")?;
         let db=root.join(".ladon/meta.turso");
         if !db.exists(){bail!("workspace not initialized; run `ladon init`");}
         LadonPolicy::check_root(&root)?;
+        let stamp=RuleStamp::read(&root);
         let policy=PendingPolicy::start(&root);
-        Ok(Self{root:root.clone(),cas:CasStore::new(root.join(".ladon/cas")),store:Store::new(db),policy:RwLock::new(policy),policy_valid:AtomicBool::new(true)})
+        Ok(Self{root:root.clone(),cas:CasStore::new(root.join(".ladon/cas")),store:Store::new(db),policy:RwLock::new(policy),policy_valid:AtomicBool::new(true),rules:Mutex::new(RuleState{stamp,last_scan:Instant::now(),inflight:None}),rule_traversals:AtomicUsize::new(0),nested_interval:NESTED_REFRESH_INTERVAL})
     }
     /// Reload `.LADONignore` after FS events without rescanning all rule files per capture.
     /// A missing root rule file also fails the rules in force, so capture refuses as archive does.
@@ -104,6 +119,70 @@ impl Engine {
         *self.policy.write().map_err(|_|anyhow!("policy lock poisoned"))?=PendingPolicy::start(&self.root);
         self.policy_valid.store(true,Ordering::SeqCst);
         Ok(())
+    }
+    /// Reloads the rule set when the root or global rule file changed, and starts a background traversal for the
+    /// nested rule files once the nested interval has passed. Both remote gates call this before they decide.
+    pub fn refresh_policy_if_stale(&self)->Result<()> {
+        let stamp=RuleStamp::read(&self.root);
+        let mut state=self.rules.lock().map_err(|_|anyhow!("rule state lock poisoned"))?;
+        // A policy marked invalid is rechecked on every call, because restoring a broken file exactly can leave the stamp unchanged.
+        if stamp!=state.stamp||!self.policy_valid.load(Ordering::SeqCst) {
+            // A traversal in flight may have read the older root or global file, so it is dropped.
+            state.inflight=None;
+            if let Err(err)=LadonPolicy::check_root(&self.root){
+                self.policy_valid.store(false,Ordering::SeqCst);
+                if !LadonPolicy::has_root_rule_file(&self.root){
+                    *self.policy.write().map_err(|_|anyhow!("policy lock poisoned"))?=PendingPolicy::failed(format!("{err:#}"));
+                }
+                return Err(err);
+            }
+            self.rule_traversals.fetch_add(1,Ordering::SeqCst);
+            state.last_scan=Instant::now();
+            *self.policy.write().map_err(|_|anyhow!("policy lock poisoned"))?=PendingPolicy::ready(LadonPolicy::load(&self.root));
+            self.policy_valid.store(true,Ordering::SeqCst);
+            state.stamp=stamp;
+            return Ok(());
+        }
+        // Install a finished background traversal, whether it loaded or failed. Until then the rules in force stay in use.
+        if let Some(pending)=state.inflight.take(){
+            if pending.is_ready(){
+                *self.policy.write().map_err(|_|anyhow!("policy lock poisoned"))?=pending;
+            } else {
+                state.inflight=Some(pending);
+            }
+        }
+        if state.inflight.is_none()&&state.last_scan.elapsed()>=self.nested_interval{
+            self.rule_traversals.fetch_add(1,Ordering::SeqCst);
+            state.last_scan=Instant::now();
+            state.inflight=Some(PendingPolicy::start(&self.root));
+        }
+        Ok(())
+    }
+    /// Number of rule-set traversals that `refresh_policy_if_stale` has started since the engine was opened.
+    pub fn rule_traversals(&self)->usize{
+        self.rule_traversals.load(Ordering::SeqCst)
+    }
+    /// True when the rule set in force is valid and has loaded. Every remote decision starts with this check.
+    fn rules_usable(&self)->Result<bool>{
+        if self.refresh_policy_if_stale().is_err(){return Ok(false);}
+        if !self.policy_valid.load(Ordering::SeqCst){return Ok(false);}
+        Ok(self.policy.read().map_err(|_|anyhow!("policy lock poisoned"))?.with(|_| Ok(())).is_ok())
+    }
+    /// File-level gate for data that leaves the machine (design 13.1). Returns false when the rules are not usable,
+    /// when the file is flagged sensitive, when the rule set excludes its path, or when its current content is excluded.
+    /// Callers treat an error as a refusal too.
+    pub async fn remote_read_allowed(&self,file:&FileRecord)->Result<bool>{
+        if !self.rules_usable()?||file.sensitive{return Ok(false);}
+        let external=self.policy.read().map_err(|_|anyhow!("policy lock poisoned"))?
+            .with(|policy| policy.allow_external(Path::new(&file.relative_path))).is_ok();
+        if !external{return Ok(false);}
+        Ok(!self.content_is_excluded(&file.current_hash).await?)
+    }
+    /// Version-level gate. A historical version is refused when its own flag is set or when its content is excluded,
+    /// whether or not the file is allowed now. Callers treat an error as a refusal too.
+    pub async fn remote_version_allowed(&self,version:&VersionRecord)->Result<bool>{
+        if !self.rules_usable()?||version.sensitive{return Ok(false);}
+        Ok(!self.content_is_excluded(&version.content_hash).await?)
     }
     pub fn resolve(&self,path:&Path)->Result<(PathBuf,String)> {
         let path=if path.is_absolute(){path.to_path_buf()}else{self.root.join(path)};
@@ -613,5 +692,78 @@ mod tests {
         let restored = e.restore(captured.version_id.as_deref().unwrap(), true, None).await.unwrap();
         assert_eq!(restored.status, "captured");
         assert_eq!(fs::read(&path).unwrap(), first);
+    }
+
+    /// Sets the last traversal time back, so the next content-related call is past the nested interval.
+    fn backdate_last_scan(e: &Engine) {
+        e.rules.lock().unwrap().last_scan = Instant::now().checked_sub(Duration::from_secs(60)).unwrap();
+    }
+
+    /// Waits until the background traversal in flight has finished, or until none is in flight.
+    fn wait_for_background_scan(e: &Engine) {
+        let started = Instant::now();
+        loop {
+            let finished = e.rules.lock().unwrap().inflight.as_ref().map_or(true, |p| p.is_ready());
+            if finished {
+                return;
+            }
+            assert!(started.elapsed() < Duration::from_secs(30), "background rule scan did not finish");
+            std::thread::sleep(Duration::from_millis(5));
+        }
+    }
+
+    #[tokio::test]
+    async fn ut_nested_rule_edit_is_applied_by_background_scan() {
+        let _env = crate::policy::lock_global_ignore();
+        let tmp = tempfile::tempdir().unwrap();
+        fs::write(tmp.path().join(".LADONignore"), "").unwrap();
+        let e = Engine::init(tmp.path()).await.unwrap();
+        fs::create_dir(tmp.path().join("sub")).unwrap();
+        fs::write(tmp.path().join("sub").join("a.txt"), "nested one").unwrap();
+        e.capture(&tmp.path().join("sub").join("a.txt"), "human", "ut859").await.unwrap();
+        let file = e.file_by_path("sub/a.txt").await.unwrap();
+        assert!(e.remote_read_allowed(&file).await.unwrap());
+
+        fs::write(tmp.path().join("sub").join(".LADONignore"), "a.txt\n").unwrap();
+        backdate_last_scan(&e);
+        let base = e.rule_traversals();
+        // The first call starts the background traversal and answers from the rules in force.
+        assert!(e.remote_read_allowed(&file).await.unwrap(), "the rules in force stay in use while the new ones load");
+        assert_eq!(e.rule_traversals(), base + 1, "the nested edit starts one background traversal");
+        // A second call does not start another traversal, whether or not the first has finished.
+        e.remote_read_allowed(&file).await.unwrap();
+        assert_eq!(e.rule_traversals(), base + 1);
+
+        wait_for_background_scan(&e);
+        assert!(!e.remote_read_allowed(&file).await.unwrap(), "the finished traversal is in force after the next call");
+        assert_eq!(e.rule_traversals(), base + 1);
+    }
+
+    #[tokio::test]
+    async fn ut_failed_nested_scan_denies_until_fixed() {
+        let _env = crate::policy::lock_global_ignore();
+        let tmp = tempfile::tempdir().unwrap();
+        fs::write(tmp.path().join(".LADONignore"), "").unwrap();
+        let e = Engine::init(tmp.path()).await.unwrap();
+        fs::create_dir(tmp.path().join("sub")).unwrap();
+        fs::write(tmp.path().join("sub").join("b.txt"), "nested two").unwrap();
+        e.capture(&tmp.path().join("sub").join("b.txt"), "human", "ut859").await.unwrap();
+        let file = e.file_by_path("sub/b.txt").await.unwrap();
+
+        fs::write(tmp.path().join("sub").join(".LADONignore"), "[z-a]\n").unwrap();
+        backdate_last_scan(&e);
+        let base = e.rule_traversals();
+        e.remote_read_allowed(&file).await.unwrap();
+        assert_eq!(e.rule_traversals(), base + 1);
+        wait_for_background_scan(&e);
+        assert!(!e.remote_read_allowed(&file).await.unwrap(), "a failed nested traversal refuses transfers");
+
+        fs::write(tmp.path().join("sub").join(".LADONignore"), "# fixed\n").unwrap();
+        backdate_last_scan(&e);
+        assert!(!e.remote_read_allowed(&file).await.unwrap(), "the failed rules stay in force until a traversal succeeds");
+        assert_eq!(e.rule_traversals(), base + 2);
+        wait_for_background_scan(&e);
+        assert!(e.remote_read_allowed(&file).await.unwrap(), "the repaired traversal restores transfers");
+        assert_eq!(e.rule_traversals(), base + 2);
     }
 }

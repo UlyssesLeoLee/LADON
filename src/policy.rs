@@ -3,6 +3,7 @@ use anyhow::{anyhow, Context, Result};
 use ignore::gitignore::{Gitignore, GitignoreBuilder};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Condvar, Mutex};
+use std::time::SystemTime;
 
 pub struct LadonPolicy { root: PathBuf, matcher: Gitignore }
 
@@ -39,6 +40,22 @@ impl PendingPolicy {
     /// A rule set whose load has already failed with `message`, so `with` returns that error.
     pub fn failed(message: String) -> PendingPolicy {
         PendingPolicy { cell: Arc::new((Mutex::new(Some(Err(message))), Condvar::new())) }
+    }
+
+    /// A rule set whose load has already finished with `result`, so `with` and `is_ready` answer at once.
+    pub fn ready(result: Result<LadonPolicy>) -> PendingPolicy {
+        let stored = result.map_err(|err| format!("{err:#}"));
+        PendingPolicy { cell: Arc::new((Mutex::new(Some(stored)), Condvar::new())) }
+    }
+
+    /// True once the load has finished, successfully or not, so `with` no longer waits. A poisoned lock also
+    /// counts as finished: `with` then fails on that lock instead of waiting for a result that may never come.
+    pub fn is_ready(&self) -> bool {
+        let (lock, _) = &*self.cell;
+        match lock.lock() {
+            Ok(slot) => slot.is_some(),
+            Err(_) => true,
+        }
     }
 
     /// Waits for the scan to finish, then runs `f` on the rule set. A failed scan returns an
@@ -138,8 +155,8 @@ fn scope_negation(scope: &str, line: &str) -> String {
 /// Adds the global rule file that `LADON_GLOBAL_IGNORE` names, when the variable is set. A file
 /// that cannot be read is an error, so mandatory global rules never drop out without notice.
 fn add_global_rule_file(builder: &mut GitignoreBuilder) -> Result<()> {
-    if let Some(path) = std::env::var_os("LADON_GLOBAL_IGNORE") {
-        if let Some(err) = builder.add(Path::new(&path)) {
+    if let Some(path) = global_rule_path() {
+        if let Some(err) = builder.add(&path) {
             return Err(err.into());
         }
     }
@@ -245,6 +262,48 @@ pub fn is_root_rule_event(root: &Path, changed: &Path) -> bool {
 /// needs a scan. The root rule file is excluded because the watcher reloads the rules for it.
 pub fn needs_full_scan(path: &Path, is_file: bool, root: &Path) -> bool {
     !is_file && !is_root_rule_event(root, path)
+}
+
+/// The global rule file named by `LADON_GLOBAL_IGNORE`, when the variable is set.
+pub(crate) fn global_rule_path() -> Option<PathBuf> {
+    std::env::var_os("LADON_GLOBAL_IGNORE").map(PathBuf::from)
+}
+
+/// One rule file as a `RuleStamp` records it. A file that is missing or cannot be read has no time, length or digest.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct RuleFileState {
+    path: PathBuf,
+    modified: Option<SystemTime>,
+    len: Option<u64>,
+    digest: Option<String>,
+}
+
+impl RuleFileState {
+    fn read(path: PathBuf) -> RuleFileState {
+        let meta = std::fs::metadata(&path).ok();
+        let modified = meta.as_ref().and_then(|m| m.modified().ok());
+        let len = meta.as_ref().map(|m| m.len());
+        let digest = std::fs::read(&path).ok().map(|bytes| crate::crypto::digest(&bytes));
+        RuleFileState { path, modified, len, digest }
+    }
+}
+
+/// The state of the root rule files and of the global rule file at one moment. Two stamps are equal when none of
+/// those files changed in between, so the engine can reuse the rule set it started from. Nested rule files are not
+/// part of the stamp; the engine finds them through a background traversal.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct RuleStamp {
+    files: Vec<RuleFileState>,
+}
+
+impl RuleStamp {
+    /// Reads the root rule files (any ASCII case, sorted by path) and the global rule file, without parsing them.
+    pub(crate) fn read(root: &Path) -> RuleStamp {
+        let mut paths = root_rule_files(root);
+        paths.sort();
+        paths.extend(global_rule_path());
+        RuleStamp { files: paths.into_iter().map(RuleFileState::read).collect() }
+    }
 }
 
 /// Serializes the tests that load rules, because `LADON_GLOBAL_IGNORE` is process-wide. A test
@@ -423,5 +482,71 @@ mod tests {
         assert!(needs_full_scan(&moved,false,&root), "a directory event must trigger a full scan");
         assert!(!needs_full_scan(&file,true,&root), "a regular file event is captured directly");
         assert!(!needs_full_scan(&root.join(".LADONignore"),false,&root), "the root rule file reloads the rules instead");
+    }
+    #[test] fn ut_pending_ready_answers_without_waiting() {
+        let _env=lock_global_ignore();
+        let t=tempfile::tempdir().unwrap();
+        let root=t.path().canonicalize().unwrap();
+        std::fs::write(root.join(".LADONignore"),"*.pem\n").unwrap();
+        let ready=PendingPolicy::ready(LadonPolicy::load(&root));
+        assert!(ready.is_ready());
+        assert!(ready.with(|p| p.excluded(&root.join("k.pem"))).unwrap());
+        let failed=PendingPolicy::ready(Err(anyhow!("broken rule file")));
+        assert!(failed.is_ready());
+        let err=failed.with(|_| Ok(())).err().expect("a stored failure must be returned by with");
+        assert!(format!("{err:#}").contains("broken rule file"), "{err:#}");
+    }
+    #[test] fn ut_pending_start_becomes_ready() {
+        let _env=lock_global_ignore();
+        let t=tempfile::tempdir().unwrap();
+        let root=t.path().canonicalize().unwrap();
+        std::fs::write(root.join(".LADONignore"),"*.pem\n").unwrap();
+        let pending=PendingPolicy::start(&root);
+        let started=std::time::Instant::now();
+        while !pending.is_ready() {
+            assert!(started.elapsed()<std::time::Duration::from_secs(30),"rule scan did not finish");
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
+        assert!(pending.with(|p| p.excluded(&root.join("k.pem"))).unwrap());
+    }
+    #[test] fn ut_rule_stamp_ignores_nested_rule_files() {
+        let _env=lock_global_ignore();
+        let t=tempfile::tempdir().unwrap();
+        let root=t.path().canonicalize().unwrap();
+        std::fs::write(root.join(".LADONignore"),"*.pem\n").unwrap();
+        std::fs::create_dir(root.join("sub")).unwrap();
+        std::fs::write(root.join("sub/.LADONignore"),"a.txt\n").unwrap();
+        let before=RuleStamp::read(&root);
+        std::fs::write(root.join("sub/.LADONignore"),"b.txt\n").unwrap();
+        assert_eq!(RuleStamp::read(&root), before, "a nested rule file is not part of the stamp");
+        std::fs::write(root.join(".LADONignore"),"*.log\n").unwrap();
+        assert_ne!(RuleStamp::read(&root), before, "a root rule edit changes the stamp");
+    }
+    #[test] fn ut_rule_stamp_tracks_root_global_and_digest() {
+        let _env=lock_global_ignore();
+        let t=tempfile::tempdir().unwrap();
+        let root=t.path().canonicalize().unwrap();
+        let rules=tempfile::tempdir().unwrap();
+        let global=rules.path().join("global.ignore");
+        let when=std::time::SystemTime::UNIX_EPOCH+std::time::Duration::from_secs(1_700_000_000);
+        let set_time=|path:&Path|std::fs::OpenOptions::new().write(true).open(path).unwrap().set_modified(when).unwrap();
+        std::fs::write(root.join(".LADONignore"),"*.aaa\n").unwrap();
+        set_time(&root.join(".LADONignore"));
+        let base=RuleStamp::read(&root);
+        // Same length and same modification time, different content: only the digest can tell them apart.
+        std::fs::write(root.join(".LADONignore"),"*.bbb\n").unwrap();
+        set_time(&root.join(".LADONignore"));
+        let same_size=RuleStamp::read(&root);
+        assert_ne!(same_size, base, "a same-size, same-time edit changes the stamp through the digest");
+        // The global file is written before the variable names it, so no concurrent test sees a missing file.
+        std::fs::write(&global,"").unwrap();
+        std::env::set_var("LADON_GLOBAL_IGNORE",&global);
+        let with_global=RuleStamp::read(&root);
+        assert_ne!(with_global, same_size, "naming a global rule file changes the stamp");
+        std::fs::write(&global,"*.x\n").unwrap();
+        assert_ne!(RuleStamp::read(&root), with_global, "writing the global rule file changes the stamp");
+        let written=RuleStamp::read(&root);
+        std::env::remove_var("LADON_GLOBAL_IGNORE");
+        assert_ne!(RuleStamp::read(&root), written, "unsetting the variable changes the stamp");
     }
 }
