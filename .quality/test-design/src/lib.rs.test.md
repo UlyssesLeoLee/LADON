@@ -35,3 +35,7 @@ Source-SHA256: `75e0d88af0c97c9d440520597c136915c3b39f2ec0d82494b4a945162cbb2340
 ## Regression Scope
 
 Every module of the crate.
+
+## Module Declaration Check (WP13)
+
+- `doctask_mcp` is declared as `pub mod doctask_mcp;` after `mcp`. The crate compiles with the module present, and the kernel API freeze test (`tests/it_kernel_api_freeze.rs`) still compiles.

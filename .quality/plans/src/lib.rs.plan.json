@@ -5,7 +5,7 @@
   "prepared_branch": "fix/compile-errors",
   "technical_design": ".quality/docs/src/lib.rs.md",
   "test_design": ".quality/test-design/src/lib.rs.test.md",
-  "prepared_technical_design_sha256": "3d9aa1f4264390bb76b26085767c871b79b9c49db8c7f26b458dd54735380b35",
-  "prepared_test_design_sha256": "0d81dee81381711a3cc456e34caf9ab428ffff80f37fdff5af355c6502862a8e",
+  "prepared_technical_design_sha256": "f2602d60cd4cd35fe19d7800d54335d697040149699dc9e868991c681bcb899b",
+  "prepared_test_design_sha256": "b11e031f5745f66a29a5013d5ae4b7af5f59013260bd0e47c96d26ec3c9443fe",
   "prepared_related_design_sha256": {}
 }

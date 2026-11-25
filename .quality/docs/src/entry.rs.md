@@ -21,7 +21,9 @@ Source-SHA256: `0a0103fa5f54097620b11e07daf492c16a617df5e48cd6c696b2861285604be7
 
 `Cli` has the global option `--root <PATH>` (default `.`) and one subcommand `cmd`. The subcommand `doc` is `Command::Doc(DocArgs)`; its argument tree, options and exit codes are defined in `doctask_cli.rs`, and `entry.rs` only forwards it. The program name is `ladon` and the version is the package version. Subcommands keep their names, arguments, defaults and help text. `shell-host-internal` is hidden from the help output.
 
-`shell-menu` and `shell-host-internal` open no workspace (`shell-host-internal` opens one only for `MarkSensitive`). `init`, `google-login` and `google-logout` open none either. Every other command calls `Engine::open(--root)` before its own work.
+`shell-menu` and `shell-host-internal` open no workspace (`shell-host-internal` opens one only for `MarkSensitive`). `init`, `google-login`, `google-logout` and `mcp-serve` open none either. Every other command calls `Engine::open(--root)` before its own work.
+
+`mcp-serve` is `Command::McpServe { launch: String, global_ignore: Option<PathBuf> }`, with `--launch` required and `--global-ignore` optional; `--root` is the global option. Its behaviour is in `doctask_mcp.rs.md`.
 
 ### Output and exit behaviour
 
@@ -130,6 +132,11 @@ The command prints `tagged <count> file(s)`.
 
 Neither branch contains SQL, store access or any other logic. `--actor` defaults to `human`. The legacy commands keep their positional arguments and the default section `ROOT`.
 
+### MCP server
+
+- `mcp-serve --launch <id> [--global-ignore <path>]`: `run` calls `doctask_mcp::serve(root, launch, global_ignore)` before any `Engine::open`, because the MCP host opens the engine on its first tool call. The returned code is `0` at end of input; a non-zero code is returned as `Reported { code }`. Standard output carries only protocol lines, and standard error carries the diagnostics described in `doctask_mcp.rs.md`.
+- The branch holds no logic of its own; the argument `--global-ignore` is passed through unchanged.
+
 ## Change Notes
 
 - The external calls of the command logic are reached through `Host`. `SystemHost` is the only implementation that calls the system.
@@ -138,3 +145,4 @@ Neither branch contains SQL, store access or any other logic. `--actor` defaults
 - The command logic of the former `main.rs` moved here without a change of output, exit status or argument definitions.
 - The `doc` command tree, its confirmation flow and its exit codes are in `doctask_cli`; `entry` holds one branch for `doc` and one branch each for `annotate` and `task`, all calling `doctask_cli`.
 - `annotate` and `task` write through the document-task service. Their output lines are unchanged; `task` adds one standard error line with the short handle.
+- `mcp-serve` is parsed in `Cli` like the other subcommands. It is the only subcommand that runs before the engine is opened, so an uninitialized workspace is reported by the MCP host as a single stderr line with code `1`, not as an `Engine::open` failure.

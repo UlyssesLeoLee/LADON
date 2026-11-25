@@ -59,3 +59,11 @@ Acceptance items of WP00C, mapped to test cases:
 ## Regression Scope
 
 Every command of `Command`, the clap help text and defaults, the watch loop, Google sign-in and sign-out, `tag-folder`, `annotate`, `task` and the shell host branches. The behaviour of `Engine`, `policy`, `google_oauth`, `tagging` and `shell` is not changed by this module and is covered by their own tests.
+
+## MCP Command Cases
+
+| Case ID | Input / Setup | Expected Outcome | Test Location |
+| --- | --- | --- | --- |
+| TC-957 | `Cli::parse_from(["ladon","--root","R","mcp-serve","--launch","20261125-101010-ab"])`. | `root` is `R`; the command is `McpServe` with the launch id and no global rule file. | src/entry.rs::tests::mcp_serve_arguments_parse |
+| TC-957 | `mcp-serve` with `--global-ignore G` and no `--launch`. | Parsing fails with the clap error for the missing required option. | src/entry.rs::tests::mcp_serve_requires_launch |
+| TC-957 | `run` with `mcp-serve` on a root that has no `.ladon/meta.turso`. | `Err` carrying `Reported { code: 1 }`; no `Engine::open` is attempted. | src/entry.rs::tests::mcp_serve_reports_uninitialized_workspace |
