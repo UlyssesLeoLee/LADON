@@ -1,0 +1,4 @@
+{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-11-25","capabilities":{"tools":{}},"serverInfo":{"name":"ladon-probe","version":"0.0.0"}}}
+{"jsonrpc":"2.0","id":2,"result":{"tools":[{"name":"probe_echo","description":"Probe only: returns environment names and hash prefixes.","inputSchema":{"type":"object","additionalProperties":false,"properties":{}},"annotations":{"readOnlyHint":true}}]}}
+{"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"{\"env_name_count\":12,\"run\":\"sdk\",\"watch\":{\"HERMES_EPHEMERAL_SYSTEM_PROMPT\":{\"present\":false},\"HERMES_HOME\":{\"present\":false},\"HERMES_MANAGED_DIR\":{\"present\":false},\"LADON_GLOBAL_IGNORE\":{\"present\":false}}}"}],"isError":false}}
+{"jsonrpc":"2.0","id":4,"result":{}}

@@ -1,0 +1,14 @@
+{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","capabilities":{"tools":{}},"serverInfo":{"name":"ladon","version":"0.0.3"}}}
+{"jsonrpc":"2.0","id":2,"result":{"protocolVersion":"2025-11-25","capabilities":{"tools":{}},"serverInfo":{"name":"ladon","version":"0.0.3"}}}
+{"jsonrpc":"2.0","id":3,"result":{"tools":[{"name":"doc_file_find","description":"按路径或关键词查找已跟踪的文档。","inputSchema":{"type":"object","additionalProperties":false,"properties":{"query":{"type":"string","maxLength":100},"has_tasks":{"type":"boolean"},"limit":{"type":"integer","minimum":1,"maximum":50,"default":20}},"required":[]},"annotations":{"readOnlyHint":true}},{"name":"doc_plan_submit","description":"提交任务的分析与方案（可含一处章节编辑），任务进入待批准。","inputSchema":{"type":"object","additionalProperties":false,"properties":{"task":{"type":"string","description":"任务号，如 T-12"},"summary":{"type":"string","minLength":1,"maxLength":500},"rationale":{"type":"string","maxLength":4000},"impact":{"type":"string","maxLength":2000},"risk":{"type":"string","enum":["low","medium","high"]},"options":{"type":"array","items":{"type":"string"},"maxItems":5},"edit_kind":{"type":"string","enum":["replace_section","insert_after_section"]},"edit_file_ref":{"type":"string"},"edit_section":{"type":"string"},"edit_text":{"type":"string","maxLength":262144},"read_refs":{"type":"array","items":{"type":"string"},"maxItems":10},"hermes_session":{"type":"string","maxLength":64}},"required":["task","summary"]}}]}}
+{"jsonrpc":"2.0","id":4,"result":{"content":[{"type":"text","text":"{\"ok\":true,\"data\":{\"files\":[]},\"summary_zh\":\"没有匹配的文件。\",\"next_zh\":\"换一个关键词再查找。\"}"}]}}
+{"jsonrpc":"2.0","id":5,"result":{"content":[{"type":"text","text":"{\"ok\":false,\"code\":\"E_NOT_FOUND\",\"message\":\"未找到该任务。\",\"hint\":\"请先用 doc_task_list 查看待办。\"}"}]}}
+{"jsonrpc":"2.0","id":6,"result":{"content":[{"type":"text","text":"{\"ok\":false,\"code\":\"E_INVALID_ARG\",\"message\":\"summary 长度超过 500。\",\"hint\":\"缩短后重试。\"}"}]}}
+{"jsonrpc":"2.0","id":7,"result":{"content":[{"type":"text","text":"内部错误，请查看控制台日志。"}],"isError":true}}
+{"jsonrpc":"2.0","id":8,"result":{}}
+{"jsonrpc":"2.0","id":9,"error":{"code":-32601,"message":"Method not found"}}
+{"jsonrpc":"2.0","id":"req-10","error":{"code":-32601,"message":"Method not found"}}
+{"jsonrpc":"2.0","id":11,"error":{"code":-32602,"message":"Unknown tool"}}
+{"jsonrpc":"2.0","id":12,"error":{"code":-32602,"message":"protocolVersion is required"}}
+{"jsonrpc":"2.0","id":null,"error":{"code":-32700,"message":"Parse error"}}
+{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid Request"}}
