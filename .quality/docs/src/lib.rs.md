@@ -14,7 +14,9 @@ Each module listed under Public Contract is a file under `src/`. No module depen
 
 ## Public Contract
 
-The public modules are `archive`, `crypto`, `diff`, `engine`, `entry`, `google_oauth`, `model`, `nema`, `policy`, `provider`, `search`, `store`, `tagging`, `workspace`, `shell`, `auth`, `agent_api`, `storage_rules`, `cloud_journal`, `ui_layout` and `emergence`.
+The public modules are `archive`, `crypto`, `diff`, `engine`, `entry`, `google_oauth`, `model`, `nema`, `policy`, `provider`, `search`, `store`, `tagging`, `workspace`, `shell`, `auth`, `agent_api`, `storage_rules`, `cloud_journal`, `ui_layout`, `emergence` and `doctask_model`.
+
+`doctask_model` is the pure model of the document-task module; its contract is in `doctask_model.rs.md`.
 
 `entry` is the command entry of the `ladon` program. Its contract is in `entry.rs.md`. `google_oauth` is the module that signs in to Google Drive; its contract is in `google_oauth.rs.md`.
 
@@ -22,3 +24,4 @@ The public modules are `archive`, `crypto`, `diff`, `engine`, `entry`, `google_o
 
 - `entry` is declared. It holds the command logic of the `ladon` binary.
 - `google_oauth` is declared and is public so that the command-line program and the window can call it.
+- `doctask_model` is declared. It has no dependency on `store` or `engine`, so it compiles and tests without the database layer.

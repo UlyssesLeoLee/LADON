@@ -13,6 +13,7 @@ Source-SHA256: `5019b4afbbb718bbe2e27e81017f12919deb3625feba52bc000a852737e72d6b
 | Case ID | Input / Setup | Expected Outcome | Test Location |
 | --- | --- | --- | --- |
 | TC-1026 | Build of all test targets with `cargo test --locked --no-run`. | The crate compiles with the `entry` module declared and `main_entry` is reachable from the library. | tests/it_cli_binary_smoke.rs::binary_smoke_entry_is_reachable |
+| TC-830 | Build of the library with the `doctask_model` declaration present, and the model's own status and boundary tests. | The crate compiles with `doctask_model` declared, and the module is reachable as `ladon_explorer::doctask_model`. | src/doctask_model.rs::tests::tc830_status_strings_match_legacy_seven |
 
 ## Boundary & Failure Cases
 
