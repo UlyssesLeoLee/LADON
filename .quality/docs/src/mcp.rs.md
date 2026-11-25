@@ -10,7 +10,7 @@ Source-SHA256: `1ba786993da5819566538cb7c0004e403b44824bbe7ca5e7842b3d7aa6041059
 
 ## Dependencies
 
-- `serde_json` (`Value`, `Map`, `json!`, `to_string`, `from_str`) and `std::io`. The module adds no crate and imports no `crate::` module.
+- `serde_json` (`Value`, `Map`, `json!`, `to_string`, `from_str`), `std::io`, `std::future::Future` and `std::pin::Pin`. The module adds no crate and imports no `crate::` module.
 - Module-level `#![deny(clippy::print_stdout, clippy::print_stderr, clippy::dbg_macro)]`. The attribute takes effect only when clippy runs; the stdout discipline is also checked by the reply-line tests of this document.
 - Callers: `doctask_mcp` (WP13) implements `ToolHost` and calls `Server::serve`. The module is declared in `lib.rs` as `pub mod mcp`.
 
@@ -31,9 +31,10 @@ Source-SHA256: `1ba786993da5819566538cb7c0004e403b44824bbe7ca5e7842b3d7aa6041059
 ### Types
 
 - `ServerInfo { pub name: &'static str, pub version: &'static str }`, derives `Debug, Clone, Copy, PartialEq, Eq`. Supplies the `serverInfo` member of the `initialize` result. `doctask_mcp` passes `ladon` and `env!("CARGO_PKG_VERSION")`.
+- `type ToolCall<'a> = Pin<Box<dyn Future<Output = Option<Value>> + 'a>>`: the future a host returns for one call. It is not required to be `Send`.
 - `trait ToolHost`:
   - `fn tools(&self) -> Vec<Value>` returns the descriptors that become the `tools` array of `tools/list`, verbatim. The protocol layer does not inspect them and adds no cursor.
-  - `fn call(&mut self, name: &str, arguments: Value) -> Option<Value>` returns `None` when `name` is not a listed tool; the protocol then replies `-32602` with `Unknown tool`. Otherwise it returns the complete `CallToolResult` object, which becomes the `result` member verbatim. `arguments` is the `arguments` member of `params`; it is an empty object when the member is absent or `null`, and any other JSON value is passed unchanged. Argument validation therefore belongs to the host.
+  - `fn call<'a>(&'a mut self, name: &'a str, arguments: Value) -> ToolCall<'a>` returns the future for one call. It resolves to `None` when `name` is not a listed tool; the protocol then replies `-32602` with `Unknown tool`. Otherwise it resolves to the complete `CallToolResult` object, which becomes the `result` member verbatim. `arguments` is the `arguments` member of `params`; it is an empty object when the member is absent or `null`, and any other JSON value is passed unchanged. Argument validation therefore belongs to the host. The server awaits the future, so a host can await the document-task services without `block_on`; a host that wraps the future, for example to catch a panic, does so inside `call`.
 - `enum Incoming`:
   - `Request { id: Value, method: String, params: Value }`: `id` is a string, a number or `null`; `params` is `Value::Null` when absent.
   - `Notification { method: String, params: Value }`: a message with a string `method` and no `id` member.
@@ -49,8 +50,8 @@ Source-SHA256: `1ba786993da5819566538cb7c0004e403b44824bbe7ca5e7842b3d7aa6041059
 - `read_bounded_line<R: BufRead>(reader: &mut R, max: usize, buf: &mut Vec<u8>) -> io::Result<LineRead>` reads one line.
 - `oversized_line_reply() -> Value` returns the error reply for an oversized line.
 - `Server::new(info: ServerInfo, host: H) -> Self`.
-- `Server::handle_line(&mut self, line: &[u8]) -> Option<Value>` returns the reply for one line, or `None` when no line is written.
-- `Server::serve<R: BufRead, W: Write>(&mut self, input: R, output: W) -> io::Result<()>` runs the loop until end of input. Only an I/O error ends it early; protocol errors are replies and do not stop the loop.
+- `Server::handle_line(&mut self, line: &[u8]) -> Option<Value>`, an `async fn`, returns the reply for one line, or `None` when no line is written.
+- `Server::serve<R: BufRead, W: Write>(&mut self, input: R, output: W) -> io::Result<()>`, an `async fn`, runs the loop until end of input. Only an I/O error ends it early; protocol errors are replies and do not stop the loop.
 
 ## Line Reading
 
@@ -91,7 +92,7 @@ The checks run in this order and the first match decides:
 - `initialize`: a missing or `null` `protocolVersion` member gives `-32602` `protocolVersion is required`. A non-string value gives `-32602` `protocolVersion must be a string`. A string gives the result `{"protocolVersion": negotiate_version(v), "capabilities": {"tools": {}}, "serverInfo": {"name": <name>, "version": <version>}}`. The capabilities object holds `tools` only.
 - `ping`: the result is `{}`, whatever `params` holds.
 - `tools/list`: the result is `{"tools": host.tools()}`. There is no `nextCursor` member.
-- `tools/call`: a missing or `null` `name` gives `-32602` `name is required`; a non-string value gives `-32602` `name must be a string`. Otherwise `host.call(name, arguments)` is run. `Some(result)` becomes the result; `None` gives `-32602` `Unknown tool`.
+- `tools/call`: a missing or `null` `name` gives `-32602` `name is required`; a non-string value gives `-32602` `name must be a string`. Otherwise `host.call(name, arguments)` is awaited. A resolved `Some(result)` becomes the result; `None` gives `-32602` `Unknown tool`.
 - Any other method gives `-32601` `Method not found`.
 
 There is no lifecycle gate: requests are answered in any order, and a repeated `initialize` is answered again. The `id` of every reply is the request `id` value, so a number stays a number and a string stays a string.
@@ -102,7 +103,7 @@ A result reply is `{"jsonrpc":"2.0","id":<id>,"result":<result>}`. An error repl
 
 ## Serve Loop
 
-`serve` repeats the following until `read_bounded_line` returns `Eof`, which returns `Ok(())`:
+`serve` runs in the caller's task. Reads are the blocking reads of the given reader, and each tool call is awaited before the next line is read, so requests are answered strictly in order. `serve` repeats the following until `read_bounded_line` returns `Eof`, which returns `Ok(())`:
 
 - `Oversized`: writes `oversized_line_reply()`, which is `Rejection { id: null, -32600, "Request line exceeds 4 MiB" }` in the reply shape.
 - `Line`: writes the reply of `handle_line(buf)` when there is one.

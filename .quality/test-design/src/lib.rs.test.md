@@ -21,7 +21,7 @@ Source-SHA256: `75e0d88af0c97c9d440520597c136915c3b39f2ec0d82494b4a945162cbb2340
 | TC-870 | Build of the library with the `doctask_service` declaration present, and the service integration tests. | The crate compiles with `doctask_service` declared, and the module is reachable as `ladon_explorer::doctask_service`. | tests/it_doctask_service.rs::tc870_create_requires_baseline_and_pins_base_version |
 | TC-910 | Build of the library with the `doctask_render` declaration present, and the render module's width and table tests. | The crate compiles with `doctask_render` declared, and the module is reachable as `ladon_explorer::doctask_render`. | src/doctask_render.rs::tests::ut_151_cjk_width_and_table_alignment |
 | TC-920 | Build of the library with the `doctask_report` declaration present, and the report module's NEMA round-trip tests. | The crate compiles with `doctask_report` declared, and the module is reachable as `ladon_explorer::doctask_report`. | src/doctask_report.rs::tests::tc920_nema_roundtrip_and_batches |
-| TC-940 | Build of the library with the `mcp` declaration present, and the protocol layer's version negotiation tests. | The crate compiles with `mcp` declared, and the module is reachable as `ladon_explorer::mcp`. | src/mcp.rs::tests::tc940_supported_versions_echoed |
+| TC-940 | Build of the library with the `mcp` declaration present, and the protocol layer's version negotiation tests. | The crate compiles with `mcp` declared, and the module is reachable as `ladon_explorer::mcp`. | src/mcp.rs::tests::ut_155_handshake_version_negotiation |
 
 ## Module Declaration Check
 
