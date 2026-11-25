@@ -21,10 +21,12 @@ Source-SHA256: `9e7cc01271e6eb3e0627815e290346f315e20b8292dca31a35f098cbd55d8c57
 | TC-870 | Build of the library with the `doctask_service` declaration present, and the service integration tests. | The crate compiles with `doctask_service` declared, and the module is reachable as `ladon_explorer::doctask_service`. | tests/it_doctask_service.rs::tc870_create_requires_baseline_and_pins_base_version |
 | TC-910 | Build of the library with the `doctask_render` declaration present, and the render module's width and table tests. | The crate compiles with `doctask_render` declared, and the module is reachable as `ladon_explorer::doctask_render`. | src/doctask_render.rs::tests::ut_151_cjk_width_and_table_alignment |
 | TC-920 | Build of the library with the `doctask_report` declaration present, and the report module's NEMA round-trip tests. | The crate compiles with `doctask_report` declared, and the module is reachable as `ladon_explorer::doctask_report`. | src/doctask_report.rs::tests::tc920_nema_roundtrip_and_batches |
+| TC-940 | Build of the library with the `mcp` declaration present, and the protocol layer's version negotiation tests. | The crate compiles with `mcp` declared, and the module is reachable as `ladon_explorer::mcp`. | src/mcp.rs::tests::tc940_supported_versions_echoed |
 
 ## Module Declaration Check
 
 - `doctask_cli` is declared after `doctask_report`. Its check is the compilation of every test target and the tests named in `doctask_cli.rs.test.md` (TC-930 to TC-939).
+- `mcp` is declared after `doctask_cli`. Its check is the compilation of every test target and the tests named in `mcp.rs.test.md` (TC-940 to TC-949).
 
 ## Boundary & Failure Cases
 

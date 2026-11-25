@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "source": "src/mcp.rs",
+  "baseline_source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "prepared_branch": "fix/compile-errors",
+  "technical_design": ".quality/docs/src/mcp.rs.md",
+  "test_design": ".quality/test-design/src/mcp.rs.test.md",
+  "prepared_technical_design_sha256": "fd84e0a7eed11103aea7a2f1d586d9193df6e39191e9b71284cf453ccc8861b4",
+  "prepared_test_design_sha256": "5363048009a0efca2299f2917e0a3fb9800d1c45e201b99cc307a980c927156b",
+  "prepared_related_design_sha256": {}
+}
