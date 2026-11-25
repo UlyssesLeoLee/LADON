@@ -35,3 +35,7 @@ pub mod doctask_store;
 
 // Document-task service core: caller, transfer gate, agent view, baselines, annotations, tasks.
 pub mod doctask_service;
+
+// Document-task workflow: transitions, approvals, proposals, dependencies, links, evidence,
+// quotas, inbox, schedule and verification.
+pub mod doctask_flow;

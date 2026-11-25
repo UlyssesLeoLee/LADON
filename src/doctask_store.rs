@@ -4,9 +4,10 @@
 //! Permission, transition rules and text validation belong to the service layer.
 
 use crate::doctask_model::{
-    event_hash, first_chain_break, sha256_hex, validate_priority, ActorKind, AnchorState, DocError,
-    ErrorCode, EventFields, EventRecord, ProposalState, SourceKind, TaskState, Visibility,
-    GENESIS_PREV_HASH,
+    event_hash, first_chain_break, sha256_hex, validate_priority, ActorKind, AnchorState,
+    ApprovalDecision, ApprovalKind, ApprovalRecord, DocError, EditKind, ErrorCode, EventFields,
+    EventRecord, EvidenceKind, EvidenceRecord, EvidenceResult, EvidenceSource, PlanRecord,
+    PlanStatus, ProposalState, Risk, SourceKind, TaskState, Visibility, GENESIS_PREV_HASH,
 };
 use crate::store::{backoff_ms, Store, StoreBusy};
 use anyhow::Result;
@@ -66,6 +67,60 @@ pub enum RowWrite {
         key_value: Value,
         values: Vec<(&'static str, Value)>,
     },
+    /// Updates every row that matches all `filters`; zero matching rows is not an error.
+    UpdateWhere {
+        table: &'static str,
+        filters: Vec<(&'static str, Value)>,
+        values: Vec<(&'static str, Value)>,
+    },
+    /// Deletes the row that matches all `filters`. Exactly one row must match.
+    Delete {
+        table: &'static str,
+        filters: Vec<(&'static str, Value)>,
+    },
+}
+
+/// The compare-and-set of a task status performed by `DocStore::commit_step`.
+#[derive(Debug, Clone)]
+pub struct StatusChange {
+    pub task_id: String,
+    pub from: TaskState,
+    pub to: TaskState,
+}
+
+/// One governance event of a step, with the identifier chosen by the caller.
+#[derive(Debug, Clone)]
+pub struct StepEvent {
+    pub id: String,
+    pub event: NewEvent,
+}
+
+/// One row of `doc_task_links`, removed rows included.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LinkRecord {
+    pub id: String,
+    pub task_id: String,
+    pub link_kind: String,
+    pub target_kind: String,
+    pub target_file_id: String,
+    pub target_section: String,
+    pub target_ref: String,
+    pub label: String,
+    pub created_by: String,
+    pub created_by_kind: String,
+    pub session: String,
+    pub created_at: String,
+    pub removed_at: Option<String>,
+}
+
+/// The identity, state and review columns of one `doc_anchors` row.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AnchorReview {
+    pub id: String,
+    pub state: String,
+    pub baseline_id: String,
+    pub current_version_id: String,
+    pub reviewed_version_id: String,
 }
 
 /// Clause fingerprint stored with an anchor created on a baseline version.
@@ -504,6 +559,41 @@ impl DocStore {
         .await
     }
 
+    /// One Immediate transaction for a flow step: the optional compare-and-set of a task status,
+    /// then the row writes in order, then the events in order. Every identifier comes from the
+    /// caller, so a retried attempt writes the same rows; any error rolls the whole step back.
+    /// Returns the stored event records in order. `events` must not be empty.
+    pub async fn commit_step(
+        &self,
+        change: Option<&StatusChange>,
+        writes: &[RowWrite],
+        events: &[StepEvent],
+    ) -> Result<Vec<EventRecord>> {
+        if events.is_empty() {
+            return Err(doc_error(
+                ErrorCode::InvalidArg,
+                "一次写入必须附带至少一条事件",
+                "附带事件后重试",
+            ));
+        }
+        for step in events {
+            validate_event(&step.event)?;
+        }
+        for write in writes {
+            validate_write(write)?;
+        }
+        let now = now();
+        let store = &self.store;
+        let (change, writes, events, now) = (change, writes, events, now.as_str());
+        with_retry(move || async move {
+            let conn = store.connect().await?;
+            let tx = Transaction::new_unchecked(&conn, TransactionBehavior::Immediate).await?;
+            let outcome = commit_step_tx(&tx, change, writes, events, now).await;
+            finish(tx, outcome).await
+        })
+        .await
+    }
+
     /// Returns the id of the anchor for the clause of `fp` on the base version, creating it in
     /// state `valid` with the fingerprint when it is absent. An existing anchor is unchanged.
     pub async fn ensure_anchor_clause(
@@ -630,6 +720,159 @@ impl DocStore {
                     rationale: row.get::<String>(10)?,
                     quote: row.get::<String>(11)?,
                     created_at: row.get::<String>(12)?,
+                });
+            }
+            Ok(out)
+        })
+        .await
+    }
+}
+
+const PLANS_SQL: &str = "SELECT id, task_id, plan_no, summary, rationale, impact, risk, options_json, chosen_option, edit_kind, target_file_id, target_section, new_text, expected_version_id, expected_hash, result_hash, plan_hash, status, submitted_by_kind, created_at FROM doc_task_plans ORDER BY task_id, plan_no";
+const APPROVALS_SQL: &str = "SELECT a.id, a.task_id, a.kind, a.decision, a.approver_kind, a.plan_id, a.subject_hash, a.base_version_id, a.comment, a.event_id, a.created_at FROM doc_task_approvals a ORDER BY (SELECT e.seq FROM doc_task_events e WHERE e.id = a.event_id)";
+const EVIDENCE_SQL: &str = "SELECT v.id, v.task_id, v.kind, v.result, v.source, v.actor_kind, v.created_at FROM doc_task_evidence v ORDER BY (SELECT e.seq FROM doc_task_events e WHERE e.id = v.event_id)";
+const LINKS_SQL: &str = "SELECT id, task_id, link_kind, target_kind, target_file_id, target_section, target_ref, label, created_by, created_by_kind, session, created_at, removed_at FROM doc_task_links ORDER BY created_at, id";
+const ANCHOR_REVIEWS_SQL: &str =
+    "SELECT id, state, baseline_id, current_version_id, reviewed_version_id FROM doc_anchors ORDER BY id";
+
+impl DocStore {
+    /// Every plan row, ordered by task and plan number.
+    pub async fn plans(&self) -> Result<Vec<PlanRecord>> {
+        let store = &self.store;
+        with_retry(move || async move {
+            let conn = store.connect().await?;
+            let mut rows = conn.query(PLANS_SQL, ()).await?;
+            let mut out = Vec::new();
+            while let Some(row) = rows.next().await? {
+                let options_json = row.get::<String>(7)?;
+                let options: Vec<String> = serde_json::from_str(&options_json).map_err(|_| {
+                    doc_error(
+                        ErrorCode::Integrity,
+                        "存储的方案选项不合法",
+                        "运行 doc verify 检查数据库",
+                    )
+                })?;
+                out.push(PlanRecord {
+                    id: row.get::<String>(0)?,
+                    task_id: row.get::<String>(1)?,
+                    plan_no: row.get::<i64>(2)?,
+                    summary: row.get::<String>(3)?,
+                    rationale: row.get::<String>(4)?,
+                    impact: row.get::<String>(5)?,
+                    risk: parse_stored(Risk::parse, &row.get::<String>(6)?)?,
+                    options,
+                    chosen_option: row.get::<String>(8)?,
+                    edit_kind: parse_stored(EditKind::parse, &row.get::<String>(9)?)?,
+                    target_file_id: row.get::<String>(10)?,
+                    target_section: row.get::<String>(11)?,
+                    new_text: row.get::<String>(12)?,
+                    expected_version_id: row.get::<String>(13)?,
+                    expected_hash: row.get::<String>(14)?,
+                    result_hash: row.get::<String>(15)?,
+                    plan_hash: row.get::<String>(16)?,
+                    status: parse_stored(PlanStatus::parse, &row.get::<String>(17)?)?,
+                    submitted_by_kind: parse_stored(ActorKind::parse, &row.get::<String>(18)?)?,
+                    created_at: row.get::<String>(19)?,
+                });
+            }
+            Ok(out)
+        })
+        .await
+    }
+
+    /// Every approval row, in chain order of its event.
+    pub async fn approvals(&self) -> Result<Vec<ApprovalRecord>> {
+        let store = &self.store;
+        with_retry(move || async move {
+            let conn = store.connect().await?;
+            let mut rows = conn.query(APPROVALS_SQL, ()).await?;
+            let mut out = Vec::new();
+            while let Some(row) = rows.next().await? {
+                out.push(ApprovalRecord {
+                    id: row.get::<String>(0)?,
+                    task_id: row.get::<String>(1)?,
+                    kind: parse_stored(ApprovalKind::parse, &row.get::<String>(2)?)?,
+                    decision: parse_stored(ApprovalDecision::parse, &row.get::<String>(3)?)?,
+                    approver_kind: parse_stored(ActorKind::parse, &row.get::<String>(4)?)?,
+                    plan_id: row.get::<String>(5)?,
+                    subject_hash: row.get::<String>(6)?,
+                    base_version_id: row.get::<String>(7)?,
+                    comment: row.get::<String>(8)?,
+                    event_id: row.get::<String>(9)?,
+                    created_at: row.get::<String>(10)?,
+                });
+            }
+            Ok(out)
+        })
+        .await
+    }
+
+    /// Every evidence row, in chain order of its event.
+    pub async fn evidence(&self) -> Result<Vec<EvidenceRecord>> {
+        let store = &self.store;
+        with_retry(move || async move {
+            let conn = store.connect().await?;
+            let mut rows = conn.query(EVIDENCE_SQL, ()).await?;
+            let mut out = Vec::new();
+            while let Some(row) = rows.next().await? {
+                out.push(EvidenceRecord {
+                    id: row.get::<String>(0)?,
+                    task_id: row.get::<String>(1)?,
+                    kind: parse_stored(EvidenceKind::parse, &row.get::<String>(2)?)?,
+                    result: parse_stored(EvidenceResult::parse, &row.get::<String>(3)?)?,
+                    source: parse_stored(EvidenceSource::parse, &row.get::<String>(4)?)?,
+                    actor_kind: parse_stored(ActorKind::parse, &row.get::<String>(5)?)?,
+                    created_at: row.get::<String>(6)?,
+                });
+            }
+            Ok(out)
+        })
+        .await
+    }
+
+    /// Every link row, removed rows included.
+    pub async fn links(&self) -> Result<Vec<LinkRecord>> {
+        let store = &self.store;
+        with_retry(move || async move {
+            let conn = store.connect().await?;
+            let mut rows = conn.query(LINKS_SQL, ()).await?;
+            let mut out = Vec::new();
+            while let Some(row) = rows.next().await? {
+                out.push(LinkRecord {
+                    id: row.get::<String>(0)?,
+                    task_id: row.get::<String>(1)?,
+                    link_kind: row.get::<String>(2)?,
+                    target_kind: row.get::<String>(3)?,
+                    target_file_id: row.get::<String>(4)?,
+                    target_section: row.get::<String>(5)?,
+                    target_ref: row.get::<String>(6)?,
+                    label: row.get::<String>(7)?,
+                    created_by: row.get::<String>(8)?,
+                    created_by_kind: row.get::<String>(9)?,
+                    session: row.get::<String>(10)?,
+                    created_at: row.get::<String>(11)?,
+                    removed_at: row.get::<Option<String>>(12)?,
+                });
+            }
+            Ok(out)
+        })
+        .await
+    }
+
+    /// The identity, state and review columns of every anchor row.
+    pub async fn anchor_reviews(&self) -> Result<Vec<AnchorReview>> {
+        let store = &self.store;
+        with_retry(move || async move {
+            let conn = store.connect().await?;
+            let mut rows = conn.query(ANCHOR_REVIEWS_SQL, ()).await?;
+            let mut out = Vec::new();
+            while let Some(row) = rows.next().await? {
+                out.push(AnchorReview {
+                    id: row.get::<String>(0)?,
+                    state: row.get::<String>(1)?,
+                    baseline_id: row.get::<String>(2)?,
+                    current_version_id: row.get::<String>(3)?,
+                    reviewed_version_id: row.get::<String>(4)?,
                 });
             }
             Ok(out)
@@ -1166,6 +1409,58 @@ async fn transition_tx(
     append_draft(conn, draft).await
 }
 
+/// One Immediate transaction of a flow step: the optional compare-and-set of the task status,
+/// the row writes in order, and the events in order.
+async fn commit_step_tx(
+    conn: &Connection,
+    change: Option<&StatusChange>,
+    writes: &[RowWrite],
+    events: &[StepEvent],
+    now: &str,
+) -> Result<Vec<EventRecord>> {
+    if let Some(change) = change {
+        let stored = query_text(
+            conn,
+            "SELECT status FROM doc_tasks WHERE id = ?1",
+            params![change.task_id.as_str()],
+        )
+        .await?;
+        let Some(stored) = stored else {
+            return Err(doc_error(ErrorCode::NotFound, "未找到任务", "确认任务 ID"));
+        };
+        if stored != change.from.as_str() {
+            return Err(conflict());
+        }
+        let changed = conn
+            .execute(
+                "UPDATE doc_tasks SET status = ?1 WHERE id = ?2 AND status = ?3",
+                params![
+                    change.to.as_str(),
+                    change.task_id.as_str(),
+                    change.from.as_str()
+                ],
+            )
+            .await?;
+        if changed != 1 {
+            return Err(conflict());
+        }
+        conn.execute(
+            "UPDATE doc_task_meta SET updated_at = ?1 WHERE task_id = ?2",
+            params![now, change.task_id.as_str()],
+        )
+        .await?;
+    }
+    for write in writes {
+        apply_write(conn, write).await?;
+    }
+    let mut records = Vec::with_capacity(events.len());
+    for step in events {
+        let draft = draft_from_event(&step.event, &step.id, now);
+        records.push(append_draft(conn, draft).await?);
+    }
+    Ok(records)
+}
+
 fn conflict() -> anyhow::Error {
     doc_error(
         ErrorCode::Conflict,
@@ -1444,17 +1739,36 @@ const BASELINES_OF_FILE_SQL: &str = "SELECT id, file_id, version_id, version_no,
 const TASKS_SQL: &str = "SELECT t.id, m.task_no, t.file_id, m.anchor_id, t.anchor_section, t.base_version_id, t.title, t.description, t.status, m.owner, m.priority, m.proposal_state, m.visibility, m.source_kind, m.created_by, m.created_by_kind, m.session, t.created_at, m.updated_at, m.closed_at, a.state, a.clause_id, a.baseline_id FROM doc_tasks t JOIN doc_task_meta m ON m.task_id = t.id LEFT JOIN doc_anchors a ON a.id = m.anchor_id ORDER BY m.task_no";
 const ANNOTATIONS_SQL: &str = "SELECT a.id, m.annotation_no, a.file_id, m.anchor_id, a.section_key, a.base_version_id, a.text, m.author, m.author_kind, m.visibility, m.rationale, m.quote, m.created_at FROM annotations a JOIN doc_annotation_meta m ON m.annotation_id = a.id ORDER BY m.annotation_no";
 
-/// Checks the table and column names of one row write.
+/// Checks the table and column names of one row write, and that its shape is complete.
 fn validate_write(write: &RowWrite) -> Result<()> {
-    let (table, values, key) = match write {
-        RowWrite::Insert { table, values } => (*table, values, None),
+    let none: &[(&'static str, Value)] = &[];
+    let (table, values, filters, key, values_required, filters_required) = match write {
+        RowWrite::Insert { table, values } => (*table, values.as_slice(), none, None, true, false),
         RowWrite::Update {
             table, key, values, ..
-        } => (*table, values, Some(*key)),
+        } => (*table, values.as_slice(), none, Some(*key), true, false),
+        RowWrite::UpdateWhere {
+            table,
+            filters,
+            values,
+        } => (
+            *table,
+            values.as_slice(),
+            filters.as_slice(),
+            None,
+            true,
+            true,
+        ),
+        RowWrite::Delete { table, filters } => {
+            (*table, none, filters.as_slice(), None, false, true)
+        }
     };
     let names_ok = values.iter().all(|(column, _)| is_identifier(column))
+        && filters.iter().all(|(column, _)| is_identifier(column))
         && key.map_or(true, |name| is_identifier(name));
-    if !is_doc_table(table) || values.is_empty() || !names_ok {
+    let shape_ok =
+        (!values_required || !values.is_empty()) && (!filters_required || !filters.is_empty());
+    if !is_doc_table(table) || !shape_ok || !names_ok {
         return Err(doc_error(
             ErrorCode::InvalidArg,
             "非法的表名或列名",
@@ -1462,6 +1776,29 @@ fn validate_write(write: &RowWrite) -> Result<()> {
         ));
     }
     Ok(())
+}
+
+/// The `WHERE` clause of a filter list, numbering its placeholders from `first`, with the values
+/// in the same order.
+fn where_clause(filters: &[(&'static str, Value)], first: usize) -> (String, Vec<Value>) {
+    let clause: Vec<String> = filters
+        .iter()
+        .enumerate()
+        .map(|(index, (column, _))| format!("{column} = ?{}", first + index))
+        .collect();
+    let bound: Vec<Value> = filters.iter().map(|(_, value)| value.clone()).collect();
+    (clause.join(" AND "), bound)
+}
+
+/// Parses a stored enumerated value. An unknown value is an integrity error.
+fn parse_stored<T>(parse: fn(&str) -> Option<T>, text: &str) -> Result<T> {
+    parse(text).ok_or_else(|| {
+        doc_error(
+            ErrorCode::Integrity,
+            "存储的取值不合法",
+            "运行 doc verify 检查数据库",
+        )
+    })
 }
 
 async fn write_with_event_tx(
@@ -1516,6 +1853,39 @@ async fn apply_write(conn: &Connection, write: &RowWrite) -> Result<()> {
                 return Err(doc_error(
                     ErrorCode::NotFound,
                     "未找到要更新的记录",
+                    "刷新后重试",
+                ));
+            }
+            Ok(())
+        }
+        RowWrite::UpdateWhere {
+            table,
+            filters,
+            values,
+        } => {
+            let assignments: Vec<String> = values
+                .iter()
+                .enumerate()
+                .map(|(index, (column, _))| format!("{column} = ?{}", index + 1))
+                .collect();
+            let (clause, filter_values) = where_clause(filters, values.len() + 1);
+            let sql = format!(
+                "UPDATE {table} SET {} WHERE {clause}",
+                assignments.join(", ")
+            );
+            let mut bound: Vec<Value> = values.iter().map(|(_, value)| value.clone()).collect();
+            bound.extend(filter_values);
+            conn.execute(sql.as_str(), bound).await?;
+            Ok(())
+        }
+        RowWrite::Delete { table, filters } => {
+            let (clause, bound) = where_clause(filters, 1);
+            let sql = format!("DELETE FROM {table} WHERE {clause}");
+            let changed = conn.execute(sql.as_str(), bound).await?;
+            if changed != 1 {
+                return Err(doc_error(
+                    ErrorCode::NotFound,
+                    "未找到要删除的记录",
                     "刷新后重试",
                 ));
             }
