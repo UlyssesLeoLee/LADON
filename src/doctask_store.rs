@@ -198,6 +198,43 @@ pub struct AnnotationRow {
     pub created_at: String,
 }
 
+/// Every column of one `doc_anchors` row. `level`, `line_start` and `line_end` are integers.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AnchorRecord {
+    pub id: String,
+    pub file_id: String,
+    pub base_version_id: String,
+    pub baseline_id: String,
+    pub section_key: String,
+    pub clause_id: String,
+    pub title: String,
+    pub level: i64,
+    pub line_start: i64,
+    pub line_end: i64,
+    pub full_hash: String,
+    pub body_hash: String,
+    pub state: String,
+    pub current_version_id: String,
+    pub current_key: String,
+    pub current_hash: String,
+    pub reviewed_version_id: String,
+    pub updated_at: String,
+}
+
+/// One row of `doc_file_lineage`: a proposed, confirmed or rejected move of a file.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LineageRow {
+    pub id: String,
+    pub old_file_id: String,
+    pub new_file_id: String,
+    pub evidence: String,
+    pub score_permille: i64,
+    pub state: String,
+    pub decided_by: String,
+    pub decided_at: Option<String>,
+    pub created_at: String,
+}
+
 /// Document-task persistence over one library file.
 #[derive(Debug, Clone)]
 pub struct DocStore {
@@ -732,6 +769,8 @@ const PLANS_SQL: &str = "SELECT id, task_id, plan_no, summary, rationale, impact
 const APPROVALS_SQL: &str = "SELECT a.id, a.task_id, a.kind, a.decision, a.approver_kind, a.plan_id, a.subject_hash, a.base_version_id, a.comment, a.event_id, a.created_at FROM doc_task_approvals a ORDER BY (SELECT e.seq FROM doc_task_events e WHERE e.id = a.event_id)";
 const EVIDENCE_SQL: &str = "SELECT v.id, v.task_id, v.kind, v.result, v.source, v.actor_kind, v.created_at FROM doc_task_evidence v ORDER BY (SELECT e.seq FROM doc_task_events e WHERE e.id = v.event_id)";
 const LINKS_SQL: &str = "SELECT id, task_id, link_kind, target_kind, target_file_id, target_section, target_ref, label, created_by, created_by_kind, session, created_at, removed_at FROM doc_task_links ORDER BY created_at, id";
+const ANCHORS_SQL: &str = "SELECT id, file_id, base_version_id, baseline_id, section_key, clause_id, title, level, line_start, line_end, full_hash, body_hash, state, current_version_id, current_key, current_hash, reviewed_version_id, updated_at FROM doc_anchors ORDER BY created_at, id";
+const LINEAGE_SQL: &str = "SELECT id, old_file_id, new_file_id, evidence, score_permille, state, decided_by, decided_at, created_at FROM doc_file_lineage ORDER BY created_at, id";
 const ANCHOR_REVIEWS_SQL: &str =
     "SELECT id, state, baseline_id, current_version_id, reviewed_version_id FROM doc_anchors ORDER BY id";
 
@@ -873,6 +912,65 @@ impl DocStore {
                     baseline_id: row.get::<String>(2)?,
                     current_version_id: row.get::<String>(3)?,
                     reviewed_version_id: row.get::<String>(4)?,
+                });
+            }
+            Ok(out)
+        })
+        .await
+    }
+
+    /// Every anchor row with all its columns, ordered by creation time and id.
+    pub async fn anchors(&self) -> Result<Vec<AnchorRecord>> {
+        let store = &self.store;
+        with_retry(move || async move {
+            let conn = store.connect().await?;
+            let mut rows = conn.query(ANCHORS_SQL, ()).await?;
+            let mut out = Vec::new();
+            while let Some(row) = rows.next().await? {
+                out.push(AnchorRecord {
+                    id: row.get::<String>(0)?,
+                    file_id: row.get::<String>(1)?,
+                    base_version_id: row.get::<String>(2)?,
+                    baseline_id: row.get::<String>(3)?,
+                    section_key: row.get::<String>(4)?,
+                    clause_id: row.get::<String>(5)?,
+                    title: row.get::<String>(6)?,
+                    level: row.get::<i64>(7)?,
+                    line_start: row.get::<i64>(8)?,
+                    line_end: row.get::<i64>(9)?,
+                    full_hash: row.get::<String>(10)?,
+                    body_hash: row.get::<String>(11)?,
+                    state: row.get::<String>(12)?,
+                    current_version_id: row.get::<String>(13)?,
+                    current_key: row.get::<String>(14)?,
+                    current_hash: row.get::<String>(15)?,
+                    reviewed_version_id: row.get::<String>(16)?,
+                    updated_at: row.get::<String>(17)?,
+                });
+            }
+            Ok(out)
+        })
+        .await
+    }
+
+    /// Every lineage row, ordered by creation time and id.
+    pub async fn lineage(&self) -> Result<Vec<LineageRow>> {
+        let store = &self.store;
+        with_retry(move || async move {
+            let conn = store.connect().await?;
+            let mut rows = conn.query(LINEAGE_SQL, ()).await?;
+            let mut out = Vec::new();
+            while let Some(row) = rows.next().await? {
+                out.push(LineageRow {
+                    id: row.get::<String>(0)?,
+                    old_file_id: row.get::<String>(1)?,
+                    new_file_id: row.get::<String>(2)?,
+                    evidence: row.get::<String>(3)?,
+                    score_permille: row.get::<i64>(4)?,
+                    state: row.get::<String>(5)?,
+                    decided_by: row.get::<String>(6)?,
+                    decided_at: row.get::<Option<String>>(7)?,
+                    created_at: row.get::<String>(8)?,
                 });
             }
             Ok(out)
@@ -1912,7 +2010,7 @@ async fn ensure_anchor_clause_tx(
     .await?;
     if created {
         conn.execute(
-            "UPDATE doc_anchors SET baseline_id = ?1, clause_id = ?2, title = ?3, level = ?4, line_start = ?5, line_end = ?6, full_hash = ?7, body_hash = ?8 WHERE id = ?9",
+            "UPDATE doc_anchors SET baseline_id = ?1, clause_id = ?2, title = ?3, level = ?4, line_start = ?5, line_end = ?6, full_hash = ?7, body_hash = ?8, current_hash = ?10 WHERE id = ?9",
             params![
                 fp.baseline_id.as_str(),
                 fp.clause_number.as_str(),
@@ -1922,7 +2020,8 @@ async fn ensure_anchor_clause_tx(
                 fp.line_end,
                 fp.full_hash.as_str(),
                 fp.body_hash.as_str(),
-                id.as_str()
+                id.as_str(),
+                fp.full_hash.as_str()
             ],
         )
         .await?;

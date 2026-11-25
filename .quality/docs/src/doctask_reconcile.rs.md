@@ -2,7 +2,7 @@
 
 Source: `src/doctask_reconcile.rs`
 
-Source-SHA256: `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`
+Source-SHA256: `a6fda4bbbe0a0349c55097b4987f15efb7ddf60931db8d6cc11d5b61a823ff6e`
 
 ## Responsibility
 
@@ -22,7 +22,7 @@ Not covered here: the decision guards themselves (`doctask_flow`), the byte-leve
 - `crate::crypto::digest`: SHA-256 hex of the live file bytes, compared with `resources.current_hash`.
 - `crate::doctask_outline`: `outline`, `classify_anchor`, `AnchorRef`, `LatestVersion`, `Method`, `Verdict`, `Outline`, `Clause`, `ClauseKind`, `resolve`, `RELOCATION_MIN_LINES`, `RELOCATION_MIN_CHARS`.
 - `crate::doctask_model`: `Operation`, `authorize`, `Principal`, `ActorKind`, `AnchorState`, `LineageState`, `SourceKind`, `Handle`, `parse_task_handle`, `parse_section_selector`, `SectionSelector`, `DocError`, `ErrorCode`, `MAX_TARGET_FILE_BYTES`.
-- `crate::doctask_store`: `DocStore` with `anchors`, `lineage`, `tasks`, `baselines`, `version_outline` is not used, `ensure_anchor_clause`, `commit_step`, `events`; the row types `AnchorRecord`, `LineageRow`, `TaskRow`, `BaselineRow`, `AnchorFingerprint`, `StepEvent`, `NewEvent`, `RowWrite`, `EventRecord`.
+- `crate::doctask_store`: `DocStore` with `anchors`, `lineage`, `tasks`, `baselines`, `ensure_anchor_clause`, `commit_step`, `events`; the row types `AnchorRecord`, `LineageRow`, `TaskRow`, `BaselineRow`, `AnchorFingerprint`, `StepEvent`, `NewEvent`, `RowWrite`, `EventRecord`.
 - `crate::doctask_service::Caller`: the principal, name and session of the human decision.
 - `crate::doctask_flow` calls `reconcile_decision` before the guards of approval and acceptance; `crate::doctask_service` calls `follow_file` when it lists tasks.
 
@@ -67,7 +67,7 @@ Every decision takes the task handle and the subject shown to the owner. Each ca
 ### Pure functions (module level, unit tested)
 
 - `overlap_permille(old: &[String], new: &[String]) -> i64`: the rule of the section-overlap score; `0` when `old` is empty.
-- `assess(anchor: &AnchorRecord, target: &FileRecord, latest: Option<&VersionRecord>, bytes: Option<Vec<u8>>, baseline_bytes: Option<&[u8]>) -> Assessment`: the decision of design 5.4 for one anchor, with the optional fingerprint fill from the anchor's base version. Returns the verdict, the version to store, the current hash to store, the fingerprint to store when filled, and whether the anchor is written. It reads no store.
+- `assess(engine, lineage, anchor) -> Assessment` (private): the decision of design 5.4 for one anchor. It reads the ledger and the bytes of the latest version of the target and writes nothing. The reconciliation and the migration report both use it, so the report shows exactly what a reconciliation would write.
 
 ### Errors
 
@@ -121,7 +121,7 @@ See the table in the public contract. Every error is a `DocError` converted to `
 
 ## Concurrency
 
-Each write is one `BEGIN IMMEDIATE` transaction. Two reconciliations of the same anchor racing each other can each emit an event for the same change; the second one changes nothing observable because it reads the committed state of the first before deciding. The module does not add a compare-and-set on the anchor row beyond the transaction, because the only writers are the owner's entry points and the system reconciliation at the start of a decision.
+Each write is one `BEGIN IMMEDIATE` transaction. The assessment of an anchor is read before its transaction starts, so two reconciliations of the same anchor that race each other can both emit the same change. Both set the same state, key and version on the anchor row, and each emitted event is appended to the chain in its own transaction. No other lock is taken; the owner's decisions reconcile first and then compare the subject they were shown with the stored values in the same call.
 
 ## Schema assumptions
 

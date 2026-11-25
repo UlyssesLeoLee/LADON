@@ -39,3 +39,7 @@ pub mod doctask_service;
 // Document-task workflow: transitions, approvals, proposals, dependencies, links, evidence,
 // quotas, inbox, schedule and verification.
 pub mod doctask_flow;
+
+// Document-task reconciliation: anchor review against the latest version, owner decisions on
+// moved anchors, and file-move lineage.
+pub mod doctask_reconcile;

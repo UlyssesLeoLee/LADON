@@ -15,6 +15,7 @@ use crate::doctask_model::{
     MAX_REASON_CHARS, MAX_VERIFY_SUMMARY_CHARS,
 };
 use crate::doctask_outline;
+use crate::doctask_reconcile::reconcile_decision;
 use crate::doctask_service::{Caller, EngineGate, TransferGate};
 use crate::doctask_store::{
     AnchorReview, DocStore, LinkRecord, NewEvent, RowWrite, StatusChange, StepEvent, TaskRow,
@@ -1120,6 +1121,20 @@ impl<'a> DocFlow<'a> {
             }
             return Err(err.into());
         }
+        // Decision-time reconciliation (design 5.5 item 3). The first pass above ran on the stored
+        // state, so a stale plan is still superseded by the stale path of guard 4. The anchor is
+        // reconciled with the ledger now, and the guards are evaluated again on the reconciled state.
+        reconcile_decision(self.engine, &self.ds, &task.anchor_id).await?;
+        let snap = self.snapshot().await?;
+        let task = self.find_task(&snap, handle).await?;
+        let latest = latest_plan(&snap.plans, &task.id).cloned();
+        let stale = self.plan_is_stale(latest.as_ref()).await?;
+        let mut guard = self.base_guard(&snap, &task);
+        guard.subject_hash_matches = latest
+            .as_ref()
+            .is_some_and(|plan| plan.plan_hash == expected_subject_hash);
+        guard.plan_stale = stale;
+        check_guards(transition, &guard)?;
         let Some(plan) = latest else {
             return Err(not_found());
         };
@@ -1438,6 +1453,9 @@ impl<'a> DocFlow<'a> {
         let from = expect_from(&task, &[TaskState::Verification], Principal::Human)?;
         let to = TaskState::Done;
         let transition = lookup_transition(from, to, Principal::Human)?;
+        reconcile_decision(self.engine, &self.ds, &task.anchor_id).await?;
+        let snap = self.snapshot().await?;
+        let task = self.find_task(&snap, handle).await?;
         let rows: Vec<EvidenceRecord> = snap
             .evidence
             .iter()

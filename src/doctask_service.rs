@@ -1209,7 +1209,7 @@ impl<'a> DocTaskService<'a> {
             proj.hidden += 1;
             return Ok(None);
         }
-        let Some(file) = self.engine.store.file_by_id(&row.file_id).await? else {
+        let Some(file) = crate::doctask_reconcile::follow_file(self.engine, &self.ds, &row.file_id).await? else {
             proj.hidden += 1;
             return Ok(None);
         };
@@ -1301,10 +1301,7 @@ impl<'a> DocTaskService<'a> {
     async fn view_of(&self, rows: &[TaskRow], row: &TaskRow) -> Result<TaskView> {
         let deps = self.dependencies().await?;
         let mut proj = Projection::default();
-        let file = self
-            .engine
-            .store
-            .file_by_id(&row.file_id)
+        let file = crate::doctask_reconcile::follow_file(self.engine, &self.ds, &row.file_id)
             .await?
             .ok_or_else(not_found)?;
         let blocked = self.blocked_by(&mut proj, row, &deps, rows).await?;
