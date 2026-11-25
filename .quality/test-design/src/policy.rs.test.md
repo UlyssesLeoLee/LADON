@@ -2,7 +2,7 @@
 
 Source: `src/policy.rs`
 
-Source-SHA256: `0b5e8991e7c6abf61eb8b209276d51dff0a49ab4fbbea41090de46657150bf1b`
+Source-SHA256: `2261995dda5401a5c7d6572b820582de162012f1ad6a62316efdda3852aab491`
 
 ## Test Strategy
 
@@ -29,6 +29,7 @@ Unit tests inside `src/policy.rs` cover the basic matching, the always-excluded 
 | TC-515 | A root `.LADONignore` that holds the reversed range `[z-a]`; `check_root` on the root. | `check_root` returns an error. | tests/it_policy_pending.rs::tc515_check_root_rejects_invalid_root_rules |
 | TC-516 | A root `.LADONignore` that holds `*.pem`, and a subdirectory `sub/.LADONignore` that holds `*.log`. `PendingPolicy::start` on the root, then `with` for `top.log` and for `sub/a.pem`. | `with` gives excluded true for `top.log`, which is matched by the nested rule because rules are workspace-wide, and true for `sub/a.pem`. | tests/it_policy_pending.rs::tc516_pending_policy_applies_nested_rules_workspace_wide |
 | TC-517 | A subdirectory `sub/.LADONignore` that holds the reversed range `[z-a]`. `PendingPolicy::start` on the root; `with` called twice. | Both calls return an error with the same message, which names the rule file parse failure. | tests/it_policy_pending.rs::tc517_pending_policy_keeps_scan_error |
+| TC-858 | `PendingPolicy::ready(Ok(policy))` and `PendingPolicy::ready(Err(message))`; `PendingPolicy::start` on a root with one rule, polled until `is_ready` is true. A `RuleStamp` is read for a root with a root rule file, a nested rule file, a global file named by `LADON_GLOBAL_IGNORE`, then after each edit: a nested rule file, a root rule file rewritten to the same length with the same modification time, and the global variable set and unset | Ready policies answer `is_ready` true and `with` without waiting; the error case returns an error containing the message; the started policy becomes ready and excludes the rule's path; the stamp is equal after the nested edit and different after each of the root, same-size and global changes | src/policy.rs::ut_pending_ready_answers_without_waiting, src/policy.rs::ut_pending_start_becomes_ready, src/policy.rs::ut_rule_stamp_ignores_nested_rule_files, src/policy.rs::ut_rule_stamp_tracks_root_global_and_digest |
 
 ## Boundary & Failure Cases
 
@@ -42,4 +43,4 @@ Unit tests inside `src/policy.rs` cover the basic matching, the always-excluded 
 
 ## Regression Scope
 
-`engine.rs` (capture sensitivity, archive transfer checks, `reload_policy`), `agent_api.rs` (`allow_remote_read`) and the CLI `sensitive-add` and `ignore-check` commands depend on this module; `tests/it_engine.rs` TC-308 and TC-314, `tests/it_history.rs` it_02 and `tests/it_agent_folder.rs` TC-407 must stay green.
+`engine.rs` (capture sensitivity, archive transfer checks, `reload_policy`), `agent_api.rs` (`allow_remote_read`) and the CLI `sensitive-add` and `ignore-check` commands depend on this module; `tests/it_engine.rs` TC-308 and TC-314, `tests/it_history.rs` it_02 and `tests/it_agent_folder.rs` TC-407 must stay green. The new functions `PendingPolicy::ready`, `PendingPolicy::is_ready`, `RuleStamp::read` and `global_rule_path` are used only by `engine.rs`; their unit tests are TC-858, and the gate tests that depend on them are TC-850 to TC-857 and TC-859 in `tests/it_engine_gate.rs` and `src/engine.rs`. The existing rules of `load`, `check_root`, `excluded` and `allow_external` are unchanged, so TC-501 to TC-517 keep their expectations.

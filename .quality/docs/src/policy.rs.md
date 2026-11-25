@@ -2,7 +2,7 @@
 
 Source: `src/policy.rs`
 
-Source-SHA256: `0b5e8991e7c6abf61eb8b209276d51dff0a49ab4fbbea41090de46657150bf1b`
+Source-SHA256: `2261995dda5401a5c7d6572b820582de162012f1ad6a62316efdda3852aab491`
 
 ## Responsibility
 
@@ -10,7 +10,7 @@ Source-SHA256: `0b5e8991e7c6abf61eb8b209276d51dff0a49ab4fbbea41090de46657150bf1b
 
 ## Dependencies
 
-- `ignore` crate (`GitignoreBuilder`, `Gitignore`) for rule parsing and matching, `walkdir` to find rule files without following links, `anyhow` for errors, `std::fs` and `std::env`.
+- `ignore` crate (`GitignoreBuilder`, `Gitignore`) for rule parsing and matching, `walkdir` to find rule files without following links, `anyhow` for errors, `std::fs`, `std::env` and `std::time::SystemTime`, and `crypto::digest` for the content digest of the rule-file stamp.
 - The optional environment variable `LADON_GLOBAL_IGNORE` names one extra rule file.
 - Callers: `engine::Engine` (load at init and open, `reload_policy`, `excluded` during capture, `allow_external` before archiving), `agent_api::AgentApi` (`allow_remote_read`), and the `ladon` CLI (`sensitive-add`, `ignore-check`, folder tagging, the Shell host).
 
@@ -24,8 +24,14 @@ Source-SHA256: `0b5e8991e7c6abf61eb8b209276d51dff0a49ab4fbbea41090de46657150bf1b
 - `LadonPolicy::check_root(root) -> Result<()>`: canonicalises the root with the same error as `load`, parses the file named by `LADON_GLOBAL_IGNORE` when that variable names an existing file, and parses the root `.LADONignore` when it exists. No other file is read, so its cost does not depend on the size of the tree. A parse error is returned as `load` returns it.
 - `PendingPolicy`: a rule set loaded on a background thread. `PendingPolicy::start(root) -> PendingPolicy` spawns one thread that runs `LadonPolicy::load(root)` and keeps its result. A load that fails keeps the error message. When the thread cannot be started, the stored result is the message `rule scan could not start`. `start` returns at once.
 - `PendingPolicy::with<R>(&self, f: impl FnOnce(&LadonPolicy) -> Result<R>) -> Result<R>`: blocks until the load has finished. A failed load returns an error whose message is the stored message. A successful load runs `f` on the rule set. Every call sees the same stored result.
+- `PendingPolicy::ready(result: Result<LadonPolicy>) -> PendingPolicy`: holds the result of a load that has already finished, so `with` and `is_ready` answer at once. An error is stored as its message `{err:#}`, and `with` returns it as `start` does.
+- `PendingPolicy::is_ready(&self) -> bool`: true once the load has finished, whether it succeeded or failed. A poisoned internal lock also reports true, so the caller installs the policy, and `with` then fails with `rule scan lock poisoned`, which keeps transfers refused.
+- `global_rule_path() -> Option<PathBuf>` (crate-internal): the path named by `LADON_GLOBAL_IGNORE`, when the variable is set. `load`, `check_root` and `RuleStamp::read` take the global rule file from it.
+- `RuleStamp` (crate-internal) with `RuleStamp::read(root) -> RuleStamp`: records, for each root rule file (any ASCII case, sorted by path) and for the global rule file, its path, its modification time, its byte length and the SHA-256 digest of its content (`crypto::digest`). A file that is missing or cannot be read has no time, length or digest. Two stamps are equal when none of these differ. Nested rule files are not part of the stamp, because they are not read on every call; `Engine` discovers them through a background traversal.
 - The rules of a workspace are workspace-wide. The `ignore` crate compiles the globs of each rule file relative to the workspace root, not relative to the directory that holds the file, so a `.LADONignore` in a subdirectory can match any path in the workspace. For this reason `load` still reads every rule file under the root, and `Engine` runs that read on a `PendingPolicy` rather than before returning from `open` or `init`.
 
 ## Change Notes
 
 Unit tests that pass absolute paths to `excluded` derive them from the canonicalised workspace root, which is the form the policy compares against, so the tests behave the same on Windows and on Unix. The contract for absolute paths is the one given under Public Contract. The remaining behaviour of the module is as specified in this document.
+
+`add_global_rule_file` reads the global path through `global_rule_path`; its behaviour is unchanged. `RuleStamp` and the readiness functions exist for the engine's rule freshness check (`Engine::refresh_policy_if_stale`) and are not part of the public transfer decision.
