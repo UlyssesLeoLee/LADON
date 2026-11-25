@@ -2,7 +2,7 @@
 
 Source: `src/mcp.rs`
 
-Source-SHA256: `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`
+Source-SHA256: `1ba786993da5819566538cb7c0004e403b44824bbe7ca5e7842b3d7aa6041059`
 
 ## Responsibility
 
@@ -10,7 +10,7 @@ Source-SHA256: `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 
 ## Dependencies
 
-- `serde_json` (`Value`, `Map`, `json!`, `to_string`, `from_slice`) and `std::io`. The module adds no crate and imports no `crate::` module.
+- `serde_json` (`Value`, `Map`, `json!`, `to_string`, `from_str`) and `std::io`. The module adds no crate and imports no `crate::` module.
 - Module-level `#![deny(clippy::print_stdout, clippy::print_stderr, clippy::dbg_macro)]`. The attribute takes effect only when clippy runs; the stdout discipline is also checked by the reply-line tests of this document.
 - Callers: `doctask_mcp` (WP13) implements `ToolHost` and calls `Server::serve`. The module is declared in `lib.rs` as `pub mod mcp`.
 

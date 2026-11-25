@@ -2,13 +2,13 @@
 
 Source: `src/mcp.rs`
 
-Source-SHA256: `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`
+Source-SHA256: `1ba786993da5819566538cb7c0004e403b44824bbe7ca5e7842b3d7aa6041059`
 
 ## Test Strategy
 
 The tests are unit tests in the `tests` module of `src/mcp.rs`. The functions named by document 41 are `ut_155_handshake_version_negotiation` and `ut_156_notifications_ping_bad_lines`. `ut_155_handshake_version_negotiation` calls the case functions `tc940_supported_versions_echoed`, `tc941_unknown_or_missing_version` and `tc942_initialize_result_shape`. `ut_156_notifications_ping_bad_lines` calls `tc943_notifications_and_client_replies_silent`, `tc944_ping_list_and_call_routing`, `tc945_unknown_method_echoes_id`, `tc946_bad_json_and_invalid_requests`, `tc947_invalid_utf8_line`, `tc948_bounded_reading_and_eof` and `tc949_fixture_lines_parse_and_replay`.
 
-The fixtures are built in the test module. `RecordingHost` implements `ToolHost`: `tools()` returns a fixed list, `call()` records `(name, arguments)` in `calls` and returns `reply.clone()` for the name `probe_echo` and `None` for any other name. Requests are fed to `Server::handle_line` as byte slices, and whole inputs to `Server::serve` through `std::io::Cursor` readers and `Vec<u8>` writers. The helper `replies(bytes)` runs `serve` on a `Vec<u8>` output, splits it at `\n` and parses each piece with `serde_json::from_str`; it fails the test when a piece is not one JSON object. The helper `reply_for(line)` returns the `handle_line` result for a literal string.
+The fixtures are built in the test module. `RecordingHost` implements `ToolHost`: `tools()` returns a fixed list, `call()` records `(name, arguments)` in `calls` and returns `reply.clone()` for the name `probe_echo` and `None` for any other name. Requests are fed to `Server::handle_line` as byte slices, and whole inputs to `Server::serve` through `std::io::Cursor` readers and `Vec<u8>` writers. The helper `run_serve(server, bytes)` runs `serve` on a `Vec<u8>` output, splits it at `\n` and parses each piece with `serde_json::from_str`; it fails the test when a piece is not one JSON object. The helper `reply_of(server, line)` returns the `handle_line` result for a literal string, `error_parts(reply)` returns the code and message of an error reply, `read_all(bytes, max)` runs `read_bounded_line` until `Eof`, and `classify_all(text)` runs `parse_line` on every non-empty line of a fixture. The reader `Flaky` reports `Interrupted` once before its data.
 
 The golden fixtures are read with `include_str!("../tests/fixtures/mcp_client/<name>.jsonl")`, so a missing fixture fails the build. The tests do not read the environment, the clock, the file system beyond these fixtures, or any database.
 

@@ -52,3 +52,7 @@ pub mod doctask_report;
 
 // Document-task one-shot command layer: the `ladon doc` tree, confirmations, output and exit codes.
 pub mod doctask_cli;
+
+// MCP protocol layer: JSON-RPC line handling, lifecycle methods, version negotiation, the
+// ToolHost seam and bounded line reading. It performs no I/O of its own.
+pub mod mcp;
