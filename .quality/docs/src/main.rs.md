@@ -2,31 +2,23 @@
 
 Source: `src/main.rs`
 
-Source-SHA256: `426480dffa98a8695fcc16ce10882fa115edb229f6c80ff3b7905c4eafc7c08e`
+Source-SHA256: `82164e22b0ac071d5cdd9b8391d7503023cb76fbbb2ee1ce2c911e6c8607f6b1`
 
 ## Responsibility
 
-`main.rs` is the command-line program `ladon`. It parses the command, opens the workspace given by `--root`, and runs the command. Two commands are handled before a workspace is opened: `shell-menu` and `shell-host-internal`, which are used by the Windows shell menu.
-
-## Commands added for Google Drive
-
-- `google-login`: runs `google_oauth::login` with the client from `OAuthClient::from_env`. The authorization URL is opened with `rundll32 url.dll,FileProtocolHandler` and is not printed. The command prints `Complete the Google Drive sign-in in the browser. Waiting up to five minutes.` before it waits. The timeout is five minutes. On success the refresh token is saved with `save_refresh_token` in the settings folder, and the command prints `Google Drive sign-in saved`.
-- `google-logout`: deletes the stored sign-in with `delete_refresh_token` and prints `Google Drive sign-in removed`.
-- Neither command needs a workspace. Neither prints a token, a code or a URL that contains a state value.
-- The settings folder is `LADON_SETTINGS_DIR`, or `%LOCALAPPDATA%\LADON` when that variable is unset.
-
-## Other commands
-
-The other commands are unchanged: `init`, `capture`, `scan`, `watch`, `files`, `history`, `restore`, `archive`, `ignore-check`, `sensitive-add`, `tag-folder`, `search`, `agent-*`, `shell-menu` and `shell-host-internal`. Their behaviour is described in `docs/` and is not changed by this design.
+`main.rs` is the binary entry point of the command-line program `ladon`. It contains one call, `ladon_explorer::entry::main_entry()`, and returns its result. Parsing, dispatch and every command are implemented in `src/entry.rs`, which is the library module behind this file.
 
 ## Dependencies
 
-`clap` (command parsing), `tokio` (runtime), `ladon_explorer` (engine, provider, policy, Google sign-in).
+`ladon_explorer::entry` (the command entry), and `anyhow` for the `Result` type returned from `main`.
 
 ## Public Contract
 
-The command-line program has these commands, in order of their handling: `shell-menu` and `shell-host-internal` (before a workspace is opened), `google-login` and `google-logout` (before a workspace is opened), then `init`, `agent-*`, `sensitive-add`, `scan`, `capture`, `watch`, `files`, `history`, `restore`, `archive`, `ignore-check` and `tag-folder`. Each command returns status 0 on success and a non-zero status with a message on failure.
+The binary is named `ladon`. `main` returns `anyhow::Result<()>`: an error returned by the entry is printed by the Rust runtime as `Error: ...` and the process exits with status 1. A failure that the entry has already printed exits with the code carried by `Reported`, as defined in `entry.rs.md`.
+
+The command set, its arguments, its output and its exit statuses are defined in `entry.rs.md` and are not repeated here.
 
 ## Change Notes
 
-`google-login` and `google-logout` are added. They need no workspace and print no token.
+- `main.rs` contains no command logic and no runtime set-up. The runtime is built by `entry::main_entry`.
+- The `clap` definitions and the command dispatch are in `src/entry.rs`.
