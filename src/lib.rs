@@ -43,3 +43,6 @@ pub mod doctask_flow;
 // Document-task reconciliation: anchor review against the latest version, owner decisions on
 // moved anchors, and file-move lineage.
 pub mod doctask_reconcile;
+
+// Document-task rendering: message catalogues, display width, tables, screens and error text.
+pub mod doctask_render;

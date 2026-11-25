@@ -2,7 +2,7 @@
 
 Source: `src/doctask_render.rs`
 
-Source-SHA256: `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`
+Source-SHA256: `78de0da339b7e4e3d7a141d626b7dc423097c587179d34998f5703a9e773ea83`
 
 ## Responsibility
 
@@ -62,7 +62,7 @@ Each enumeration key uses the stored string of the variant, so the catalogue is 
 `Table { headers: Vec<String>, rows: Vec<Vec<String>> }` renders with `render(mode) -> String`:
 1. Every header and cell passes through `cell`. A row shorter than the header list is padded with empty cells; a longer row is truncated.
 2. The width of a column is the largest display width among its header and cells.
-3. Each line joins its cells with two spaces. Every column except the last is padded to its width; the last column is not padded, so no line ends with a space.
+3. Each line joins its cells with two spaces. Every column except the last is padded to its width; trailing spaces of a line are removed, so no line ends with a space.
 4. The second line is a rule of hyphens, one run per column, with the same gutter.
 5. In `Color` mode the header line is painted `Heading` and the rule is painted `Dim`. The padding is computed on the unpainted text.
 6. Lines are joined with `\n`; the output has no trailing newline. A table without headers renders as the empty string.
@@ -95,7 +95,7 @@ Each screen returns lines joined by `\n` with no trailing newline. Titles and se
 
 **Approval** `ApprovalScreen { task, task_title, clause, target_file, target_section, submitted_by, submitted_kind, session, summary, risk, impact, options, diff, expected_hash, result_hash, baseline, other_plans, dependencies, anchor }`, with `BaselineCheck` of `Matches`, `Differs` and `NoBaseline`.
 - Title `approval.title`; clause; target file and section; submitter with its kind label; session; summary; risk label; impact.
-- Options, when present: a heading and `  n. option` items.
+- Options, when present: a heading and `  n. option` items; at most `MAX_PLAN_OPTIONS` (five) items are shown.
 - The unified diff: a heading, then each diff line sanitised and kept without indentation so that the `+` and `-` markers are at column one. An empty diff shows the none text.
 - `expected_hash` and `result_hash`, each on its own line with `short_hash` of the value.
 - The baseline check on its own line: `approval.baseline_matches`, `approval.baseline_differs` or `approval.baseline_none`.
