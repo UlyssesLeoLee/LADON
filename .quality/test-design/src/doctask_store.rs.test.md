@@ -60,6 +60,10 @@ Verification runs in the CI job `release.yml` (`cargo test --locked --all-target
 - Lock exhaustion: after six lock errors the write returns `StoreBusy`, whose text begins with `E_STORE_BUSY`. The write driver is exercised directly by the unit test `tc864_retry_policy_bounds`; the store's own UT-162 covers the open path.
 - `insert_row` with a value list that names a column that does not exist: the statement fails, the transaction rolls back, and the error is returned unchanged (`it_049_generic_writer_rejects_unknown_columns_and_writes_nothing`).
 
+## Flow Primitives
+
+The step primitive `commit_step`, the row writes `UpdateWhere` and `Delete`, and the readers `plans`, `approvals`, `evidence`, `links` and `anchor_reviews` are exercised through the flow in `tests/it_doctask_flow.rs`: a failed compare-and-set, a failing row write and a duplicate identifier roll the whole step back (TC-882); the chain order of evidence and approvals decides the acceptance rule (TC-885); the delete of a dependency row and the update of several plan rows are checked by TC-895 and TC-890. The anchor review columns are read by the anchor guard of TC-892.
+
 ## Regression Scope
 
 `doctask_service`, `doctask_flow` and `doctask_reconcile` (WP06 to WP08) call these methods and depend on the event hash tuple, the payload shapes, the legacy payload rule and the counter names; changing any of them changes persisted chains and must fail TC-862, TC-867 to TC-869 before any other module is changed. `Store` and `Engine` are used read-only by these tests: the tests in `tests/it_store.rs`, `tests/it_doctask_migration.rs` (IT-047, IT-073 and the probe tests) and `tests/it_engine.rs` must keep passing unchanged. The pure model tests (UT-141 to UT-146) must keep passing because the hashes come from `doctask_model`.
