@@ -2,7 +2,7 @@
 
 Source: `src/entry.rs`
 
-Source-SHA256: `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`
+Source-SHA256: `9a2b8b3ddff4b24648301e10fc962ca430e272e3796bdbbb5578cab40cda8379`
 
 ## Responsibility
 
@@ -43,7 +43,7 @@ pub trait Host: Sync {
     fn stop_requested(&self) -> bool { false }
     fn open_browser(&self, url: &str);
     fn settings_dir(&self) -> Option<PathBuf>;
-    async fn oauth_login(&self, on_url: &(dyn Fn(&str) + Sync), timeout: Duration) -> anyhow::Result<String>;
+    async fn oauth_login<F: Fn(&str) + Sync>(&self, on_url: &F, timeout: Duration) -> anyhow::Result<String>;
     fn save_refresh_token(&self, settings_dir: &Path, refresh_token: &str) -> anyhow::Result<()>;
     fn delete_refresh_token(&self, settings_dir: &Path) -> anyhow::Result<()>;
     async fn ai_tags(&self, endpoint: &str, model: &str, description: &str, filename: &str, preview: &str) -> anyhow::Result<Vec<String>>;

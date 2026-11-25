@@ -3,6 +3,7 @@ pub mod archive;
 pub mod crypto;
 pub mod diff;
 pub mod engine;
+pub mod entry;
 pub mod model;
 pub mod nema;
 pub mod policy;

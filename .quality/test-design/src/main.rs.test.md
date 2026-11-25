@@ -2,11 +2,11 @@
 
 Source: `src/main.rs`
 
-Source-SHA256: `82164e22b0ac071d5cdd9b8391d7503023cb76fbbb2ee1ce2c911e6c8607f6b1`
+Source-SHA256: `be36fd70a9fa4dfee00393676b65d8f955f72229fd647651a8d8c9f62086999d`
 
 ## Test Strategy
 
-The binary is tested as a process. `tests/it_entry_legacy.rs` runs the built `ladon` binary (`CARGO_BIN_EXE_ladon`) in temporary workspaces and compares the status, stdout and stderr of every legacy command with its recorded transcript. `tests/it_cli_binary_smoke.rs` runs the binary for the version and help output and for a first workspace, checks that `main.rs` holds exactly one call, and checks that the entry point is reachable from the library. The command logic itself is tested in process through `src/entry.rs`.
+The binary is tested as a process. `tests/it_entry_legacy.rs` runs the built `ladon` binary (`CARGO_BIN_EXE_ladon`) in temporary workspaces and compares the status, stdout and stderr of every legacy command with its recorded transcript. `tests/it_cli_binary_smoke.rs` runs the binary for the version and help output and for a first workspace, checks that `main.rs` holds exactly one call, and checks that the entry point is reachable from the library. The command logic itself is tested in process through `src/entry.rs`; the in-process cases TC-1027 to TC-1029 are listed in `.quality/test-design/src/entry.rs.test.md`.
 
 ## Test Cases
 
@@ -20,9 +20,6 @@ The binary is tested as a process. `tests/it_entry_legacy.rs` runs the built `la
 | TC-1025 | `--version`, `--help`, and `init`, `scan` and `files` in a temporary workspace through the binary; the source of `src/main.rs` is read. | Version text equals the package version; help lists every legacy command; the statuses are 0; `main.rs` has exactly one `main_entry()` call and no `tokio`, `clap` or other `fn` than `main`. | tests/it_cli_binary_smoke.rs::binary_smoke_version_help_and_workspace |
 | TC-1025 | The source of `src/main.rs` checked for its statements. | The file has one `fn main` and one call of `ladon_explorer::entry::main_entry()`. | tests/it_cli_binary_smoke.rs::binary_smoke_main_is_one_call |
 | TC-1026 | A function pointer of type `fn() -> anyhow::Result<()>` is assigned from `ladon_explorer::entry::main_entry`. | The test target compiles; the entry point is reachable from the library crate. | tests/it_cli_binary_smoke.rs::binary_smoke_entry_is_reachable |
-| TC-1027 | In-process `process_batch` and `watch` with a scripted event source, as listed in `src/entry.rs`. | Captured versions, deleted marks and policy reloads match the workspace; the notify error is returned; disconnection returns `watcher disconnected`; a stop request returns `Ok` without reading events. | src/entry.rs::tests::process_batch_captures_marks_and_reloads |
-| TC-1028 | In-process `google_login` and `google_logout` with a fake `Host`, as listed in `src/entry.rs`. | The refresh token is saved only after a successful login; messages match the recorded text; a missing folder returns the documented error; repeated logout is `Ok`. | src/entry.rs::tests::google_login_saves_token_after_success |
-| TC-1029 | In-process `tag_folder`, the shell menu and the shell host commands through `run` with a fake `Host`, as listed in `src/entry.rs`. | Excluded files are not sent to a remote endpoint; tags are sorted and unique; the shell menu opens Explorer when the host exits non-zero; each `ShellResult` maps to its message; a failed shell host returns `Reported` with code 1. | src/entry.rs::tests::tag_folder_skips_excluded_files_for_remote_endpoint |
 
 ## Acceptance Traceability
 

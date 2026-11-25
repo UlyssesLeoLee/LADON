@@ -2,7 +2,7 @@
 
 Source: `src/main.rs`
 
-Source-SHA256: `82164e22b0ac071d5cdd9b8391d7503023cb76fbbb2ee1ce2c911e6c8607f6b1`
+Source-SHA256: `be36fd70a9fa4dfee00393676b65d8f955f72229fd647651a8d8c9f62086999d`
 
 ## Responsibility
 

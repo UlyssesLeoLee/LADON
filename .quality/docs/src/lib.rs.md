@@ -2,7 +2,7 @@
 
 Source: `src/lib.rs`
 
-Source-SHA256: `83c60ca06de0588a6626d895adc3732be5214e150f4a712a9482a7a347a9330e`
+Source-SHA256: `5019b4afbbb718bbe2e27e81017f12919deb3625feba52bc000a852737e72d6b`
 
 ## Responsibility
 

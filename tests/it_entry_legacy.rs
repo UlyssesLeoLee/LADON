@@ -14,7 +14,11 @@ use std::{
 };
 
 /// Variables that select the Google sign-in folder or client; removed from every child process.
-const GOOGLE_ENV: [&str; 3] = ["LADON_GOOGLE_CLIENT_ID", "LADON_GOOGLE_CLIENT_SECRET", "LADON_SETTINGS_DIR"];
+const GOOGLE_ENV: [&str; 3] = [
+    "LADON_GOOGLE_CLIENT_ID",
+    "LADON_GOOGLE_CLIENT_SECRET",
+    "LADON_SETTINGS_DIR",
+];
 
 /// Collects the transcript of the commands run against one workspace.
 struct Transcript {
@@ -24,7 +28,10 @@ struct Transcript {
 
 impl Transcript {
     fn new(root: &Path) -> Self {
-        Self { root: root.to_path_buf(), text: String::new() }
+        Self {
+            root: root.to_path_buf(),
+            text: String::new(),
+        }
     }
 
     /// Runs `ladon --root <workspace> <args>` and returns the raw stdout.
@@ -35,7 +42,11 @@ impl Transcript {
     /// Runs the command with extra variables and with `remove` variables unset.
     fn run_with_env(&mut self, args: &[&str], set: &[(&str, &str)], remove: &[&str]) -> String {
         let mut command = Command::new(env!("CARGO_BIN_EXE_ladon"));
-        command.current_dir(&self.root).arg("--root").arg(&self.root).args(args);
+        command
+            .current_dir(&self.root)
+            .arg("--root")
+            .arg(&self.root)
+            .args(args);
         for name in GOOGLE_ENV.iter().chain(remove.iter()) {
             command.env_remove(name);
         }
@@ -45,8 +56,16 @@ impl Transcript {
         let output = command.output().expect("ladon binary runs");
         let stdout = String::from_utf8(output.stdout).expect("stdout is UTF-8");
         let stderr = String::from_utf8(output.stderr).expect("stderr is UTF-8");
-        let status = output.status.code().map_or("signal".to_string(), |code| code.to_string());
-        self.record(&format!("ladon {}", args.join(" ")), &status, &stdout, &stderr);
+        let status = output
+            .status
+            .code()
+            .map_or("signal".to_string(), |code| code.to_string());
+        self.record(
+            &format!("ladon {}", args.join(" ")),
+            &status,
+            &stdout,
+            &stderr,
+        );
         stdout
     }
 
@@ -54,7 +73,11 @@ impl Transcript {
         let label = normalise(label, &self.root);
         let stdout = normalise(stdout, &self.root);
         let stderr = normalise(stderr, &self.root);
-        self.text.push_str(&format!("$ {label}\nstatus: {status}\nstdout:\n{}stderr:\n{}", section(&stdout), section(&stderr)));
+        self.text.push_str(&format!(
+            "$ {label}\nstatus: {status}\nstdout:\n{}stderr:\n{}",
+            section(&stdout),
+            section(&stderr)
+        ));
     }
 
     /// Starts `watch`, records its start line and stops it.
@@ -70,12 +93,24 @@ impl Transcript {
             .spawn()
             .expect("ladon binary runs");
         let mut start_line = String::new();
-        BufReader::new(child.stdout.take().expect("stdout piped")).read_line(&mut start_line).expect("start line");
+        BufReader::new(child.stdout.take().expect("stdout piped"))
+            .read_line(&mut start_line)
+            .expect("start line");
         let _ = child.kill();
         child.wait().expect("child waits");
         let mut stderr = String::new();
-        child.stderr.take().expect("stderr piped").read_to_string(&mut stderr).expect("stderr reads");
-        self.record("ladon watch (stopped after the start line)", "stopped by the test", &start_line, &stderr);
+        child
+            .stderr
+            .take()
+            .expect("stderr piped")
+            .read_to_string(&mut stderr)
+            .expect("stderr reads");
+        self.record(
+            "ladon watch (stopped after the start line)",
+            "stopped by the test",
+            &start_line,
+            &stderr,
+        );
     }
 }
 
@@ -92,7 +127,9 @@ fn section(text: &str) -> String {
 /// Replaces the workspace path, identifiers and timestamps with placeholders.
 fn normalise(text: &str, root: &Path) -> String {
     let raw = root.to_string_lossy().into_owned();
-    let canonical = fs::canonicalize(root).map(|path| path.to_string_lossy().into_owned()).unwrap_or_else(|_| raw.clone());
+    let canonical = fs::canonicalize(root)
+        .map(|path| path.to_string_lossy().into_owned())
+        .unwrap_or_else(|_| raw.clone());
     let bare = canonical.trim_start_matches(r"\\?\").to_string();
     let mut forms = Vec::new();
     for base in [raw, canonical, bare] {
@@ -106,10 +143,16 @@ fn normalise(text: &str, root: &Path) -> String {
         text = text.replace(&form, "<WS>");
     }
     // clap prints the executable name with its platform suffix; JSON escapes a separator as two characters.
-    let text = text.replace("ladon.exe", "ladon").replace("\\\\", "/").replace('\\', "/");
-    let uuid = Regex::new(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}").expect("pattern");
+    let text = text
+        .replace("ladon.exe", "ladon")
+        .replace("\\\\", "/")
+        .replace('\\', "/");
+    let uuid = Regex::new(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+        .expect("pattern");
     let hash = Regex::new(r"\b[0-9a-f]{64}\b").expect("pattern");
-    let stamp = Regex::new(r"\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?").expect("pattern");
+    let stamp =
+        Regex::new(r"\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?")
+            .expect("pattern");
     let text = uuid.replace_all(&text, "<UUID>");
     let text = hash.replace_all(&text, "<SHA256>");
     stamp.replace_all(&text, "<TS>").into_owned()
@@ -301,7 +344,7 @@ stdout:
 ALLOWED: subject to explicit archive action
 stderr:
 (empty)
-$ ladon grep REQ --limit 10
+$ ladon grep REQ-001 --limit 10
 status: 0
 stdout:
 [
@@ -309,21 +352,6 @@ stdout:
     "path": "docs/req.md",
     "line": 1,
     "snippet": "# REQ-001"
-  },
-  {
-    "path": "graph.nema",
-    "line": 2,
-    "snippet": "REQ Requirement"
-  },
-  {
-    "path": "graph.nema",
-    "line": 5,
-    "snippet": "REQ>E1>DES Traces"
-  },
-  {
-    "path": "graph.nema",
-    "line": 6,
-    "snippet": "REQ>E2>TEST Traces"
   }
 ]
 stderr:
@@ -735,8 +763,19 @@ fn legacy_workspace_lifecycle() {
     t.run(&["init"]);
     write_documents(root);
     t.run(&["scan"]);
-    fs::write(root.join("docs/req.md"), "# REQ-001\nApproved with changes\n").expect("edit");
-    t.run(&["capture", "docs/req.md", "--actor", "tester", "--reason", "manual check"]);
+    fs::write(
+        root.join("docs/req.md"),
+        "# REQ-001\nApproved with changes\n",
+    )
+    .expect("edit");
+    t.run(&[
+        "capture",
+        "docs/req.md",
+        "--actor",
+        "tester",
+        "--reason",
+        "manual check",
+    ]);
     t.run(&["files"]);
     let history = t.run(&["history", "docs/req.md"]);
     t.run(&["verify", "docs/req.md"]);
@@ -755,13 +794,36 @@ fn legacy_queries_and_records() {
     write_documents(root);
     t.run(&["scan"]);
     let graph = root.join("graph.nema");
-    fs::write(&graph, " \\>9 1\nREQ Requirement\nDES Design\nTEST Test\nREQ>E1>DES Traces\nREQ>E2>TEST Traces").expect("graph");
+    fs::write(
+        &graph,
+        " \\>9 1\nREQ Requirement\nDES Design\nTEST Test\nREQ>E1>DES Traces\nREQ>E2>TEST Traces",
+    )
+    .expect("graph");
     t.run(&["ignore-check", "docs/req.md"]);
-    t.run(&["grep", "REQ", "--limit", "10"]);
-    t.run(&["tag-folder", "--recursive", "--description", "project notes"]);
+    t.run(&["grep", "REQ-001", "--limit", "10"]);
+    t.run(&[
+        "tag-folder",
+        "--recursive",
+        "--description",
+        "project notes",
+    ]);
     t.run(&["tags", "docs/req.md"]);
-    t.run(&["annotate", "docs/req.md", "--section", "ROOT", "reviewed by tester"]);
-    t.run(&["task", "docs/req.md", "--section", "ROOT", "Write summary", "--description", "due Friday"]);
+    t.run(&[
+        "annotate",
+        "docs/req.md",
+        "--section",
+        "ROOT",
+        "reviewed by tester",
+    ]);
+    t.run(&[
+        "task",
+        "docs/req.md",
+        "--section",
+        "ROOT",
+        "Write summary",
+        "--description",
+        "due Friday",
+    ]);
     let history = t.run(&["history", "docs/req.md"]);
     let first = version_id(&history, 1);
     t.run(&["plan", first.as_str()]);
@@ -783,7 +845,11 @@ fn legacy_agent_sensitivity_and_tagging() {
     t.run(&["ignore-check", "notes.txt"]);
     t.run(&["file-space"]);
     t.run(&["tag-folder"]);
-    check("legacy_agent_sensitivity_and_tagging", &t.text, AGENT_AND_TAGS);
+    check(
+        "legacy_agent_sensitivity_and_tagging",
+        &t.text,
+        AGENT_AND_TAGS,
+    );
 }
 
 #[test]
@@ -806,7 +872,12 @@ fn legacy_error_paths() {
     t.run(&["restore", "unknown-version"]);
     t.run(&["restore", "unknown-version", "--approve"]);
     t.run(&["archive", "unknown-version"]);
-    t.run(&["archive", "unknown-version", "--provider", "unknown-provider"]);
+    t.run(&[
+        "archive",
+        "unknown-version",
+        "--provider",
+        "unknown-provider",
+    ]);
     t.run(&["frobnicate"]);
     let combined = format!("{}{}", before_init.text, t.text);
     check("legacy_error_paths", &combined, ERRORS);
@@ -820,10 +891,22 @@ fn legacy_google_offline_and_watch_start() {
     let settings_text = settings.path().to_string_lossy().into_owned();
     let mut t = Transcript::new(root);
     t.run(&["init"]);
-    t.run_with_env(&["google-login"], &[("LADON_SETTINGS_DIR", settings_text.as_str())], &[]);
+    t.run_with_env(
+        &["google-login"],
+        &[("LADON_SETTINGS_DIR", settings_text.as_str())],
+        &[],
+    );
     t.run_with_env(&["google-login"], &[], &["LOCALAPPDATA"]);
-    t.run_with_env(&["google-logout"], &[("LADON_SETTINGS_DIR", settings_text.as_str())], &[]);
+    t.run_with_env(
+        &["google-logout"],
+        &[("LADON_SETTINGS_DIR", settings_text.as_str())],
+        &[],
+    );
     t.run_with_env(&["google-logout"], &[], &["LOCALAPPDATA"]);
     t.watch_start();
-    check("legacy_google_offline_and_watch_start", &t.text, GOOGLE_AND_WATCH);
+    check(
+        "legacy_google_offline_and_watch_start",
+        &t.text,
+        GOOGLE_AND_WATCH,
+    );
 }

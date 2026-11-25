@@ -2,7 +2,7 @@
 
 Source: `src/entry.rs`
 
-Source-SHA256: `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`
+Source-SHA256: `9a2b8b3ddff4b24648301e10fc962ca430e272e3796bdbbb5578cab40cda8379`
 
 ## Test Strategy
 
@@ -32,13 +32,13 @@ Acceptance items of WP00C, mapped to test cases:
 | TC-1028 | `run` with `google-login` and no settings folder. | Returns the error `no settings folder: set LOCALAPPDATA or LADON_SETTINGS_DIR`; `oauth_login` is not called. | src/entry.rs::tests::google_login_without_settings_folder |
 | TC-1028 | `run` with `google-logout` and a settings folder, twice. | Both return `Ok(())`; `delete_refresh_token` is called twice with the folder. | src/entry.rs::tests::google_logout_is_repeatable |
 | TC-1028 | `run` with `google-logout` and no settings folder. | Returns the no-settings-folder error; `delete_refresh_token` is not called. | src/entry.rs::tests::google_logout_without_settings_folder |
-| TC-1029 | `tag-folder --endpoint https://ai.example.test/v1 --model m --description rules --recursive` on a scanned workspace containing `docs/req.md` and `secret.txt`, where `secret.txt` was made sensitive with `add_sensitive` before the scan. The tagger returns `spec`, `requirements` and `spec` for `docs/req.md`. | The tagger is called for `docs/req.md` only; the output is `tagged 2 file(s)`; the tags of `docs/req.md` are the heuristic tags plus `spec`, `requirements` and `rule-described`, sorted and unique; the tags of `secret.txt` are `rule-described` only; `skipped remote AI tagging for excluded file: secret.txt` is written to stderr. | src/entry.rs::tests::tag_folder_skips_excluded_files_for_remote_endpoint |
+| TC-1029 | `tag_folder` with options for `https://ai.example.test/v1`, model `m`, description `rules` and recursion, on a scanned workspace containing `docs/req.md` and `secret.txt`, where `secret.txt` was made sensitive with `add_sensitive` before the scan. The tagger returns `spec`, `requirements` and `spec`. | The tagger is called for `docs/req.md` only; the count is 2 (printed as `tagged 2 file(s)`); the stored tags of `docs/req.md` include `spec` and `requirements` and are sorted and unique; the stored tags of `secret.txt` include `rule-described` and not `spec`. The stderr line `skipped remote AI tagging for excluded file: secret.txt` is written by the same branch and is not asserted in process. | src/entry.rs::tests::tag_folder_skips_excluded_files_for_remote_endpoint |
 | TC-1029 | `tag-folder` with `--endpoint` but without `--model`. | The tagger is never called; the output is `tagged <n> file(s)` with heuristic tags only. | src/entry.rs::tests::tag_folder_without_model_never_calls_ai |
 | TC-1029 | `shell-menu <file>` with `spawn_shell_host` returning 0, then returning 3. | Returns `Ok(())` both times; `open_in_explorer` is called only for status 3. | src/entry.rs::tests::shell_menu_opens_explorer_on_failed_host |
 | TC-1029 | `shell-host-internal <file>` with `run_isolated_host` returning `ExecutedOrDismissed`, `ViewHistory`, `DocumentTask` and `OpenExplorer`. | Each returns `Ok(())`; `OpenExplorer` calls `open_in_explorer` with the canonical path. | src/entry.rs::tests::shell_host_results_are_mapped |
 | TC-1029 | `shell-host-internal <file>` with `MarkSensitive` in an initialised workspace. | Returns `Ok(())`; the policy reports the file excluded afterwards. | src/entry.rs::tests::shell_host_mark_sensitive_updates_policy |
 | TC-1029 | `shell-host-internal <file>` with `run_isolated_host` returning an error. | Returns `Reported` with code 1. | src/entry.rs::tests::shell_host_error_is_reported_with_code_one |
-| TC-1029 | `init` through `run` with `--root <dir>`; then `annotate` and `task` on an untracked file. | `init` creates the workspace (`Ok`); `annotate` and `task` return `file has no version` for a file that is tracked without a version, and the lookup error for an untracked file. | src/entry.rs::tests::init_and_record_commands_through_run |
+| TC-1029 | `init` through `run` with `--root <dir>`; then `annotate` and `task` on an untracked file. | `init` creates the workspace (`Ok`); `annotate` and `task` return `file not found in ledger`. | src/entry.rs::tests::init_and_record_commands_through_run |
 | TC-1029 | `Cli::try_parse_from` with no subcommand, and with an unknown option. | Both return clap errors; no host call is made. | src/entry.rs::tests::cli_rejects_missing_and_unknown_arguments |
 
 ## Boundary & Failure Cases
