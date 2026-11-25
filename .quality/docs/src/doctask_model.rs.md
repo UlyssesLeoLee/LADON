@@ -26,7 +26,7 @@ Each value domain is a Rust enum with `as_str()` returning the stored string, `p
 
 ### Transitions
 
-`Transition` has variants `T1` to `T11` and `code()` returns `"T1"` to `"T11"`. `TRANSITIONS` is a static table of `TransitionSpec { id, from, to, actors, event_kind }` with sixteen rows: T1 open to analysis (human, agent); T2 analysis to approval (human, agent); T3 approval to working (human); T4 approval to analysis (human); T5 working to verification (human, agent); T6 verification to done (human); T7 verification to working (human, agent); T8 working to analysis (human, agent); T9 from each of open, analysis, approval, working and verification to cancelled (human); T10 from done and from cancelled to open (human); T11 approval to analysis (system). The `event_kind` of T10 is `dt.task.reopened`; every other row carries `dt.task.transitioned`.
+`Transition` has variants `T1` to `T11` and `code()` returns `"T1"` to `"T11"`. `ActorKind` converts from `Principal` through `From`, each principal giving the kind of the same name. `TRANSITIONS` is a static table of `TransitionSpec { id, from, to, actors, event_kind }` with sixteen rows: T1 open to analysis (human, agent); T2 analysis to approval (human, agent); T3 approval to working (human); T4 approval to analysis (human); T5 working to verification (human, agent); T6 verification to done (human); T7 verification to working (human, agent); T8 working to analysis (human, agent); T9 from each of open, analysis, approval, working and verification to cancelled (human); T10 from done and from cancelled to open (human); T11 approval to analysis (system). The `event_kind` of T10 is `dt.task.reopened`; every other row carries `dt.task.transitioned`.
 
 `lookup_transition(from, to, principal) -> Result<Transition, DocError>`:
 1. No row for the pair `(from, to)`: `E_TRANSITION_DENIED`.
@@ -40,7 +40,7 @@ Guard inputs and evaluation: `GuardInput<'a>` carries the principal and the fact
 
 | Transition | Check and error |
 |---|---|
-| T1 | `proposal_accepted` else `E_TRANSITION_DENIED` (hint: the owner must adopt the proposal); anchor `orphaned`, `file_missing` or `ambiguous` else `E_ANCHOR_BROKEN` |
+| T1 | `proposal_accepted` else `E_TRANSITION_DENIED` (hint: the owner must adopt the proposal); the anchor is not `orphaned`, `file_missing` or `ambiguous`, else `E_ANCHOR_BROKEN` |
 | T2 | none (plan field validation is `validate_plan_text`) |
 | T3 | principal human else `E_HUMAN_ONLY`; `latest_plan_submitted` else `E_GUARD_FAILED`; `subject_hash_matches` else `E_STALE_SUBJECT`; `dependencies_done` else `E_GUARD_FAILED`; anchor settled else `E_ANCHOR_BROKEN`; `plan_stale` gives `E_STALE_PLAN` (the caller commits T11 in the same transaction before returning) |
 | T4, T7, T8, T9, T10 | `reason` non-empty after trimming and at most 500 characters else `E_INVALID_ARG`; T7 by agent requires `latest_evidence_failed` else `E_GUARD_FAILED`; T8 and T9 require `!has_applying_plan` else `E_GUARD_FAILED` |
@@ -56,7 +56,7 @@ Guard inputs and evaluation: `GuardInput<'a>` carries the principal and the fact
 
 ### Errors
 
-`ErrorCode` has the 27 codes of section 14.1, each with `as_str()` (for example `E_STALE_PLAN`), `exit_code()` (the value of section 14.1 and section 9.3) and `ALL`. `DocError { code, message_zh, hint_zh, detail }` is built with `DocError::new(code, message_zh, hint_zh)` and refined with `with_detail`. Messages are Chinese; English texts are supplied by the render module from the code.
+`ErrorCode` has the 27 codes of section 14.1, each with `as_str()` (for example `E_STALE_PLAN`), `exit_code()`: 1 for `E_INTERNAL`; 3 for `E_NOT_FOUND`, `E_AMBIGUOUS` and `E_SECTION_NOT_FOUND`; 5 for `E_HUMAN_ONLY` and `E_NOT_INTERACTIVE`; 6 for `E_STALE_PLAN`, `E_STALE_SUBJECT`, `E_CONFLICT` and `E_FILE_CHANGED`; 7 for `E_STORE_BUSY`; 8 for `E_POLICY_DENIED`; 9 for `E_INTEGRITY`; 4 for every other code. `Display` for `DocError` writes `CODE: message_zh` and `ALL`. `DocError { code, message_zh, hint_zh, detail }` is built with `DocError::new(code, message_zh, hint_zh)` and refined with `with_detail`. Messages are Chinese; English texts are supplied by the render module from the code.
 
 ### Handles and selectors
 
@@ -107,7 +107,7 @@ Lengths count Unicode scalar values. The constants are: task title 1 to 200; tas
 
 1. Duplicate ids are `E_INVALID_ARG`. The dependency graph of all input tasks, with an edge from each known dependency to its dependent, is layered with `nema::topo_batches`. A cycle (including a self-dependency) is `E_DEP_CYCLE`.
 2. The schedulable set holds the tasks whose status is `open`, `analysis`, `approval` or `working` and whose proposal is accepted. Other tasks are not scheduled and are not reported.
-3. For each schedulable task, a dependency that is `done` is dropped. A dependency that is schedulable is an edge. Any other dependency blocks the task: `cancelled` gives the reason "dependency cancelled", an unaccepted proposal gives "dependency proposed", an unknown id gives "dependency not found" and any other status gives "dependency not schedulable".
+3. For each schedulable task, a dependency that is `done` is dropped. A dependency that is schedulable is an edge. Any other dependency blocks the task: `cancelled` gives the reason `dependency cancelled: T-n`, an unaccepted proposal gives `dependency proposed: T-n`, any other status gives `dependency not schedulable: T-n`, and an unknown id gives `dependency not found` (it has no handle).
 4. A schedulable task that depends on a blocked task is blocked with the reason `upstream blocked: T-n`, repeated to a fixed point.
 5. The unblocked tasks are layered with `nema::topo_batches`. Each batch is sorted by `task_no`.
 6. The write target of a task is `plan_target` when present, otherwise `link_target`, otherwise the task is listed in `unknown_targets` (it stays in its batch).
