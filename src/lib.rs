@@ -29,3 +29,6 @@ pub mod doctask_model;
 
 // Document-task pure clause layer: outline, clause numbers, anchor classification, byte-level splice.
 pub mod doctask_outline;
+
+// Document-task persistence: immediate transactions, counters, governance chain, legacy backfill.
+pub mod doctask_store;
