@@ -20,6 +20,7 @@ Source-SHA256: `992b2939c944acab655b30ec7d32f2f744338c1ab4748a89c4079693978b55d4
 | TC-900 | Build of the library with the `doctask_reconcile` declaration present, and the reconciliation integration tests. | The crate compiles with `doctask_reconcile` declared, and the module is reachable as `ladon_explorer::doctask_reconcile`. | tests/it_doctask_reconcile.rs::tc900_renamed_heading_relocates_and_gates_approval |
 | TC-870 | Build of the library with the `doctask_service` declaration present, and the service integration tests. | The crate compiles with `doctask_service` declared, and the module is reachable as `ladon_explorer::doctask_service`. | tests/it_doctask_service.rs::tc870_create_requires_baseline_and_pins_base_version |
 | TC-910 | Build of the library with the `doctask_render` declaration present, and the render module's width and table tests. | The crate compiles with `doctask_render` declared, and the module is reachable as `ladon_explorer::doctask_render`. | src/doctask_render.rs::tests::ut_151_cjk_width_and_table_alignment |
+| TC-920 | Build of the library with the `doctask_report` declaration present, and the report module's NEMA round-trip tests. | The crate compiles with `doctask_report` declared, and the module is reachable as `ladon_explorer::doctask_report`. | src/doctask_report.rs::tests::tc920_nema_roundtrip_and_batches |
 
 ## Boundary & Failure Cases
 
