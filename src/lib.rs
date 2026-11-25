@@ -26,3 +26,6 @@ pub mod emergence;
 
 // Document-task pure model: states, transitions, errors, hashes, limits, scheduling.
 pub mod doctask_model;
+
+// Document-task pure clause layer: outline, clause numbers, anchor classification, byte-level splice.
+pub mod doctask_outline;

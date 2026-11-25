@@ -2,7 +2,7 @@
 
 Source: `src/doctask_outline.rs`
 
-Source-SHA256: `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`
+Source-SHA256: `0f9a8609e7698124d33d887c97893809b7a26202302bed7057d0297bbfb62a1e`
 
 ## Responsibility
 
