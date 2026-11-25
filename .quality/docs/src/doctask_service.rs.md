@@ -2,7 +2,7 @@
 
 Source: `src/doctask_service.rs`
 
-Source-SHA256: `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`
+Source-SHA256: `ced75da560e8bee97ec5ff4992bffa988869c84bd757d91c73302d8ccdc3434d`
 
 ## Responsibility
 
@@ -63,7 +63,7 @@ Not covered here: acknowledgement, relocation and rebase of anchors (WP08), tran
 - `edit_task(handle, edit: &TaskEdit, expected_hash) -> TaskView` (human only).
 - `legacy_annotate(file_ref, section, text) -> AnnotationRef` and `legacy_task(file_ref, section, title, description) -> TaskRef` (human only; the path of the `annotate` and `task` commands, which keep the 0.0.3 semantics).
 
-Value types: `TaskSpec { title, description, owner, priority: i64, private: bool }` (`TaskSpec::new(title)` sets priority 2); `TaskEdit { title, description, owner, priority, visibility: Option<..> }` (absent fields are unchanged); `AnnotationRef { id, handle, existing }`; `TaskRef { id, handle, task_no, existing }`; `TaskView` (identifier, handle, file reference, path, section, clause number, base version id and number, `base_stale`, `file_state` (`live` or `missing`), anchor state, `unbound` (no baseline binding), status, title, description, owner, priority, proposal state, visibility, source kind, creator and creator kind, times, and `blocked_by` as handles of visible unfinished prerequisites); `TaskCard { task: TaskView, events: Vec<EventView> }`; `EventView { seq, kind, from_status, to_status, actor, actor_kind, timestamp, payload: Option<String> }` with `payload` absent for the agent; `AnnotationView`.
+Value types: `TaskSpec { title, description, owner, priority: i64, private: bool }` (`TaskSpec::new(title)` sets priority 2); `TaskEdit { title, description, owner, priority, visibility }`, each an `Option` (an absent field is unchanged); `TaskView` (identifier, handle, task number, file reference, path, anchor identifier, section, clause number, anchor state, `unbound` (no baseline binding), base version id and number, `base_stale`, `file_state` (`live` or `missing`), status, title, description, owner, priority, proposal state, visibility, source kind, creator and creator kind, times, and `blocked_by` as handles of visible unfinished prerequisites); `TaskCard { task, events }`; `EventView { seq, kind, from_status, to_status, actor, actor_kind, timestamp, payload: Option<String> }` with `payload` absent for the agent principal; `AnnotationView`, `AnnotationRef { id, handle, existing }`, `TaskRef { id, handle, existing }`.
 
 ### Free functions
 
@@ -82,7 +82,7 @@ Value types: `TaskSpec { title, description, owner, priority: i64, private: bool
 5. Gate for the agent principal: file and version (`E_NOT_FOUND`).
 6. Baseline precondition (`E_NO_BASELINE`) and section resolution on the baseline version (`E_SECTION_NOT_FOUND`, `E_AMBIGUOUS`, `E_ANCHOR_BROKEN` when the bytes are cold).
 7. Expected subject: `E_STALE_SUBJECT` when the displayed version id, content hash or task content hash differs.
-8. Live file digest for baseline registration: `E_FILE_CHANGED` when the digest of the file on disk differs from `resources.current_hash`. The file is read at `root/relative_path`; a missing file is `E_FILE_MISSING`.
+8. Live file for baseline registration: a deleted file, or one that cannot be read at `root/relative_path`, is `E_FILE_MISSING`; a digest that differs from `resources.current_hash` is `E_FILE_CHANGED`.
 9. Natural-key deduplication: an existing record is returned with `existing: true`.
 10. One `DocStore` write with its governance event (`write_with_event` or the typed `create_task` and `add_annotation`).
 
@@ -106,9 +106,9 @@ Every agent read is projected through one `Projection` per call. The projection 
 
 ### Anchors and text
 
-- Section resolution: `parse_section_selector(section)`, then `doctask_outline::resolve` on `outline(bytes, extension)` of the version bytes. The bytes come from the content-addressed store and are bounded by `MAX_TARGET_FILE_BYTES`. Cold bytes are `E_ANCHOR_BROKEN`.
+- Section resolution on the strict path: `parse_section_selector(section)`, then `doctask_outline::resolve` on `outline(bytes, extension)` of the version bytes. The bytes come from the content-addressed store and are bounded by `MAX_TARGET_FILE_BYTES`. Cold bytes are `E_ANCHOR_BROKEN`.
 - Anchors created by the service carry the clause fingerprint (`AnchorFingerprint`: baseline id, clause key, clause number, title, level, lines, full and body hash) and state `valid`.
-- The legacy path keeps the 0.0.3 behaviour: no baseline is required. The base version is the active baseline's version when there is one, and otherwise the latest version (the anchor then has no baseline binding). A section that resolves gets a fingerprinted `valid` anchor. A section that does not resolve, or whose bytes are cold, gets an `unchecked` anchor keyed by the raw section text and is accepted, not refused. Legacy tasks have source `legacy`, proposal `accepted` and visibility `shared`. Legacy annotations are `shared`.
+- The legacy path keeps the 0.0.3 behaviour: no baseline is required. The base version is the active baseline's version when there is one, and otherwise the latest version (the anchor then has no baseline binding). The section string is first matched as an exact clause key, then as a selector. A section that resolves gets a fingerprinted `valid` anchor. A section that does not resolve, or whose bytes are cold, gets an `unchecked` anchor keyed by the raw section text and is accepted, not refused. Legacy tasks have source `legacy`, proposal `accepted` and visibility `shared`. Legacy annotations are `shared`.
 
 ### Tasks
 

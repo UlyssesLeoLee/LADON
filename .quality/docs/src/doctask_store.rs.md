@@ -2,7 +2,7 @@
 
 Source: `src/doctask_store.rs`
 
-Source-SHA256: `486d5dc46289698767fc30200b60e6136fed3949096a4acc4d98ecc476bee5dc`
+Source-SHA256: `1faba6c97e176cc96dbd53328bbf9e5eba6afd89268c3d0b98586e5c97e4f08c`
 
 ## Responsibility
 
@@ -45,7 +45,7 @@ Retry policy: one driver, `with_retry`, runs every write and every read. Each at
 
 `RowWrite` is the typed row change of an atomic write. `Insert { table, values }` inserts one row. `Update { table, key, key_value, values }` updates the row whose `key` column equals `key_value`; both `table` and every column name must be in the document-task tables and match `^[a-z][a-z0-9_]*$`. `AnchorFingerprint` holds the clause fingerprint of an anchor: `baseline_id`, `section_key`, `clause_number`, `title`, `level`, `line_start`, `line_end`, `full_hash`, `body_hash`.
 
-`BaselineRow` mirrors `doc_baselines`: `id`, `file_id`, `version_id`, `version_no` (`i64`), `content_hash`, `approver`, `note`, `created_at`, `revoked_at` and `revoked_by` (`Option<String>`, `NULL` when active). `TaskRow` joins `doc_tasks`, `doc_task_meta` and `doc_anchors`: `id`, `task_no`, `file_id`, `anchor_id`, `anchor_section`, `base_version_id`, `title`, `description`, `status`, `owner`, `priority` (`i64`), `proposal_state`, `visibility`, `source_kind`, `created_by`, `created_by_kind`, `session`, `created_at`, `updated_at`, `closed_at` (`Option<String>`), `anchor_state`, `clause_number` and `baseline_id` (the anchor columns, empty when no anchor row or fingerprint exists). `AnnotationRow` joins `annotations` and `doc_annotation_meta`: `id`, `annotation_no`, `file_id`, `anchor_id`, `section_key`, `base_version_id`, `text`, `author`, `author_kind`, `visibility`, `rationale`, `quote`, `created_at`.
+`BaselineRow` mirrors `doc_baselines`: `id`, `file_id`, `version_id`, `version_no` (`i64`), `content_hash`, `approver`, `note`, `created_at`, `revoked_at` and `revoked_by` (`Option<String>`, `NULL` when active). `TaskRow` joins `doc_tasks`, `doc_task_meta` and `doc_anchors`: `id`, `task_no`, `file_id`, `anchor_id`, `anchor_section`, `base_version_id`, `title`, `description`, `status`, `owner`, `priority` (`i64`), `proposal_state`, `visibility`, `source_kind`, `created_by`, `created_by_kind`, `session`, `created_at`, `updated_at`, `closed_at` (`Option<String>`), `anchor_state`, `clause_number` and `baseline_id` (the anchor columns, `None` when no anchor row matches the meta row). `AnnotationRow` joins `annotations` and `doc_annotation_meta`: `id`, `annotation_no`, `file_id`, `anchor_id`, `section_key`, `base_version_id`, `text`, `author`, `author_kind`, `visibility`, `rationale`, `quote`, `created_at`.
 
 ### Write methods
 

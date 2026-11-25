@@ -2,7 +2,7 @@
 
 Source: `src/doctask_store.rs`
 
-Source-SHA256: `486d5dc46289698767fc30200b60e6136fed3949096a4acc4d98ecc476bee5dc`
+Source-SHA256: `1faba6c97e176cc96dbd53328bbf9e5eba6afd89268c3d0b98586e5c97e4f08c`
 
 ## Test Strategy
 

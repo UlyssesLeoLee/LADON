@@ -32,3 +32,6 @@ pub mod doctask_outline;
 
 // Document-task persistence: immediate transactions, counters, governance chain, legacy backfill.
 pub mod doctask_store;
+
+// Document-task service core: caller, transfer gate, agent view, baselines, annotations, tasks.
+pub mod doctask_service;

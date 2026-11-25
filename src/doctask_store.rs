@@ -50,6 +50,99 @@ const ROOT_KEY: &str = "ROOT";
 const ROOT_TITLE: &str = "（全文）";
 const UNKNOWN_KIND: &str = "unknown";
 
+/// One row write of an atomic change. Table and column names are checked against the
+/// document-task tables before any statement runs.
+#[derive(Clone)]
+pub enum RowWrite {
+    /// Inserts one row with the given columns.
+    Insert {
+        table: &'static str,
+        values: Vec<(&'static str, Value)>,
+    },
+    /// Updates the row whose `key` column equals `key_value`. Exactly one row must change.
+    Update {
+        table: &'static str,
+        key: &'static str,
+        key_value: Value,
+        values: Vec<(&'static str, Value)>,
+    },
+}
+
+/// Clause fingerprint stored with an anchor created on a baseline version.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AnchorFingerprint {
+    pub baseline_id: String,
+    pub section_key: String,
+    pub clause_number: String,
+    pub title: String,
+    pub level: i64,
+    pub line_start: i64,
+    pub line_end: i64,
+    pub full_hash: String,
+    pub body_hash: String,
+}
+
+/// One row of `doc_baselines`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BaselineRow {
+    pub id: String,
+    pub file_id: String,
+    pub version_id: String,
+    pub version_no: i64,
+    pub content_hash: String,
+    pub approver: String,
+    pub note: String,
+    pub created_at: String,
+    pub revoked_at: Option<String>,
+    pub revoked_by: Option<String>,
+}
+
+/// One task with its meta row and its anchor columns (`None` when no anchor row matches).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TaskRow {
+    pub id: String,
+    pub task_no: i64,
+    pub file_id: String,
+    pub anchor_id: String,
+    pub anchor_section: String,
+    pub base_version_id: String,
+    pub title: String,
+    pub description: String,
+    pub status: String,
+    pub owner: String,
+    pub priority: i64,
+    pub proposal_state: String,
+    pub visibility: String,
+    pub source_kind: String,
+    pub created_by: String,
+    pub created_by_kind: String,
+    pub session: String,
+    pub created_at: String,
+    pub updated_at: String,
+    pub closed_at: Option<String>,
+    pub anchor_state: Option<String>,
+    pub clause_number: Option<String>,
+    pub baseline_id: Option<String>,
+}
+
+/// One annotation with its meta row.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AnnotationRow {
+    pub id: String,
+    pub annotation_no: i64,
+    pub file_id: String,
+    pub anchor_id: String,
+    pub section_key: String,
+    pub base_version_id: String,
+    pub text: String,
+    pub author: String,
+    pub author_kind: String,
+    pub visibility: String,
+    pub rationale: String,
+    pub quote: String,
+    pub created_at: String,
+}
+
 /// Document-task persistence over one library file.
 #[derive(Debug, Clone)]
 pub struct DocStore {
@@ -383,6 +476,163 @@ impl DocStore {
                 .filter(|(_, count)| *count > 1)
                 .map(|((file_id, version_id), count)| (file_id, version_id, count))
                 .collect())
+        })
+        .await
+    }
+
+    /// Applies `writes` in order and appends `ev` to the chain, in one Immediate transaction.
+    /// Every identifier is supplied by the caller, so a retried transaction writes the same rows.
+    pub async fn write_with_event(
+        &self,
+        writes: &[RowWrite],
+        ev: &NewEvent,
+    ) -> Result<EventRecord> {
+        validate_event(ev)?;
+        for write in writes {
+            validate_write(write)?;
+        }
+        let id = new_id();
+        let now = now();
+        let store = &self.store;
+        let (writes, ev, id, now) = (writes, ev, id.as_str(), now.as_str());
+        with_retry(move || async move {
+            let conn = store.connect().await?;
+            let tx = Transaction::new_unchecked(&conn, TransactionBehavior::Immediate).await?;
+            let outcome = write_with_event_tx(&tx, writes, ev, id, now).await;
+            finish(tx, outcome).await
+        })
+        .await
+    }
+
+    /// Returns the id of the anchor for the clause of `fp` on the base version, creating it in
+    /// state `valid` with the fingerprint when it is absent. An existing anchor is unchanged.
+    pub async fn ensure_anchor_clause(
+        &self,
+        file_id: &str,
+        base_version_id: &str,
+        fp: &AnchorFingerprint,
+    ) -> Result<String> {
+        let now = now();
+        let store = &self.store;
+        let (file_id, base_version_id, fp, now) = (file_id, base_version_id, fp, now.as_str());
+        with_retry(move || async move {
+            let conn = store.connect().await?;
+            let tx = Transaction::new_unchecked(&conn, TransactionBehavior::Immediate).await?;
+            let outcome = ensure_anchor_clause_tx(&tx, file_id, base_version_id, fp, now).await;
+            finish(tx, outcome).await
+        })
+        .await
+    }
+
+    /// True when migration 4 is recorded in `schema_migrations`. Writes nothing.
+    pub async fn schema_current(&self) -> Result<bool> {
+        let store = &self.store;
+        with_retry(move || async move {
+            let conn = store.connect().await?;
+            let count = query_i64(
+                &conn,
+                "SELECT COUNT(*) FROM schema_migrations WHERE version = 4",
+                (),
+            )
+            .await?;
+            Ok(count > 0)
+        })
+        .await
+    }
+
+    /// Baseline rows, of one file when `file_id` is given, ordered by creation time and id.
+    pub async fn baselines(&self, file_id: Option<&str>) -> Result<Vec<BaselineRow>> {
+        let store = &self.store;
+        with_retry(move || async move {
+            let conn = store.connect().await?;
+            let mut rows = match file_id {
+                Some(id) => conn.query(BASELINES_OF_FILE_SQL, params![id]).await?,
+                None => conn.query(BASELINES_SQL, ()).await?,
+            };
+            let mut out = Vec::new();
+            while let Some(row) = rows.next().await? {
+                out.push(BaselineRow {
+                    id: row.get::<String>(0)?,
+                    file_id: row.get::<String>(1)?,
+                    version_id: row.get::<String>(2)?,
+                    version_no: row.get::<i64>(3)?,
+                    content_hash: row.get::<String>(4)?,
+                    approver: row.get::<String>(5)?,
+                    note: row.get::<String>(6)?,
+                    created_at: row.get::<String>(7)?,
+                    revoked_at: row.get::<Option<String>>(8)?,
+                    revoked_by: row.get::<Option<String>>(9)?,
+                });
+            }
+            Ok(out)
+        })
+        .await
+    }
+
+    /// Every task with its meta row and anchor columns, ordered by task number.
+    pub async fn tasks(&self) -> Result<Vec<TaskRow>> {
+        let store = &self.store;
+        with_retry(move || async move {
+            let conn = store.connect().await?;
+            let mut rows = conn.query(TASKS_SQL, ()).await?;
+            let mut out = Vec::new();
+            while let Some(row) = rows.next().await? {
+                out.push(TaskRow {
+                    id: row.get::<String>(0)?,
+                    task_no: row.get::<i64>(1)?,
+                    file_id: row.get::<String>(2)?,
+                    anchor_id: row.get::<String>(3)?,
+                    anchor_section: row.get::<String>(4)?,
+                    base_version_id: row.get::<String>(5)?,
+                    title: row.get::<String>(6)?,
+                    description: row.get::<String>(7)?,
+                    status: row.get::<String>(8)?,
+                    owner: row.get::<String>(9)?,
+                    priority: row.get::<i64>(10)?,
+                    proposal_state: row.get::<String>(11)?,
+                    visibility: row.get::<String>(12)?,
+                    source_kind: row.get::<String>(13)?,
+                    created_by: row.get::<String>(14)?,
+                    created_by_kind: row.get::<String>(15)?,
+                    session: row.get::<String>(16)?,
+                    created_at: row.get::<String>(17)?,
+                    updated_at: row.get::<String>(18)?,
+                    closed_at: row.get::<Option<String>>(19)?,
+                    anchor_state: row.get::<Option<String>>(20)?,
+                    clause_number: row.get::<Option<String>>(21)?,
+                    baseline_id: row.get::<Option<String>>(22)?,
+                });
+            }
+            Ok(out)
+        })
+        .await
+    }
+
+    /// Every annotation with its meta row, ordered by annotation number.
+    pub async fn annotations(&self) -> Result<Vec<AnnotationRow>> {
+        let store = &self.store;
+        with_retry(move || async move {
+            let conn = store.connect().await?;
+            let mut rows = conn.query(ANNOTATIONS_SQL, ()).await?;
+            let mut out = Vec::new();
+            while let Some(row) = rows.next().await? {
+                out.push(AnnotationRow {
+                    id: row.get::<String>(0)?,
+                    annotation_no: row.get::<i64>(1)?,
+                    file_id: row.get::<String>(2)?,
+                    anchor_id: row.get::<String>(3)?,
+                    section_key: row.get::<String>(4)?,
+                    base_version_id: row.get::<String>(5)?,
+                    text: row.get::<String>(6)?,
+                    author: row.get::<String>(7)?,
+                    author_kind: row.get::<String>(8)?,
+                    visibility: row.get::<String>(9)?,
+                    rationale: row.get::<String>(10)?,
+                    quote: row.get::<String>(11)?,
+                    created_at: row.get::<String>(12)?,
+                });
+            }
+            Ok(out)
         })
         .await
     }
@@ -1187,6 +1437,127 @@ async fn query_opt_i64<P: IntoParams>(conn: &Connection, sql: &str, p: P) -> Res
 
 async fn query_i64<P: IntoParams>(conn: &Connection, sql: &str, p: P) -> Result<i64> {
     Ok(query_opt_i64(conn, sql, p).await?.unwrap_or(0))
+}
+
+const BASELINES_SQL: &str = "SELECT id, file_id, version_id, version_no, content_hash, approver, note, created_at, revoked_at, revoked_by FROM doc_baselines ORDER BY created_at, id";
+const BASELINES_OF_FILE_SQL: &str = "SELECT id, file_id, version_id, version_no, content_hash, approver, note, created_at, revoked_at, revoked_by FROM doc_baselines WHERE file_id = ?1 ORDER BY created_at, id";
+const TASKS_SQL: &str = "SELECT t.id, m.task_no, t.file_id, m.anchor_id, t.anchor_section, t.base_version_id, t.title, t.description, t.status, m.owner, m.priority, m.proposal_state, m.visibility, m.source_kind, m.created_by, m.created_by_kind, m.session, t.created_at, m.updated_at, m.closed_at, a.state, a.clause_id, a.baseline_id FROM doc_tasks t JOIN doc_task_meta m ON m.task_id = t.id LEFT JOIN doc_anchors a ON a.id = m.anchor_id ORDER BY m.task_no";
+const ANNOTATIONS_SQL: &str = "SELECT a.id, m.annotation_no, a.file_id, m.anchor_id, a.section_key, a.base_version_id, a.text, m.author, m.author_kind, m.visibility, m.rationale, m.quote, m.created_at FROM annotations a JOIN doc_annotation_meta m ON m.annotation_id = a.id ORDER BY m.annotation_no";
+
+/// Checks the table and column names of one row write.
+fn validate_write(write: &RowWrite) -> Result<()> {
+    let (table, values, key) = match write {
+        RowWrite::Insert { table, values } => (*table, values, None),
+        RowWrite::Update {
+            table, key, values, ..
+        } => (*table, values, Some(*key)),
+    };
+    let names_ok = values.iter().all(|(column, _)| is_identifier(column))
+        && key.map_or(true, |name| is_identifier(name));
+    if !is_doc_table(table) || values.is_empty() || !names_ok {
+        return Err(doc_error(
+            ErrorCode::InvalidArg,
+            "非法的表名或列名",
+            "只能写入文档任务表的合法列",
+        ));
+    }
+    Ok(())
+}
+
+async fn write_with_event_tx(
+    conn: &Connection,
+    writes: &[RowWrite],
+    ev: &NewEvent,
+    id: &str,
+    now: &str,
+) -> Result<EventRecord> {
+    for write in writes {
+        apply_write(conn, write).await?;
+    }
+    append_draft(conn, draft_from_event(ev, id, now)).await
+}
+
+async fn apply_write(conn: &Connection, write: &RowWrite) -> Result<()> {
+    match write {
+        RowWrite::Insert { table, values } => {
+            let columns: Vec<&str> = values.iter().map(|(column, _)| *column).collect();
+            let placeholders: Vec<String> = (1..=values.len())
+                .map(|index| format!("?{index}"))
+                .collect();
+            let sql = format!(
+                "INSERT INTO {table} ({}) VALUES ({})",
+                columns.join(", "),
+                placeholders.join(", ")
+            );
+            let bound: Vec<Value> = values.iter().map(|(_, value)| value.clone()).collect();
+            conn.execute(sql.as_str(), bound).await?;
+            Ok(())
+        }
+        RowWrite::Update {
+            table,
+            key,
+            key_value,
+            values,
+        } => {
+            let assignments: Vec<String> = values
+                .iter()
+                .enumerate()
+                .map(|(index, (column, _))| format!("{column} = ?{}", index + 1))
+                .collect();
+            let sql = format!(
+                "UPDATE {table} SET {} WHERE {key} = ?{}",
+                assignments.join(", "),
+                values.len() + 1
+            );
+            let mut bound: Vec<Value> = values.iter().map(|(_, value)| value.clone()).collect();
+            bound.push(key_value.clone());
+            let changed = conn.execute(sql.as_str(), bound).await?;
+            if changed != 1 {
+                return Err(doc_error(
+                    ErrorCode::NotFound,
+                    "未找到要更新的记录",
+                    "刷新后重试",
+                ));
+            }
+            Ok(())
+        }
+    }
+}
+
+async fn ensure_anchor_clause_tx(
+    conn: &Connection,
+    file_id: &str,
+    base_version_id: &str,
+    fp: &AnchorFingerprint,
+    now: &str,
+) -> Result<String> {
+    let (id, created) = ensure_anchor_tx(
+        conn,
+        file_id,
+        base_version_id,
+        &fp.section_key,
+        AnchorState::Valid,
+        now,
+    )
+    .await?;
+    if created {
+        conn.execute(
+            "UPDATE doc_anchors SET baseline_id = ?1, clause_id = ?2, title = ?3, level = ?4, line_start = ?5, line_end = ?6, full_hash = ?7, body_hash = ?8 WHERE id = ?9",
+            params![
+                fp.baseline_id.as_str(),
+                fp.clause_number.as_str(),
+                fp.title.as_str(),
+                fp.level,
+                fp.line_start,
+                fp.line_end,
+                fp.full_hash.as_str(),
+                fp.body_hash.as_str(),
+                id.as_str()
+            ],
+        )
+        .await?;
+    }
+    Ok(id)
 }
 
 fn doc_error(code: ErrorCode, message: &str, hint: &str) -> anyhow::Error {

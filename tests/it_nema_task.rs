@@ -1,4 +1,9 @@
-use ladon_explorer::{engine::Engine,nema};
+use ladon_explorer::{
+    doctask_model::SourceKind,
+    doctask_service::{Caller, DocTaskService},
+    engine::Engine,
+    nema,
+};
 use std::fs;
 
 #[tokio::test]
@@ -10,6 +15,13 @@ async fn it_05_task_annotation_bind_approved_version(){
  let a=e.store.add_annotation(&result.file_id,"H1:REQ-001#1",&vid,"add review").await.unwrap();
  let t=e.store.create_task(&result.file_id,"H1:REQ-001#1",&vid,"Review","check impacts").await.unwrap();
  assert!(!a.is_empty()&&!t.is_empty());
+ let svc=DocTaskService::open(&e,Caller::human("owner",SourceKind::Cli)).await.unwrap();
+ let tasks=svc.list_tasks().await.unwrap();
+ let task=tasks.items.iter().find(|x|x.title=="Review").unwrap();
+ assert_eq!(task.base_version_id,vid);
+ assert_eq!(task.section,"H1:REQ-001#1");
+ let notes=svc.list_annotations(Some(&result.file_id)).await.unwrap();
+ assert!(notes.items.iter().any(|n|n.text=="add review"&&n.section=="H1:REQ-001#1"&&n.base_version_id==vid));
 }
 
 #[test]
