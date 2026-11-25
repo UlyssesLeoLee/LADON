@@ -227,7 +227,9 @@
     "implementation_status": "Design",
     "implementation": "docs/01_requirements/11_文档治理业务要件.md",
     "main_test": "ST-010",
-    "acceptance": "需求提交仅关联批准条款与相关文件。"
+    "acceptance": "需求提交仅关联批准条款与相关文件。",
+    "release_target": "Partial",
+    "disposition": "文件版本级基线登记与锚点增量对账（REQ-102、REQ-103；WP06、WP08；IT-051、IT-055）；“仅用相关批准 REQ 筛选并提示 Agent”由 `doc_clause_list`、`doc_mentions_find` 提供确定性输入，筛选建议由模型作出，ST-010 保持 Not Run"
   },
   {
     "id": "REQ-024",
@@ -237,7 +239,9 @@
     "implementation_status": "Partial",
     "implementation": "src/store.rs;src/main.rs",
     "main_test": "IT-005",
-    "acceptance": "创建注释/任务与对应批准版本关联，状态可追踪。"
+    "acceptance": "创建注释/任务与对应批准版本关联，状态可追踪。",
+    "release_target": "Implemented",
+    "disposition": "REQ-101～103、107；IT-005（WP06 加强）、IT-052；ST-084"
   },
   {
     "id": "REQ-025",
@@ -247,7 +251,9 @@
     "implementation_status": "Partial",
     "implementation": "src/nema.rs;sql/001_initial.sql",
     "main_test": "IT-006",
-    "acceptance": "跨层次关系可追踪，非法悬空边被拒绝。"
+    "acceptance": "跨层次关系可追踪，非法悬空边被拒绝。",
+    "release_target": "Partial",
+    "disposition": "任务到设计、代码、UT/IT/ST 的关联与条款追踪屏，任务与条款双向可查（WP07、WP10；IT-057、IT-066、UT-153）；独立于任务的条款间影响关系延后，本设计的关联取代未使用的 `graph_edges` 表"
   },
   {
     "id": "REQ-026",
@@ -257,7 +263,9 @@
     "implementation_status": "Design",
     "implementation": "docs/01_requirements/11_文档治理业务要件.md",
     "main_test": "ST-011",
-    "acceptance": "冲突提示包含条款、来源、可选方案。"
+    "acceptance": "冲突提示包含条款、来源、可选方案。",
+    "release_target": "Deferred",
+    "disposition": "Hook 与 Concept Guard 不在本设计内（第 1.3 节）"
   },
   {
     "id": "REQ-027",
@@ -267,7 +275,9 @@
     "implementation_status": "Partial",
     "implementation": "src/nema.rs;design/nema",
     "main_test": "UT-013",
-    "acceptance": "现有子集可解析并拒绝非法输入；全语法有回归规范。"
+    "acceptance": "现有子集可解析并拒绝非法输入；全语法有回归规范。",
+    "release_target": "Partial",
+    "disposition": "只使用 `>` 有向图子集的导出与回读（UT-153）；Table、5W1H 语法的解析不在本设计内，`nema.rs` 不改动"
   },
   {
     "id": "REQ-028",
@@ -277,7 +287,9 @@
     "implementation_status": "Partial",
     "implementation": "src/nema.rs;src/main.rs",
     "main_test": "IT-006",
-    "acceptance": "互不依赖任务同批次，环路任务拒绝。"
+    "acceptance": "互不依赖任务同批次，环路任务拒绝。",
+    "release_target": "Implemented（任务 DAG 范围）",
+    "disposition": "`topo_batches` 分层、冲突组与环阻断（UT-146、IT-057、UAT-05）"
   },
   {
     "id": "REQ-029",
@@ -287,7 +299,9 @@
     "implementation_status": "Partial",
     "implementation": "src/workspace.rs",
     "main_test": "UT-023",
-    "acceptance": "写入前版本校验，读取不需要额外全文复制。"
+    "acceptance": "写入前版本校验，读取不需要额外全文复制。",
+    "release_target": "Deferred",
+    "disposition": "FileSpace 租约与多 Agent 运行时不在本设计内"
   },
   {
     "id": "REQ-030",
@@ -297,7 +311,9 @@
     "implementation_status": "Design",
     "implementation": "docs/03_detailed_design/33_并行与任务详细设计.md",
     "main_test": "ST-012",
-    "acceptance": "并发写同一文件一个冲突被拒绝。"
+    "acceptance": "并发写同一文件一个冲突被拒绝。",
+    "release_target": "Partial",
+    "disposition": "单文件章节写入的版本戳校验、批准后提交与冲突保护（REQ-107；IT-058、IT-059）；ST-012 的“两个 Agent 并发”依赖 FileSpace，保持 Not Run"
   },
   {
     "id": "REQ-031",
@@ -307,7 +323,9 @@
     "implementation_status": "Partial",
     "implementation": "src/main.rs;docs/02_basic_design/24_外部接口与UI基本设计.md",
     "main_test": "ST-013",
-    "acceptance": "所有写入通过审计且可定位操作者。"
+    "acceptance": "所有写入通过审计且可定位操作者。",
+    "release_target": "Partial",
+    "disposition": "文档任务范围内 CLI、控制台、MCP 共用 `DocTaskService`（IT-060、IT-062、IT-067）；GUI 与 Skills 入口不在范围内，ST-013 依赖 GUI，保持 Not Run"
   },
   {
     "id": "REQ-032",
@@ -417,7 +435,9 @@
     "implementation_status": "Partial",
     "implementation": "src/store.rs;ui-prototype/src/main.rs",
     "main_test": "ST-023",
-    "acceptance": "点击条款可绑定任务/批注，提交修改产生版本记录。"
+    "acceptance": "点击条款可绑定任务/批注，提交修改产生版本记录。",
+    "release_target": "Partial",
+    "disposition": "批注、统一差异、修改原因关联任务与版本事件（REQ-107；ST-023 由 ST-084 覆盖）；GUI 内联编辑界面延后"
   },
   {
     "id": "REQ-043",
@@ -427,7 +447,9 @@
     "implementation_status": "Partial",
     "implementation": "src/store.rs",
     "main_test": "ST-024",
-    "acceptance": "目录变化后备注不会暴露或丢失。"
+    "acceptance": "目录变化后备注不会暴露或丢失。",
+    "release_target": "Partial",
+    "disposition": "批注以 `file_id` 存于 Turso，移动经谱系确认后保持（REQ-114；IT-056；ST-024 由 ST-087 覆盖）"
   },
   {
     "id": "REQ-044",
@@ -437,7 +459,9 @@
     "implementation_status": "Partial",
     "implementation": "src/store.rs;src/main.rs",
     "main_test": "ST-025",
-    "acceptance": "每条正式捕获事件含时间、身份和来源。"
+    "acceptance": "每条正式捕获事件含时间、身份和来源。",
+    "release_target": "Implemented（文档任务范围）",
+    "disposition": "每个变更写入事件链（REQ-104；IT-049、IT-052）；GUI 路径尚无文档任务写入"
   },
   {
     "id": "REQ-045",
@@ -557,7 +581,9 @@
     "implementation_status": "Design",
     "implementation": "docs/03_detailed_design/41_租户聊天与同步.md",
     "main_test": "ST-055",
-    "acceptance": "会话隔离，成员消息不会自动传入 AI，敏感文件附件受策略约束。"
+    "acceptance": "会话隔离，成员消息不会自动传入 AI，敏感文件附件受策略约束。",
+    "release_target": "Deferred",
+    "disposition": "底部 AI 聊天栏在文档任务版本发布之后另行设计"
   },
   {
     "id": "REQ-057",
@@ -597,7 +623,9 @@
     "implementation_status": "Partial",
     "implementation": "src/agent_api.rs;api/ladon-agent-openapi.yaml",
     "main_test": "IT-015",
-    "acceptance": "相同 API 权限控制可被 UI、CLI、Agent 使用且返回稳定结构。"
+    "acceptance": "相同 API 权限控制可被 UI、CLI、Agent 使用且返回稳定结构。",
+    "release_target": "Partial",
+    "disposition": "新增 `doc_*` 工具（REQ-110）；目录枚举、Grep、指纹、订阅等 `AgentApi` 能力不变"
   },
   {
     "id": "REQ-061",
@@ -607,7 +635,9 @@
     "implementation_status": "Design",
     "implementation": "docs/03_detailed_design/42_AgentFolderAPI详细设计.md",
     "main_test": "ST-058",
-    "acceptance": "无审批或基准版本变更均禁止覆盖。"
+    "acceptance": "无审批或基准版本变更均禁止覆盖。",
+    "release_target": "Implemented（单文件章节写入）",
+    "disposition": "计划、版本戳校验、人工批准、受控提交与恢复（REQ-107；IT-058、IT-059）；ST-058 的“无审批、旧哈希被拒”由 IT-058 对应并在 ST-084 中人工确认"
   },
   {
     "id": "REQ-062",
@@ -617,7 +647,9 @@
     "implementation_status": "Design",
     "implementation": "docs/03_detailed_design/42_AgentFolderAPI详细设计.md",
     "main_test": "ST-059",
-    "acceptance": "多 Agent 高并发时不得丢已确认事件，过期游标要求重建快照。"
+    "acceptance": "多 Agent 高并发时不得丢已确认事件，过期游标要求重建快照。",
+    "release_target": "Deferred",
+    "disposition": "`subscribe`、游标、ack 不在本设计内；UC-11 的“通知 Agent”以拉取方式交付：Hermes 启动时经 `doc_task_list` 取得待办，所有者用 `doc inbox --watch`"
   },
   {
     "id": "REQ-063",
@@ -667,7 +699,9 @@
     "implementation_status": "Partial",
     "implementation": "src/auth.rs;sql/002_collaboration_shell_agent.sql",
     "main_test": "UT-034",
-    "acceptance": "Reviewer 不可修改文件，Viewer 不可读取敏感资源，Agent 仅限定作用域。"
+    "acceptance": "Reviewer 不可修改文件，Viewer 不可读取敏感资源，Agent 仅限定作用域。",
+    "release_target": "Deferred",
+    "disposition": "`auth.rs` 不接入，本设计只有 Human、Agent、System 三类主体"
   },
   {
     "id": "REQ-068",
@@ -687,7 +721,9 @@
     "implementation_status": "Design",
     "implementation": "docs/03_detailed_design/41_租户聊天与同步.md",
     "main_test": "ST-064",
-    "acceptance": "原消息、条款、任务、审批和提交事件可双向追踪。"
+    "acceptance": "原消息、条款、任务、审批和提交事件可双向追踪。",
+    "release_target": "Deferred",
+    "disposition": "依赖底部聊天栏（第 1.3 节）；`source_ref` 列为后续接入保留"
   },
   {
     "id": "REQ-070",
@@ -697,7 +733,9 @@
     "implementation_status": "Partial",
     "implementation": "src/store.rs;docs/03_detailed_design/43_云盘Provider多租户归档.md",
     "main_test": "IT-017",
-    "acceptance": "每版本都能解释差异、来源和归档状态；未知来源必须标注为未知。"
+    "acceptance": "每版本都能解释差异、来源和归档状态；未知来源必须标注为未知。",
+    "release_target": "Partial",
+    "disposition": "任务审计链校验、回滚链与报告（REQ-104、REQ-108；IT-049、IT-066）；文件历史与云盘状态的审计不变"
   },
   {
     "id": "REQ-071",
@@ -717,7 +755,9 @@
     "implementation_status": "Design",
     "implementation": "docs/02_basic_design/26_现代侘寂UI与聊天基本设计.md",
     "main_test": "ST-066",
-    "acceptance": "切换编辑条款时关联准确，隐藏侧栏后仍可通过快捷键访问。"
+    "acceptance": "切换编辑条款时关联准确，隐藏侧栏后仍可通过快捷键访问。",
+    "release_target": "Deferred",
+    "disposition": "GUI 接线在发布之后；控制台的追踪屏提供同一数据的文本形式"
   },
   {
     "id": "REQ-073",
@@ -937,7 +977,9 @@
     "implementation_status": "Partial",
     "implementation": "src/emergence.rs;docs/03_detailed_design/49_涌现式设计与AI节流.md",
     "main_test": "ST-068",
-    "acceptance": "单一弱信号不生成任务，至少两类独立证据。"
+    "acceptance": "单一弱信号不生成任务，至少两类独立证据。",
+    "release_target": "Deferred",
+    "disposition": "涌现式建议落地不在本设计内（第 1.3 节）"
   },
   {
     "id": "REQ-095",
@@ -947,7 +989,9 @@
     "implementation_status": "Design",
     "implementation": "src/emergence.rs;docs/03_detailed_design/49_涌现式设计与AI节流.md",
     "main_test": "ST-069",
-    "acceptance": "没有审批时文件哈希不改变。"
+    "acceptance": "没有审批时文件哈希不改变。",
+    "release_target": "Partial",
+    "disposition": "Agent 只能产生提案、方案与证据，应用只能由人在真实控制台执行（REQ-101、REQ-107）；涌现建议部分延后"
   },
   {
     "id": "REQ-096",
@@ -957,7 +1001,9 @@
     "implementation_status": "Design",
     "implementation": "src/storage_rules.rs;protocol/drive-layout-v1.yaml",
     "main_test": "ST-070",
-    "acceptance": "远端文件名与属性不包含真实敏感文件路径。"
+    "acceptance": "远端文件名与属性不包含真实敏感文件路径。",
+    "release_target": "Deferred",
+    "disposition": "Drive 链接不在本设计内"
   },
   {
     "id": "REQ-097",
@@ -967,7 +1013,9 @@
     "implementation_status": "Design",
     "implementation": "api/ladon-agent-openapi.yaml;server/vercel/lib/auth.ts",
     "main_test": "ST-071",
-    "acceptance": "未授予权限的 Agent 无法使用恢复/写入接口。"
+    "acceptance": "未授予权限的 Agent 无法使用恢复/写入接口。",
+    "release_target": "Partial",
+    "disposition": "文档任务工具的工作区范围、敏感策略、幂等与审计（REQ-113）；身份授权与多租户不在范围内"
   },
   {
     "id": "REQ-098",
@@ -977,7 +1025,9 @@
     "implementation_status": "Design",
     "implementation": "src/engine.rs;docs/02_basic_design/27_本地优先与最小后端.md",
     "main_test": "ST-072",
-    "acceptance": "关闭网络与后台服务仍可 init/capture/history。"
+    "acceptance": "关闭网络与后台服务仍可 init/capture/history。",
+    "release_target": "Implemented（文档任务范围）",
+    "disposition": "文档任务功能不依赖网络与登录（Hermes 自身的模型访问不在范围内）"
   },
   {
     "id": "REQ-099",
@@ -987,7 +1037,9 @@
     "implementation_status": "Design",
     "implementation": "docs/03_detailed_design/47_通信Dock与信息渐隐.md",
     "main_test": "ST-073",
-    "acceptance": "引用同名不同版本文件仍能精确定位。"
+    "acceptance": "引用同名不同版本文件仍能精确定位。",
+    "release_target": "Deferred",
+    "disposition": "聊天引用与聊天源证据依赖底部聊天栏"
   },
   {
     "id": "REQ-100",
@@ -998,5 +1050,512 @@
     "implementation": "src/cloud_journal.rs;sql/003_drive_rules_control_plane.sql",
     "main_test": "ST-074",
     "acceptance": "同基线的不同设备写入必显示人工审核提示。"
+  },
+  {
+    "id": "REQ-101",
+    "name": "任务生命周期与人工批准规则",
+    "description": "文档任务状态只按 T1～T11、P1、P2 迁移（11 号文档第 9.3 节）。批准（T3）、驳回（T4）、验收（T6）、取消（T9）、重开（T10）与采纳提案（P1）由人工主体执行；Agent 只能执行 T1、T2（随方案提交）、T5、T7（最新证据为失败时）与 T8；系统只能执行 T11。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/03_detailed_design/57_文档任务模块与HermesCLI详细设计.md 第 4 节",
+    "main_test": "IT-052",
+    "tests": [
+      "UT-141",
+      "UT-142",
+      "IT-052",
+      "IT-053",
+      "ST-084",
+      "TC-830～839",
+      "TC-880～899",
+      "TC-930～939"
+    ],
+    "acceptance": "迁移表之外的迁移返回 E_TRANSITION_DENIED；Agent 调用人工专属迁移返回 E_HUMAN_ONLY；每条合法迁移与其状态写入、附带写入同一事务并追加链事件。"
+  },
+  {
+    "id": "REQ-102",
+    "name": "已批准基线登记",
+    "description": "文档任务以已批准的基线版本为依据。基线登记与撤销、锚点确认由人工完成；登记时展示版本号与内容哈希，所有者批准的对象是账本中已存在的版本；任务钉在基线版本上，章节解析取自该版本的字节。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/03_detailed_design/57_文档任务模块与HermesCLI详细设计.md 第 5.3 节",
+    "main_test": "IT-051",
+    "tests": [
+      "IT-051",
+      "IT-070",
+      "ST-084",
+      "TC-870～879",
+      "TC-997～999"
+    ],
+    "acceptance": "无基线时创建任务返回 E_NO_BASELINE；展示后主体变化返回 E_STALE_SUBJECT；现存文件未被捕获时基线登记、ack、rebase 返回 E_FILE_CHANGED；基线撤销后同一版本可重新登记且 doc verify 无 BASELINE_DUPLICATE。"
+  },
+  {
+    "id": "REQ-103",
+    "name": "条款锚点、指纹与迁移",
+    "description": "条款以标题键与正文哈希识别。对账对改名、移动、删除与正文改动分别给出 relocated、needs_review、file_missing、unknown 等显式状态；不静默重定基，重定位须经人工确认。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/03_detailed_design/57_文档任务模块与HermesCLI详细设计.md 第 5 节",
+    "main_test": "IT-055",
+    "tests": [
+      "UT-147",
+      "UT-148",
+      "UT-149",
+      "UT-150",
+      "IT-055",
+      "ST-086",
+      "TC-840～849",
+      "TC-900～909"
+    ],
+    "acceptance": "分类结果符合 57 号文档第 5.4 节矩阵；短正文不自动重定位；relocated 在 ack 或 relocate 之前不可批准、验收或应用。"
+  },
+  {
+    "id": "REQ-104",
+    "name": "任务审计链与完整性校验",
+    "description": "每个治理变更在同一 Immediate 事务内追加到 doc_task_events 链。链元组固定并由金标测试锁定；doc verify 重算哈希，检出篡改、删除、状态漂移与人工专属种类的非人工写入。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/03_detailed_design/57_文档任务模块与HermesCLI详细设计.md 第 4.7～4.9 节",
+    "main_test": "IT-049",
+    "tests": [
+      "UT-144",
+      "IT-049",
+      "IT-069",
+      "TC-860～869",
+      "TC-880～899"
+    ],
+    "acceptance": "事务中任一语句失败时整体回滚，不出现无事件的记录；两个并发 CAS 只有一个成功；篡改 payload_json 在对应 seq 被 CHAIN_BROKEN 检出；绕过 set_task_status 的状态变化被 STATUS_DRIFT 检出。"
+  },
+  {
+    "id": "REQ-105",
+    "name": "存量数据兼容与 Schema 迁移",
+    "description": "迁移 004 只由 ensure_schema 应用，Store::init 与 Engine::init 不应用。迁移前成对备份 meta.turso 与 -wal 并按行数核对；0.0.3 形态库升级后旧行逐字节不变；存量任务回填为 local_only 或 unchecked 并导入事件。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/03_detailed_design/57_文档任务模块与HermesCLI详细设计.md 第 3 节",
+    "main_test": "IT-047",
+    "tests": [
+      "UT-162",
+      "IT-047",
+      "IT-048",
+      "IT-050",
+      "IT-061",
+      "IT-068",
+      "IT-073",
+      "TC-820～829",
+      "TC-860～869"
+    ],
+    "acceptance": "全新库与升级库的 schema_migrations 版本符合设计；备份不可验证时 004 不执行；回填重复执行无变化；回滚到 0.0.3 再升级后 doc verify 无错误级发现。"
+  },
+  {
+    "id": "REQ-106",
+    "name": "关联、证据、依赖与并行调度",
+    "description": "任务之间的依赖形成有向无环图，成环与悬空依赖被拒绝。调度按层分批，并识别写入同一目标的冲突组；关联与证据按设计记录，Agent 写入的证据标注为未核验。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/03_detailed_design/57_文档任务模块与HermesCLI详细设计.md 第 6.1～6.3、7 节",
+    "main_test": "IT-057",
+    "tests": [
+      "UT-146",
+      "IT-057",
+      "TC-880～899"
+    ],
+    "acceptance": "依赖成环被拒绝；写入同一目标的任务落入同一冲突组；UAT-05 对应用例得到一个冲突组加一个并行任务。"
+  },
+  {
+    "id": "REQ-107",
+    "name": "方案、批准与受控写入",
+    "description": "文件修改只能经人工批准的方案完成。方案绑定期望版本与哈希；批准界面展示的差异应用于期望版本字节后，与写入字节逐字节相等。应用前外部改动使方案 conflicted 或返回 E_STALE_PLAN，不写入；应用与恢复留下完整的账本与证据链。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/03_detailed_design/57_文档任务模块与HermesCLI详细设计.md 第 8 节",
+    "main_test": "IT-058",
+    "tests": [
+      "UT-150",
+      "IT-058",
+      "IT-059",
+      "ST-084",
+      "TC-960～969"
+    ],
+    "acceptance": "result_hash 等于 expected_hash 的方案被拒；批准与应用之间的外部修改不写入且方案为 conflicted；注入中断后 doc recover 收敛到旧内容、新内容或保留现场。"
+  },
+  {
+    "id": "REQ-108",
+    "name": "审计报告与 .NEMA 导出",
+    "description": "报告与 .NEMA 导出只读取已提交的事件与任务，以 cutoff_seq 为数据截止点；未开启时不含 local_only 文本；导出的 .nema 可被 parse_graph_edges 解析并由 topo_batches 分层。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/03_detailed_design/57_文档任务模块与HermesCLI详细设计.md 第 6.4、6.5 节",
+    "main_test": "IT-066",
+    "tests": [
+      "UT-153",
+      "UT-154",
+      "IT-066",
+      "TC-920～929"
+    ],
+    "acceptance": "同一输入与 --generated-at 的输出逐字节相同；连续导出两次结果相同；报告含回滚链与恢复命令。"
+  },
+  {
+    "id": "REQ-109",
+    "name": "一次性命令行 ladon doc",
+    "description": "ladon doc 命令树覆盖初始化、基线、批注、任务、依赖、证据、方案、批准、应用、恢复、报告与导出。人工专属命令在非交互输入上以退出码 5 拒绝；annotate 与 task 保持位置参数与既有输出行。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/03_detailed_design/57_文档任务模块与HermesCLI详细设计.md 第 9 节",
+    "main_test": "IT-060",
+    "tests": [
+      "UT-143",
+      "IT-060",
+      "IT-061",
+      "TC-930～939",
+      "TC-1020～1029"
+    ],
+    "acceptance": "从初始化到导出的只分析方案全流程不需要 Hermes；人工专属命令在管道上退出 5；annotate、task 首行分别输出 annotation id: 与 task id:。"
+  },
+  {
+    "id": "REQ-110",
+    "name": "MCP 文档任务服务器",
+    "description": "ladon mcp-serve 以 stdio 提供 14 个 doc_* 工具，其中 13 个由 WP13 注册，doc_plan_submit 由 WP14 追加；工具表不含人工专属工具。业务拒绝与非法参数以不带 error 键的普通结果返回；门禁、配额与披露记录在内容返回之前写入。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/03_detailed_design/57_文档任务模块与HermesCLI详细设计.md 第 10 节",
+    "main_test": "IT-062",
+    "tests": [
+      "UT-155",
+      "UT-156",
+      "UT-157",
+      "IT-062",
+      "IT-063",
+      "IT-067",
+      "IT-072",
+      "IT-074",
+      "ST-076",
+      "TC-940～949",
+      "TC-950～959",
+      "TC-1015～1019"
+    ],
+    "acceptance": "工具集与 57 号文档第 10.2 节一致；数据库被占用时 initialize 在 200 ms 内回复；一系列只读调用之后 doc_task_events、doc_anchors、doc_task_meta 逐字节不变；EOF 后 2 秒内以退出码 0 结束。"
+  },
+  {
+    "id": "REQ-111",
+    "name": "交互控制台",
+    "description": "ladon console 提供全部 doc 命令（带或不带 doc 前缀）、收件箱与批准流程、Hermes 启动入口与设置。收件箱以展示哈希绑定，只有精确键入任务号才批准；脚本模式下人工专属命令与 hermes 以退出码 5 拒绝；ladon shell-menu 的文档即任务入口打开该控制台。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/03_detailed_design/57_文档任务模块与HermesCLI详细设计.md 第 11 节",
+    "main_test": "IT-070",
+    "tests": [
+      "UT-145",
+      "UT-151",
+      "UT-152",
+      "UT-158",
+      "IT-064",
+      "IT-070",
+      "ST-077",
+      "ST-078",
+      "ST-081",
+      "ST-082",
+      "ST-085",
+      "ST-088",
+      "TC-910～919",
+      "TC-985～994",
+      "TC-995～996",
+      "TC-997～999"
+    ],
+    "acceptance": "收件箱批准时内容已变化返回 E_STALE_SUBJECT；启动屏在 NFR-044 夹具上 CI 不超过 10 秒（回归报警）；所有者机器上热工作区启动目标不超过 3 秒（ST-077 手工度量）。"
+  },
+  {
+    "id": "REQ-112",
+    "name": "Hermes 受控启动",
+    "description": "ladon hermes 以受控方式启动 Hermes。覆盖层与指令文本写入临时目录，退出后清除；子进程环境不含 LADON_* 与被禁的 HERMES_* 变量；参数以列表逐元素传递，不拼接用户文本；恢复会话前做披露检查。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/03_detailed_design/57_文档任务模块与HermesCLI详细设计.md 第 12 节",
+    "main_test": "IT-065",
+    "tests": [
+      "UT-159",
+      "UT-160",
+      "UT-161",
+      "IT-065",
+      "IT-071",
+      "ST-076",
+      "ST-078",
+      "ST-079",
+      "ST-080",
+      "ST-082",
+      "TC-970～974",
+      "TC-975～984",
+      "TC-1015～1019"
+    ],
+    "acceptance": "假启动器两层链上的 argv、指令文本的 SHA-256 与长度与设计一致；预置 HERMES_MANAGED_DIR、非真实控制台、Schema 过低时拒绝启动；披露条件改变时 hermes resume 开启新会话。"
+  },
+  {
+    "id": "REQ-113",
+    "name": "Agent 外传门禁",
+    "description": "Agent 的读取与任务视图经 AgentView 投影。敏感文件内容脱敏，被排除路径及其副本不返回文本，历史版本逐版本判定；规则无效或不可读时失败即关闭；被拒绝、local_only 与不存在的引用返回相同的 E_NOT_FOUND。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/03_detailed_design/57_文档任务模块与HermesCLI详细设计.md 第 13.1 节",
+    "main_test": "IT-054",
+    "tests": [
+      "IT-054",
+      "IT-063",
+      "IT-071",
+      "IT-074",
+      "ST-083",
+      "TC-850～859",
+      "TC-870～879",
+      "TC-950～959",
+      "TC-975～984"
+    ],
+    "acceptance": "被排除路径内容的副本被拒绝；历史版本的门禁生效；规则文件修改后下一次调用即采用新规则；全局忽略文件不可读时含文件的调用得到 E_POLICY_DENIED。"
+  },
+  {
+    "id": "REQ-114",
+    "name": "文件移动谱系确认",
+    "description": "文件移动只生成仅人工可确认的谱系候选。确认前列表保持原路径，确认后批注与任务跟随新路径；候选、确认与拒绝写入事件链，被拒绝的候选不再提议。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/03_detailed_design/57_文档任务模块与HermesCLI详细设计.md 第 5.7 节",
+    "main_test": "IT-056",
+    "tests": [
+      "IT-056",
+      "ST-087",
+      "TC-900～909"
+    ],
+    "acceptance": "确认与拒绝须展示新旧文件与哈希后经 y/N 确认；拒绝后不再提议同一候选；确认后列表跟随新路径。"
+  },
+  {
+    "id": "REQ-115",
+    "name": "文件图标与可执行文件图标",
+    "description": "ladon.exe 与 ladon-gui.exe 嵌入 LADON 图标。GUI 文件列表按文件类型显示系统图标，取不到时回退为字形占位。交付范围与设计见 58 号文档 WP20 与 3.3 节。",
+    "priority": "P0",
+    "implementation_status": "Design",
+    "implementation": "docs/05_operations/58_文档任务与HermesCLI开发WBS.md 第 3.3 节",
+    "main_test": "ST-089",
+    "tests": [
+      "ST-089",
+      "TC-1000～1009"
+    ],
+    "acceptance": "ladon.exe 的 PE 资源目录含 RT_GROUP_ICON 与 RT_ICON；文件列表对目录、.md、.txt、.exe 显示非空位图；ladon-gui.exe 的图标由所有者机器手工确认（ST-089）。"
+  },
+  {
+    "id": "RSK-21",
+    "kind": "risk",
+    "name": "Hermes 集成路线尚未经端到端验证：覆盖层与指令文本是否经本机启动器链（两层 `.cmd` 加 `powershell -File`）透传、`-c … --query-file` 组合、MCP 子进程是否在发现窗口内就绪、Tool Search 是否确实关闭",
+    "description": "Hermes 集成路线尚未经端到端验证：覆盖层与指令文本是否经本机启动器链（两层 `.cmd` 加 `powershell -File`）透传、`-c … --query-file` 组合、MCP 子进程是否在发现窗口内就绪、Tool Search 是否确实关闭",
+    "priority": "未分级",
+    "implementation_status": "Open",
+    "implementation": "docs/00_guide/01_实施状态与关键风险.md",
+    "main_test": "",
+    "acceptance": "路线是设置项（`overlay`、`profile`、`print`）；WP00B 的探针在 WP12 与 WP16 之前用真实启动器与 SDK 客户端检验这些前提并选定路线（`HERMES_MANAGED_DIR` 的每次启动设置超出 Hermes 文档的意图，Hermes 升级可能使其失效）；`hermes doctor` 以 `hermes mcp test ladon` 的退出码判定；完整的 ST-076 在 WP16 之后执行"
+  },
+  {
+    "id": "RSK-22",
+    "kind": "risk",
+    "name": "人工专属是纵深防御而不是安全边界：本地模式无认证，同一用户下的任意代码可改写数据库或伪造终端",
+    "description": "人工专属是纵深防御而不是安全边界：本地模式无认证，同一用户下的任意代码可改写数据库或伪造终端",
+    "priority": "未分级",
+    "implementation_status": "Open",
+    "implementation": "docs/00_guide/01_实施状态与关键风险.md",
+    "main_test": "",
+    "acceptance": "工具表不含人工专属工具、服务层拒绝、`verify` 回放、`-t ladon,clarify` 去掉终端与文件工具；手册明确该边界"
+  },
+  {
+    "id": "RSK-23",
+    "kind": "risk",
+    "name": "外传：Hermes 把工具结果发给远端模型；门禁依赖规则正确性与新鲜度（30 秒窗口、嵌套规则文件、元数据）",
+    "description": "外传：Hermes 把工具结果发给远端模型；门禁依赖规则正确性与新鲜度（30 秒窗口、嵌套规则文件、元数据）",
+    "priority": "未分级",
+    "implementation_status": "Open",
+    "implementation": "docs/00_guide/01_实施状态与关键风险.md",
+    "main_test": "",
+    "acceptance": "失败即关闭、`local_only` 默认、版本级门禁与 `AgentView` 统一投影、全局忽略路径显式传给 `mcp-serve`、`hermes resume` 的披露检查、首次同意提示、IT-054、IT-071、IT-074、ST-083"
+  },
+  {
+    "id": "RSK-24",
+    "kind": "risk",
+    "name": "跨进程数据库锁：Windows 上 turso 的独占且立即失败的锁使控制台、`mcp-serve`、`watch`、GUI 偶发冲突",
+    "description": "跨进程数据库锁：Windows 上 turso 的独占且立即失败的锁使控制台、`mcp-serve`、`watch`、GUI 偶发冲突",
+    "priority": "未分级",
+    "implementation_status": "Open",
+    "implementation": "docs/00_guide/01_实施状态与关键风险.md",
+    "main_test": "",
+    "acceptance": "即用即弃连接加有界重试；长时间扫描仍可能耗尽重试而得到 `E_STORE_BUSY`"
+  },
+  {
+    "id": "RSK-25",
+    "kind": "risk",
+    "name": "turso 0.8.3 行为（影响行数、`BEGIN IMMEDIATE`、DDL、CHECK、外键）部分未验证",
+    "description": "turso 0.8.3 行为（影响行数、`BEGIN IMMEDIATE`、DDL、CHECK、外键）部分未验证",
+    "priority": "未分级",
+    "implementation_status": "Open",
+    "implementation": "docs/00_guide/01_实施状态与关键风险.md",
+    "main_test": "",
+    "acceptance": "WP01 探针在依赖它们之前记录事实；设计不依赖 CHECK 与外键，CAS 有读回确认"
+  },
+  {
+    "id": "RSK-26",
+    "kind": "risk",
+    "name": "只能依赖 CI 构建：一次编译错误消耗一个 CI 周期；GUI 在最后一步才编译",
+    "description": "只能依赖 CI 构建：一次编译错误消耗一个 CI 周期；GUI 在最后一步才编译",
+    "priority": "未分级",
+    "implementation_status": "Open",
+    "implementation": "docs/00_guide/01_实施状态与关键风险.md",
+    "main_test": "",
+    "acceptance": "小包、纯模块先在通道 B 验证、内核 API 冻结测试"
+  },
+  {
+    "id": "RSK-27",
+    "kind": "risk",
+    "name": "质量门禁负载：16 个新受管源文件各需设计提交；项目整体覆盖率门禁不可通过",
+    "description": "质量门禁负载：16 个新受管源文件各需设计提交；项目整体覆盖率门禁不可通过",
+    "priority": "未分级",
+    "implementation_status": "Open",
+    "implementation": "docs/00_guide/01_实施状态与关键风险.md",
+    "main_test": "",
+    "acceptance": "每包设计提交模板化；合并过小的模块；如实报告项目门禁；度量与 `main.rs` 的处理见 RSK-37"
+  },
+  {
+    "id": "RSK-28",
+    "kind": "risk",
+    "name": "Windows 控制台行为只能在真实控制台观察：Ctrl+C、`Terminate batch job (Y/N)?`、作业嵌套、代码页与控制台模式、输入法",
+    "description": "Windows 控制台行为只能在真实控制台观察：Ctrl+C、`Terminate batch job (Y/N)?`、作业嵌套、代码页与控制台模式、输入法",
+    "priority": "未分级",
+    "implementation_status": "Open",
+    "implementation": "docs/00_guide/01_实施状态与关键风险.md",
+    "main_test": "",
+    "acceptance": "手工 ST-078～082；作业加入失败只是警告；启动器可配置"
+  },
+  {
+    "id": "RSK-29",
+    "kind": "risk",
+    "name": "锚点稳定性：标题改名改变键，围栏代码内的 `#` 被当作标题，非 Markdown/NEMA 文件只有 `ROOT` 锚点",
+    "description": "锚点稳定性：标题改名改变键，围栏代码内的 `#` 被当作标题，非 Markdown/NEMA 文件只有 `ROOT` 锚点",
+    "priority": "未分级",
+    "implementation_status": "Open",
+    "implementation": "docs/00_guide/01_实施状态与关键风险.md",
+    "main_test": "",
+    "acceptance": "`body_hash` 识别改名、`ROW` 条款、显式状态与人工处理、绝不静默重定基；限制写入手册"
+  },
+  {
+    "id": "RSK-30",
+    "kind": "risk",
+    "name": "单文件方案是有意的范围限制，多文件改动需拆成多个任务",
+    "description": "单文件方案是有意的范围限制，多文件改动需拆成多个任务",
+    "priority": "未分级",
+    "implementation_status": "Open",
+    "implementation": "docs/00_guide/01_实施状态与关键风险.md",
+    "main_test": "",
+    "acceptance": "手册说明；任务调度识别写入冲突"
+  },
+  {
+    "id": "RSK-31",
+    "kind": "risk",
+    "name": "批准疲劳：人可能不读差异就键入任务号",
+    "description": "批准疲劳：人可能不读差异就键入任务号",
+    "priority": "未分级",
+    "implementation_status": "Open",
+    "implementation": "docs/00_guide/01_实施状态与关键风险.md",
+    "main_test": "",
+    "acceptance": "展示统一差异、哈希绑定与风险标志；无法强制理解，记录为残余风险"
+  },
+  {
+    "id": "RSK-32",
+    "kind": "risk",
+    "name": "文档文本中的提示注入无法检测，只能收容",
+    "description": "文档文本中的提示注入无法检测，只能收容",
+    "priority": "未分级",
+    "implementation_status": "Open",
+    "implementation": "docs/00_guide/01_实施状态与关键风险.md",
+    "main_test": "",
+    "acceptance": "去掉 Agent 的能力：只能创建受配额限制的提案、批注、带标注的证据与待人审阅的方案"
+  },
+  {
+    "id": "RSK-33",
+    "kind": "risk",
+    "name": "旧接口 `set_task_status` 无限制，仍可使状态与链脱节",
+    "description": "旧接口 `set_task_status` 无限制，仍可使状态与链脱节",
+    "priority": "未分级",
+    "implementation_status": "Open",
+    "implementation": "docs/00_guide/01_实施状态与关键风险.md",
+    "main_test": "",
+    "acceptance": "`doc verify` 报告 `STATUS_DRIFT`；新代码不调用"
+  },
+  {
+    "id": "RSK-34",
+    "kind": "risk",
+    "name": "仓库根目录存在若干零字节的散落文件（疑为 shell 重定向误操作产物），可能被 `scan` 或打包拾取",
+    "description": "仓库根目录存在若干零字节的散落文件（疑为 shell 重定向误操作产物），可能被 `scan` 或打包拾取",
+    "priority": "未分级",
+    "implementation_status": "Open",
+    "implementation": "docs/00_guide/01_实施状态与关键风险.md",
+    "main_test": "",
+    "acceptance": "经所有者同意后在首次提交前清理，不纳入提交"
+  },
+  {
+    "id": "RSK-35",
+    "kind": "risk",
+    "name": "有探索记录称 Hermes 启动器脚本中存在明文凭据赋值（此处不复述）",
+    "description": "有探索记录称 Hermes 启动器脚本中存在明文凭据赋值（此处不复述）",
+    "priority": "未分级",
+    "implementation_status": "Open",
+    "implementation": "docs/00_guide/01_实施状态与关键风险.md",
+    "main_test": "",
+    "acceptance": "所有者应视为已暴露并轮换；LADON 从不读取、复制、记录或转发启动器脚本及其环境"
+  },
+  {
+    "id": "RSK-36",
+    "kind": "risk",
+    "name": "向 `fix/compile-errors` 推送即触发 MSI 构建与完整测试，成本高",
+    "description": "向 `fix/compile-errors` 推送即触发 MSI 构建与完整测试，成本高",
+    "priority": "未分级",
+    "implementation_status": "Open",
+    "implementation": "docs/00_guide/01_实施状态与关键风险.md",
+    "main_test": "",
+    "acceptance": "合并小包后再推送，推送前征得所有者同意"
+  },
+  {
+    "id": "RSK-37",
+    "kind": "risk",
+    "name": "覆盖率度量与 `verify` 流程在 WP00A 之前不存在，`store.rs`、`engine.rs`、`main.rs` 的既有覆盖率未知，`main.rs` 的遗留逻辑无法在进程内测试",
+    "description": "覆盖率度量与 `verify` 流程在 WP00A 之前不存在，`store.rs`、`engine.rs`、`main.rs` 的既有覆盖率未知，`main.rs` 的遗留逻辑无法在进程内测试",
+    "priority": "未分级",
+    "implementation_status": "Open",
+    "implementation": "docs/00_guide/01_实施状态与关键风险.md",
+    "main_test": "",
+    "acceptance": "WP00A 先行并给出基线；WP00C 迁移遗留逻辑并补特征化测试（须所有者批准）；既有未覆盖行的补测工时在度量之后追加；未达标如实报告为阻断，不降低标准"
+  },
+  {
+    "id": "RSK-38",
+    "kind": "risk",
+    "name": "Hermes 的会话转录留存在 Hermes 中，恢复会话会把此前返回的内容再次发给模型；LADON 不读取也不删除转录",
+    "description": "Hermes 的会话转录留存在 Hermes 中，恢复会话会把此前返回的内容再次发给模型；LADON 不读取也不删除转录",
+    "priority": "未分级",
+    "implementation_status": "Open",
+    "implementation": "docs/00_guide/01_实施状态与关键风险.md",
+    "main_test": "",
+    "acceptance": "披露记录先写后返回、策略指纹与逐文件复核、不满足时开启新会话；手册说明转录由所有者自行管理"
+  },
+  {
+    "id": "RSK-39",
+    "kind": "risk",
+    "name": "迁移前备份可能无法验证（`-wal` 成对一致性、复制失败），而迁移不可逆地增加表",
+    "description": "迁移前备份可能无法验证（`-wal` 成对一致性、复制失败），而迁移不可逆地增加表",
+    "priority": "未分级",
+    "implementation_status": "Open",
+    "implementation": "docs/00_guide/01_实施状态与关键风险.md",
+    "main_test": "",
+    "acceptance": "备份在迁移内成对复制并按行数核对；不可验证时 004 不执行，需所有者确认并记录；004 是纯增量，0.0.3 忽略新表"
+  },
+  {
+    "id": "RSK-40",
+    "kind": "risk",
+    "name": "CI 不运行 clippy（`rust-ci.yml` 的 fmt 步骤先失败），依赖 clippy 的守卫（模块级 `deny`、非 Windows 桩无警告）没有执行位",
+    "description": "CI 不运行 clippy（`rust-ci.yml` 的 fmt 步骤先失败），依赖 clippy 的守卫（模块级 `deny`、非 Windows 桩无警告）没有执行位",
+    "priority": "未分级",
+    "implementation_status": "Open",
+    "implementation": "docs/00_guide/01_实施状态与关键风险.md",
+    "main_test": "",
+    "acceptance": "所有者择一建立 clippy 证据通道；其间报告“未验证”，stdout 守卫以 IT-062 与 IT-067 为准"
   }
 ]

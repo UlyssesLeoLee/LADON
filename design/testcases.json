@@ -439,6 +439,182 @@
       "ut_journal_sensitive_denied",
       "敏感事件段不得远程发布",
       "Implemented"
+    ],
+    [
+      "UT-141",
+      "状态迁移矩阵穷举",
+      "src/doctask_model.rs",
+      "ut_141_transition_matrix",
+      "7 个状态、7 个状态对 3 类主体的迁移矩阵穷举；终态只能经 T10 离开",
+      "Design"
+    ],
+    [
+      "UT-142",
+      "人工专属操作拒绝",
+      "src/doctask_model.rs",
+      "ut_142_human_only_operations",
+      "操作表中的人工专属操作对 Agent、System 返回 E_HUMAN_ONLY",
+      "Design"
+    ],
+    [
+      "UT-143",
+      "句柄、选择器、限制与文本校验",
+      "src/doctask_model.rs",
+      "ut_143_handles_selectors_limits",
+      "句柄与选择器解析、长度限制、文本校验的边界值",
+      "Design"
+    ],
+    [
+      "UT-144",
+      "事件与方案哈希金标",
+      "src/doctask_model.rs",
+      "ut_144_hash_golden_vectors",
+      "事件哈希金标与字段敏感性；方案哈希与证据哈希稳定",
+      "Design"
+    ],
+    [
+      "UT-145",
+      "控制字符与双向字符",
+      "src/doctask_model.rs; src/doctask_render.rs",
+      "ut_145_control_and_bidi_rejection",
+      "控制字符与双向字符被拒绝；渲染输出被净化",
+      "Design"
+    ],
+    [
+      "UT-146",
+      "调度分批、冲突组与环拒绝",
+      "src/doctask_model.rs",
+      "ut_146_schedule_batches",
+      "调度输出分批与冲突组正确；有环输入被拒绝",
+      "Design"
+    ],
+    [
+      "UT-147",
+      "大纲键与章节哈希逐键一致",
+      "src/doctask_outline.rs",
+      "ut_147_outline_keys_match_section_hashes",
+      "大纲键与 diff::section_hashes 逐键相等，含重复标题与 NEMA 域",
+      "Design"
+    ],
+    [
+      "UT-148",
+      "条款编号提取与 ROW 虚拟条款",
+      "src/doctask_outline.rs",
+      "ut_148_clause_numbers_and_row",
+      "条款编号提取正确；表格行形成 ROW 虚拟条款",
+      "Design"
+    ],
+    [
+      "UT-149",
+      "锚点分类矩阵",
+      "src/doctask_outline.rs",
+      "ut_149_anchor_classification_matrix",
+      "改名重定位、级别变化、CRLF、围栏代码中的 #、ROOT-only、冷版本；前置重复标题（full_hash 与 needs_review）；body_hash 重定位下限在 39 与 40 个字符处的边界；短正文为 ambiguous",
+      "Design"
+    ],
+    [
+      "UT-150",
+      "字节级章节拼接",
+      "src/doctask_outline.rs",
+      "ut_150_byte_level_splice",
+      "CRLF、混合换行、BOM、缺失末尾换行时范围外字节逐字节不变；插入与替换；无效 UTF-8、NUL、UTF-16 目标被拒绝",
+      "Design"
+    ],
+    [
+      "UT-151",
+      "CJK 显示宽度与表格对齐",
+      "src/doctask_render.rs",
+      "ut_151_cjk_width_and_table_alignment",
+      "中英混排的显示宽度与列对齐正确",
+      "Design"
+    ],
+    [
+      "UT-152",
+      "屏幕 golden 与文案键集",
+      "src/doctask_render.rs",
+      "ut_152_screen_golden_and_message_keys",
+      "各屏幕与 golden 文本一致；中英文案键集一致；纯文本模式无 ANSI",
+      "Design"
+    ],
+    [
+      "UT-153",
+      ".NEMA 往返与净化",
+      "src/doctask_report.rs",
+      "ut_153_nema_roundtrip",
+      "导出经 parse_graph_edges 与 topo_batches 往返；记号与标签被净化",
+      "Design"
+    ],
+    [
+      "UT-154",
+      "报告确定性",
+      "src/doctask_report.rs",
+      "ut_154_report_determinism",
+      "同一输入逐字节相同；连续导出两次相同；排除 local_only；含回滚链",
+      "Design"
+    ],
+    [
+      "UT-155",
+      "MCP 握手版本协商",
+      "src/mcp.rs",
+      "ut_155_handshake_version_negotiation",
+      "协商 2025-11-25、2025-06-18、2025-03-26、2024-11-05；未知版本回复 2025-11-25",
+      "Design"
+    ],
+    [
+      "UT-156",
+      "MCP 通知、ping 与错误行",
+      "src/mcp.rs",
+      "ut_156_notifications_ping_bad_lines",
+      "通知无回复；ping 回 {}；未知方法 -32601 并回显 id；坏 JSON、无效 UTF-8、超长行得到错误回复且循环继续；EOF 结束",
+      "Design"
+    ],
+    [
+      "UT-157",
+      "工具列表快照与 CatchPanic",
+      "src/doctask_mcp.rs",
+      "ut_157_tool_list_snapshot_and_catch_panic",
+      "WP13 时 13 个工具、WP14 后 14 个；readOnlyHint 恰在 8 个只读工具；无 outputSchema；panic 得到 E_INTERNAL 且循环继续",
+      "Design"
+    ],
+    [
+      "UT-158",
+      "控制台分词与命令解析",
+      "src/console.rs",
+      "ut_158_console_tokenizer_and_commands",
+      "分词、中文引号、别名、建议与命令解析",
+      "Design"
+    ],
+    [
+      "UT-159",
+      "覆盖层、argv 与环境白名单",
+      "src/hermes.rs",
+      "ut_159_overlay_argv_environment",
+      "覆盖层快照（含 --global-ignore）；argv；环境白名单保留 Path、SystemRoot、ProgramFiles(x86)；混合大小写的 LADON 变量被拒绝；预置变量拒绝；.cmd 参数安全；路径前缀剥离",
+      "Design"
+    ],
+    [
+      "UT-160",
+      "指令文本扫描与长度",
+      "src/hermes.rs",
+      "ut_160_instruction_text_scan_and_length",
+      "指令文本通过威胁模式扫描；长度不超过 4000 字符",
+      "Design"
+    ],
+    [
+      "UT-161",
+      "winconsole 纯函数与桩",
+      "src/winconsole.rs",
+      "ut_161_winconsole_pure_and_stub",
+      "管道安全；作业结构大小；Ctrl+C 门返回值；非 Windows 桩；管道句柄判为非真实控制台；msys 与 cygwin 管道名匹配",
+      "Design"
+    ],
+    [
+      "UT-162",
+      "连接重试（可注入打开器）",
+      "src/store.rs",
+      "ut_162_connect_retry_with_injected_opener",
+      "锁错误连续 N 次后成功；退避序列与抖动范围；耗尽后给出明确信息并映射 E_STORE_BUSY；非锁错误不重试",
+      "Design"
     ]
   ],
   "IT": [
@@ -680,6 +856,230 @@
       "Slint+Rust layout",
       "integration scenario",
       "三态侧栏与 ChatDock 一致",
+      "Design"
+    ],
+    [
+      "IT-047",
+      "迁移 004 的应用条件",
+      "tests/it_doctask_migration.rs::it_047_*",
+      "全新库与 0.0.3 形态库分别经 Store::init、Engine::init 与 ensure_schema 打开",
+      "schema_migrations 恰含版本 2 与 4；Store::init 与 Engine::init 单独调用时不应用 004；已记录版本不重复执行；ensure_schema 幂等",
+      "Design"
+    ],
+    [
+      "IT-048",
+      "turso 行为探针",
+      "tests/it_doctask_migration.rs::it_048_*",
+      "影响行数、BEGIN IMMEDIATE、CHECK 与外键、唯一索引违反、回滚后序号、跨进程锁",
+      "探针结果（含错误变体与文本）写入测试设计；AUTOINCREMENT 在回滚插入之后的连续性决定 SEQ_GAP 级别",
+      "Design"
+    ],
+    [
+      "IT-049",
+      "DocStore 事务与链",
+      "tests/it_doctask_store.rs::it_049_*",
+      "第二条语句失败的事务；两个并发 CAS；线性追加；两个连接同时追加；篡改与删除链",
+      "失败事务无残留；CAS 只有一个赢家；链篡改与删除被检出；STATUS_DRIFT 被报告",
+      "Design"
+    ],
+    [
+      "IT-050",
+      "存量回填",
+      "tests/it_doctask_store.rs::it_050_*",
+      "旧库回填、重复回填、回滚到 0.0.3 后再升级并 doc migrate --import-legacy",
+      "编号按 created_at 顺序；批注与任务为 local_only；任何链载荷不含批注文本或任务标题；每个非 open 的旧任务有 dt.task.imported；doc verify 无错误级发现",
+      "Design"
+    ],
+    [
+      "IT-051",
+      "服务核心",
+      "tests/it_doctask_service.rs::it_051_*",
+      "基线登记、批注、任务创建；展示后主体变化；现存文件未捕获；基线撤销后重新登记",
+      "无基线返回 E_NO_BASELINE；任务钉在基线版本；expected_* 不符返回 E_STALE_SUBJECT；未捕获时返回 E_FILE_CHANGED；--yes 无 --expect-hash 被拒；重新登记后 doc verify 无 BASELINE_DUPLICATE",
+      "Design"
+    ],
+    [
+      "IT-052",
+      "任务生命周期全流程",
+      "tests/it_doctask_flow.rs::it_052_*",
+      "open 到 done 的全生命周期；全部非法迁移；驳回与重开；T3 守卫 4 失败；Agent 证据的验收",
+      "合法边各写入规定事件且同事务；非法边被拒且不写入；T3 守卫 4 失败时方案 superseded、任务回到 analysis 并返回 E_STALE_PLAN；--accept-agent-evidence 与书面豁免各自通过且 id 写入批准载荷",
+      "Design"
+    ],
+    [
+      "IT-053",
+      "Agent 权限与提案",
+      "tests/it_doctask_flow.rs::it_053_*",
+      "Agent 调用全部人工专属操作；提案采纳与忽略；配额；未采纳提案上的迁移与方案提交",
+      "人工专属操作对 Agent 被拒；未采纳提案上的迁移与方案提交返回 E_TRANSITION_DENIED 并提示采纳",
+      "Design"
+    ],
+    [
+      "IT-054",
+      "外传门禁",
+      "tests/it_engine_gate.rs::it_054_* 与 tests/it_doctask_service.rs::it_054_*",
+      "敏感文件、排除路径的副本、规则失效、local_only 批注与任务、历史版本、AgentView 投影",
+      "被排除内容与其副本不返回文本；策略失败即关闭；历史版本逐版本判定；被拒绝、local_only 与不存在的引用返回相同的 E_NOT_FOUND",
+      "Design"
+    ],
+    [
+      "IT-055",
+      "锚点对账",
+      "tests/it_doctask_reconcile.rs::it_055_*",
+      "改名、正文改动、删除、冷字节、重复执行，前置重复标题，短正文",
+      "改名得到 relocated 并记事件；正文改动得到 needs_review；relocated 须 ack 或 relocate 后才可批准；对账重复执行不产生重复事件",
+      "Design"
+    ],
+    [
+      "IT-056",
+      "文件移动谱系",
+      "tests/it_doctask_reconcile.rs::it_056_*",
+      "移动文件后提议谱系；人工确认；人工拒绝；列表刷新",
+      "候选仅人工可确认；拒绝后不再提议；确认后列表跟随新路径",
+      "Design"
+    ],
+    [
+      "IT-057",
+      "依赖、环与调度",
+      "tests/it_doctask_flow.rs::it_057_*",
+      "依赖的增加与移除、成环、悬空依赖、调度批次、冲突组（UAT-05）",
+      "成环与悬空依赖被拒绝；同一目标的任务进入同一冲突组；无冲突任务进入并行批次",
+      "Design"
+    ],
+    [
+      "IT-058",
+      "方案提交、批准与应用",
+      "tests/it_doctask_plan.rs::it_058_*",
+      "方案提交、批准、应用；过期方案；外部编辑冲突；基线之后被编辑的目标；两个方案写同一文件",
+      "result_hash 等于 expected_hash 的方案被拒；应用结果与 commit_text 写入的字节逐字节相等；两个方案写同一文件时后者返回 E_STALE_PLAN",
+      "Design"
+    ],
+    [
+      "IT-059",
+      "恢复收敛",
+      "tests/it_doctask_plan.rs::it_059_*",
+      "applying 的各种状态；A1 至 A4 之间的注入中断；注入的并发 capture 与 mark_deleted",
+      "目标文件只可能是旧内容、新内容或保留现场的内容；账本与事件链一致",
+      "Design"
+    ],
+    [
+      "IT-060",
+      "二进制冒烟：doc 全流程",
+      "tests/it_doctask_cli_binary.rs::it_060_*",
+      "CARGO_BIN_EXE_ladon 执行 doc 全流程、--json 输出与人工专属命令的管道调用",
+      "--json 输出可解析；退出码符合规定；人工专属命令在管道上退出 5",
+      "Design"
+    ],
+    [
+      "IT-061",
+      "旧命令契约",
+      "tests/it_doctask_cli.rs::it_061_*",
+      "annotate 与 task 的位置参数与输出行；未知章节",
+      "首行输出 annotation id: 与 task id:；未知章节记为 unchecked",
+      "Design"
+    ],
+    [
+      "IT-062",
+      "MCP 桩客户端握手与生命周期",
+      "tests/it_mcp_stdio.rs::it_062_*",
+      "重放 WP00B 金标的握手字节；工具集；EOF；数据库被占用时 initialize；中文往返",
+      "金标逐行被接受；业务错误无 error 键；EOF 后 2 秒内退出；数据库被占用时 initialize 仍回复；每行 stdout 恰为一个 JSON 对象",
+      "Design"
+    ],
+    [
+      "IT-063",
+      "MCP 门禁、配额与参数错误",
+      "tests/it_mcp_stdio.rs::it_063_*",
+      "门禁与配额、重复创建；未知工具名与人工专属工具名；已知工具的非法参数",
+      "未知与人工专属工具名得到 -32602 且不写任何行；非法参数得到不带 isError 的 E_INVALID_ARG 普通结果且不使熔断计数增加",
+      "Design"
+    ],
+    [
+      "IT-064",
+      "控制台脚本会话",
+      "tests/it_console.rs::it_064_*",
+      "收件箱批准、键入任务号、脚本模式拒绝、NFR-044 夹具的启动时间、只有 Agent 证据时的收件箱",
+      "收件箱只提供接受证据与书面豁免；脚本模式下人工专属命令与 hermes 退出 5；CI 上启动时间不超过 10 秒",
+      "Design"
+    ],
+    [
+      "IT-065",
+      "Hermes 假启动器两层链",
+      "tests/it_hermes_launch.rs::it_065_*",
+      "两层 .cmd 与 powershell -File 的假启动器，记录 $args、环境变量名与指令文本的哈希",
+      "argv 与 57 号文档 12.5 节一致；指令文本的 SHA-256 与长度正确；退出码映射正确；预置变量被拒绝；启动目录创建与清除",
+      "Design"
+    ],
+    [
+      "IT-066",
+      "报告与导出集成",
+      "tests/it_doctask_cli_binary.rs::it_066_*",
+      "完成判定端到端；.NEMA 导出与回读",
+      "完成判定与报告内容一致；导出的 .nema 可回读",
+      "Design"
+    ],
+    [
+      "IT-067",
+      "架构守卫",
+      "tests/it_arch_guard.rs::it_067_*",
+      "对 mcp.rs、doctask_mcp.rs、纯模块、entry.rs 做词元扫描（57 号文档 13.4 节标识符清单）",
+      "工具表与纯模块不含人工专属标识符与禁止路径；entry.rs 与 main.rs 不含 SQL 调用标识符",
+      "Design"
+    ],
+    [
+      "IT-068",
+      "内核 API 冻结",
+      "tests/it_kernel_api_freeze.rs::it_068_*",
+      "编译 GUI 使用的全部内核签名",
+      "签名变化在内核测试步骤中被编译错误暴露",
+      "Design"
+    ],
+    [
+      "IT-069",
+      "跨进程并发",
+      "tests/it_doctask_concurrency.rs::it_069_*",
+      "子进程与测试进程同时读写同一工作区，两侧每次存储调用之间停顿 10～30 ms",
+      "全部操作成功；链校验通过；记录第二个进程得到的锁错误变体与文本",
+      "Design"
+    ],
+    [
+      "IT-070",
+      "所有者一天端到端",
+      "tests/it_doctask_owner_day.rs::it_070_*",
+      "记录型 ProcessRunner 启动的桩 MCP 客户端：提案、批注、所有者采纳、方案提交、批准、应用、证据、验收、校验、导出与回读",
+      "全流程通过；.NEMA 回读成功；UAT-01 的自动化对应通过",
+      "Design"
+    ],
+    [
+      "IT-071",
+      "恢复披露检查",
+      "tests/it_hermes_launch.rs::it_071_*",
+      "规则文件改变、敏感标记改变、已披露内容被放入排除路径、上次会话未结束记录，以及一切不变的情形",
+      "前四种情形开启新会话并给出说明；一切不变时恢复；披露记录在内容返回之前写入，写入失败时不返回内容",
+      "Design"
+    ],
+    [
+      "IT-072",
+      "mcp-serve 只读不变量与错误形态",
+      "tests/it_mcp_stdio.rs::it_072_*",
+      "一系列 Agent 读调用；无 meta 的旧行；E_STORE_BUSY、E_SCHEMA_OUTDATED、E_INVALID_ARG；panic",
+      "doc_task_events、doc_anchors、doc_task_meta 逐字节不变，只有 doc_agent_disclosures 增加；错误均为带 ok:false 的普通结果；panic 标记文本不出现在 stderr",
+      "Design"
+    ],
+    [
+      "IT-073",
+      "迁移前备份",
+      "tests/it_doctask_migration.rs::it_073_*",
+      "成对复制 meta.turso 与 -wal；复制失败、副本打不开、行数不符；空库",
+      "失败时 004 不执行并要求确认，确认后写入 backup_verified:false；空库不备份",
+      "Design"
+    ],
+    [
+      "IT-074",
+      "全局忽略规则在 MCP 进程内生效",
+      "tests/it_mcp_stdio.rs::it_074_*",
+      "仅存在于全局忽略文件中的规则，经 env_clear 加 Hermes 基线环境启动的 mcp-serve --global-ignore",
+      "被遮蔽的文件不可读；全局文件不可读时含文件的调用得到 E_POLICY_DENIED",
       "Design"
     ]
   ],
@@ -1247,6 +1647,281 @@
       "Windows + Drive + Agent",
       "移动文件路径后 FileRef 稳定",
       "Not Run"
+    ],
+    [
+      "ST-076",
+      "hermes doctor 与覆盖层透传",
+      "Windows 11 / 真实 Hermes 与真实启动器（所有者机器）",
+      "运行 ladon hermes doctor；执行 -c … --query-file 组合的交互启动",
+      "doctor 以 hermes mcp test 的退出码判定通过；覆盖层与指令文本透传；工具以 mcp__ladon__doc_* 出现",
+      "REQ-110, REQ-112"
+    ],
+    [
+      "ST-077",
+      "交互会话与控制台启动时间",
+      "Windows 11 / 真实 Hermes / NFR-044 夹具的热工作区",
+      "控制台启动 Hermes 创建提案，退出后在收件箱批准；记录启动时间与 untrusted 逐次确认的显示",
+      "提案出现在收件箱并可批准；热工作区启动不超过 3 秒；逐次确认的中文显示正确",
+      "REQ-111, NFR-044"
+    ],
+    [
+      "ST-078",
+      "Ctrl+C",
+      "Windows 11 / 真实控制台",
+      "在提示符处与 Hermes 运行期间分别按 Ctrl+C",
+      "提示符处放弃当前输入行并重新提示；Hermes 运行期间 LADON 只吸收 Ctrl+C，Hermes 收到中断",
+      "REQ-111, REQ-112"
+    ],
+    [
+      "ST-079",
+      "taskkill /F 后无遗留进程",
+      "Windows 11 / 真实进程树",
+      "以 taskkill /F 终止 ladon.exe",
+      "无遗留的 Hermes、python、powershell、mcp-serve 进程（嵌套作业生效）",
+      "REQ-112"
+    ],
+    [
+      "ST-080",
+      "Terminate batch job 提示",
+      "Windows 11 / 两层 .cmd 启动器",
+      "经两层 .cmd 启动 Hermes 并结束",
+      "记录 Terminate batch job (Y/N)? 是否出现及其影响；结果写入 46 号文档",
+      "REQ-112"
+    ],
+    [
+      "ST-081",
+      "中文输入输出",
+      "cmd、Windows Terminal、conhost",
+      "在三种终端中输入与显示中文文档任务内容",
+      "中文输入与输出无乱码",
+      "REQ-111"
+    ],
+    [
+      "ST-082",
+      "异常退出后的控制台恢复",
+      "Windows 11 / 真实控制台",
+      "Hermes 异常退出后检查控制台模式与输出编码",
+      "控制台模式与输出代码页恢复到启动前的值",
+      "REQ-111, REQ-112"
+    ],
+    [
+      "ST-083",
+      "敏感文件不发送给模型",
+      "Windows 11 / 真实模型 / 敏感测试资料",
+      "在 Agent 会话中读取、搜索与标注敏感文件",
+      "敏感文件内容不出现在模型请求中；被排除路径的副本不返回文本",
+      "REQ-113"
+    ],
+    [
+      "ST-084",
+      "全流程（UAT-01）",
+      "Windows 11 / 真实 Hermes / 所有者机器",
+      "条款、批注、任务、Hermes 提案、所有者采纳、Hermes 方案提交、批准、应用、证据、验收、报告与 .NEMA 导出",
+      "全流程可完成且每一步的记录与事件链一致",
+      "REQ-101, REQ-102, REQ-107, REQ-024"
+    ],
+    [
+      "ST-085",
+      "Hermes 运行时在第二终端批准",
+      "两个终端窗口 / 真实 Hermes",
+      "Hermes 打开时在第二终端批准一个方案",
+      "批准以展示哈希绑定；Hermes 下一次读取看到新状态",
+      "REQ-111"
+    ],
+    [
+      "ST-086",
+      "外部编辑条款后的启动屏提示",
+      "Windows 11 / 已批准要件文档",
+      "在外部编辑已批准条款后启动控制台并确认条款",
+      "启动屏列出 needs_review 条款；确认后条款可用于批准",
+      "REQ-103"
+    ],
+    [
+      "ST-087",
+      "文件移动后的谱系确认",
+      "Windows 11 / 带批注与任务的文件",
+      "移动文件后在控制台确认谱系",
+      "确认前列表保持原路径；确认后批注与任务跟随新路径",
+      "REQ-114"
+    ],
+    [
+      "ST-088",
+      "shell-menu 的文档即任务入口",
+      "Windows 11 / 交互桌面会话",
+      "运行 ladon shell-menu <文件>，在菜单中选择文档即任务（0x7003）；文件名含 &、^、% 时重复",
+      "打开新的控制台窗口，以该文件为当前文件显示大纲；特殊字符文件名同样成功",
+      "REQ-111"
+    ],
+    [
+      "ST-089",
+      "文件图标与可执行文件图标",
+      "Windows 11 / 交互桌面会话 / 发布构建",
+      "查看 ladon.exe 与 ladon-gui.exe 的图标；打开 GUI 文件列表",
+      "两个可执行文件显示 LADON 图标；文件列表对目录、.md、.txt、.exe 显示系统图标",
+      "REQ-115"
+    ]
+  ],
+  "TC": [
+    [
+      "TC-820～829",
+      "WP01",
+      "迁移与连接",
+      "REQ-105, NFR-046",
+      "Planned"
+    ],
+    [
+      "TC-830～839",
+      "WP02",
+      "模型",
+      "REQ-101",
+      "Planned"
+    ],
+    [
+      "TC-840～849",
+      "WP03",
+      "大纲与分类",
+      "REQ-103",
+      "Planned"
+    ],
+    [
+      "TC-850～859",
+      "WP04",
+      "外传门禁（引擎）",
+      "REQ-113",
+      "Planned"
+    ],
+    [
+      "TC-860～869",
+      "WP05",
+      "DocStore",
+      "REQ-104, REQ-105",
+      "Planned"
+    ],
+    [
+      "TC-870～879",
+      "WP06",
+      "服务核心",
+      "REQ-102, REQ-113",
+      "Planned"
+    ],
+    [
+      "TC-880～899",
+      "WP07",
+      "服务流程",
+      "REQ-101, REQ-104, REQ-106",
+      "Planned"
+    ],
+    [
+      "TC-900～909",
+      "WP08",
+      "对账与文件移动谱系",
+      "REQ-103, REQ-114",
+      "Planned"
+    ],
+    [
+      "TC-910～919",
+      "WP09",
+      "渲染与文案",
+      "REQ-111",
+      "Planned"
+    ],
+    [
+      "TC-920～929",
+      "WP10",
+      "报告与 .NEMA 导出",
+      "REQ-108",
+      "Planned"
+    ],
+    [
+      "TC-930～939",
+      "WP11",
+      "一次性命令行",
+      "REQ-101, REQ-109",
+      "Planned"
+    ],
+    [
+      "TC-940～949",
+      "WP12",
+      "MCP 协议层",
+      "REQ-110",
+      "Planned"
+    ],
+    [
+      "TC-950～959",
+      "WP13",
+      "MCP 工具与 mcp-serve",
+      "REQ-110, REQ-113, NFR-045",
+      "Planned"
+    ],
+    [
+      "TC-960～969",
+      "WP14",
+      "方案、批准、应用与恢复",
+      "REQ-107",
+      "Planned"
+    ],
+    [
+      "TC-970～974",
+      "WP15",
+      "Windows 控制台辅助",
+      "REQ-112",
+      "Planned"
+    ],
+    [
+      "TC-975～984",
+      "WP16",
+      "Hermes 启动与自检",
+      "REQ-112, REQ-113",
+      "Planned"
+    ],
+    [
+      "TC-985～994",
+      "WP17",
+      "交互控制台",
+      "REQ-111, NFR-044",
+      "Planned"
+    ],
+    [
+      "TC-995～996",
+      "WP18",
+      "菜单入口",
+      "REQ-111",
+      "Planned"
+    ],
+    [
+      "TC-997～999",
+      "WP19",
+      "端到端验收",
+      "REQ-102, REQ-111",
+      "Planned"
+    ],
+    [
+      "TC-1000～1009",
+      "WP20",
+      "文件图标",
+      "REQ-115",
+      "Planned"
+    ],
+    [
+      "TC-1010～1014",
+      "WP00A",
+      "质量门禁与覆盖率度量",
+      "无（例外，见 11 号文档第 9.6 节）",
+      "Planned"
+    ],
+    [
+      "TC-1015～1019",
+      "WP00B",
+      "Hermes 集成探针",
+      "REQ-110, REQ-112",
+      "Planned"
+    ],
+    [
+      "TC-1020～1029",
+      "WP00C",
+      "命令入口库化",
+      "REQ-109",
+      "Planned"
     ]
   ]
 }
