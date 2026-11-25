@@ -5,7 +5,7 @@
 
 use crate::doctask_model::{
     first_chain_break, sanitize_display, ActorKind, AnchorState, ApprovalRecord, DocError,
-    ErrorCode, EvidenceRecord, EventRecord, LinkKind, PlanRecord, SourceKind, TargetKind,
+    ErrorCode, EventRecord, EvidenceRecord, LinkKind, PlanRecord, SourceKind, TargetKind,
     TaskRecord, Visibility, GENESIS_PREV_HASH,
 };
 use crate::nema::{parse_graph_edges, topo_batches, Dependency};
@@ -24,7 +24,8 @@ const NODE_TOKEN_MIN: usize = 8;
 const NODE_TOKEN_STEP: usize = 4;
 /// Command that restores the file to a version, as printed in the report.
 const RESTORE_PREFIX: &str = "ladon restore ";
-const TASK_HINT: &str = "确认任务编号；私人任务需要 --include-local-only，门禁排除的文件需要 --include-sensitive";
+const TASK_HINT: &str =
+    "确认任务编号；私人任务需要 --include-local-only，门禁排除的文件需要 --include-sensitive";
 const FILE_HINT: &str = "确认文件路径；门禁排除的文件需要 --include-sensitive";
 
 /// Which part of the workspace an export covers.
@@ -35,7 +36,10 @@ pub enum Scope {
     /// One task (by id), its clause, annotations and related records.
     Task(String),
     /// The tasks of one file, restricted to one section when given.
-    File { file_id: String, section: Option<String> },
+    File {
+        file_id: String,
+        section: Option<String>,
+    },
 }
 
 /// Scope and visibility switches of one export.
@@ -347,11 +351,20 @@ pub fn render_markdown(input: &ReportInput, options: &ExportOptions) -> Result<S
     let mut md = String::new();
     line(&mut md, "# 文档任务审计报告");
     line(&mut md, "");
-    line(&mut md, &format!("- 生成时间: {}", md_inline(&r.generated_at)));
-    line(&mut md, &format!("- 数据截止点 cutoff_seq: {}", r.cutoff_seq));
+    line(
+        &mut md,
+        &format!("- 生成时间: {}", md_inline(&r.generated_at)),
+    );
+    line(
+        &mut md,
+        &format!("- 数据截止点 cutoff_seq: {}", r.cutoff_seq),
+    );
     line(&mut md, &format!("- 范围: {}", md_inline(&r.scope)));
     line(&mut md, &format!("- 链校验: {}", chain_text(&r.chain)));
-    line(&mut md, &format!("- 链头哈希: {}", md_inline(&r.chain.head_hash)));
+    line(
+        &mut md,
+        &format!("- 链头哈希: {}", md_inline(&r.chain.head_hash)),
+    );
     line(
         &mut md,
         &format!(
@@ -391,7 +404,11 @@ pub fn render_markdown(input: &ReportInput, options: &ExportOptions) -> Result<S
     }
     for clause in &r.clauses {
         let heading = if clause.number.is_empty() {
-            format!("### {} {}", md_inline(&clause.file), md_inline(&clause.title))
+            format!(
+                "### {} {}",
+                md_inline(&clause.file),
+                md_inline(&clause.title)
+            )
         } else {
             format!(
                 "### {} {} {}",
@@ -428,7 +445,10 @@ pub fn render_markdown(input: &ReportInput, options: &ExportOptions) -> Result<S
         line(&mut md, "（无任务）");
     }
     for task in &r.tasks {
-        line(&mut md, &format!("### {} {}", md_inline(&task.handle), md_inline(&task.title)));
+        line(
+            &mut md,
+            &format!("### {} {}", md_inline(&task.handle), md_inline(&task.title)),
+        );
         line(
             &mut md,
             &format!(
@@ -472,31 +492,40 @@ pub fn render_markdown(input: &ReportInput, options: &ExportOptions) -> Result<S
     line(&mut md, "");
 
     line(&mut md, "## 4. 批准");
-    list_or_none(&mut md, r.approvals.iter().map(|a| {
-        let mut text = format!(
-            "{} 方案 {} [{}] {}，批准人类型 {}，绑定哈希 {}，时间 {}",
-            md_inline(&a.task),
-            a.plan_no,
-            md_inline(&a.kind),
-            md_inline(&a.decision),
-            md_inline(&a.approver_kind),
-            md_inline(&a.subject_hash),
-            md_inline(&a.created_at)
-        );
-        if !a.comment.is_empty() {
-            text.push_str(&format!("，说明: {}", md_inline(&a.comment)));
-        }
-        text
-    }));
+    list_or_none(
+        &mut md,
+        r.approvals.iter().map(|a| {
+            let mut text = format!(
+                "{} 方案 {} [{}] {}，批准人类型 {}，绑定哈希 {}，时间 {}",
+                md_inline(&a.task),
+                a.plan_no,
+                md_inline(&a.kind),
+                md_inline(&a.decision),
+                md_inline(&a.approver_kind),
+                md_inline(&a.subject_hash),
+                md_inline(&a.created_at)
+            );
+            if !a.comment.is_empty() {
+                text.push_str(&format!("，说明: {}", md_inline(&a.comment)));
+            }
+            text
+        }),
+    );
 
     line(&mut md, "## 5. 方案与差异统计");
-    list_or_none(&mut md, r.plans.iter().map(|p| {
-        let edit = if p.edit_kind.is_empty() { "只分析".to_string() } else { md_inline(&p.edit_kind) };
-        let diff = match (p.added, p.removed) {
-            (Some(a), Some(d)) => format!("+{} -{}", a, d),
-            _ => "未计算".to_string(),
-        };
-        format!(
+    list_or_none(
+        &mut md,
+        r.plans.iter().map(|p| {
+            let edit = if p.edit_kind.is_empty() {
+                "只分析".to_string()
+            } else {
+                md_inline(&p.edit_kind)
+            };
+            let diff = match (p.added, p.removed) {
+                (Some(a), Some(d)) => format!("+{} -{}", a, d),
+                _ => "未计算".to_string(),
+            };
+            format!(
             "{} 方案 {} [{}] {}，风险 {}，目标 {} {}，差异 {}，期望哈希 {}，结果哈希 {}，摘要: {}",
             md_inline(&p.task),
             p.plan_no,
@@ -510,53 +539,74 @@ pub fn render_markdown(input: &ReportInput, options: &ExportOptions) -> Result<S
             md_inline(&p.result_hash),
             md_inline(&p.summary)
         )
-    }));
+        }),
+    );
 
     line(&mut md, "## 6. 提交与账本事件");
-    list_or_none(&mut md, r.commits.iter().map(|c| {
-        format!(
-            "{} 方案 {}: 文件 {}，版本 {}，账本事件 {}",
-            md_inline(&c.task),
-            c.plan_no,
-            md_inline(&c.file),
-            md_inline(&c.version_id),
-            md_inline(&c.ledger_event_id)
-        )
-    }));
+    list_or_none(
+        &mut md,
+        r.commits.iter().map(|c| {
+            format!(
+                "{} 方案 {}: 文件 {}，版本 {}，账本事件 {}",
+                md_inline(&c.task),
+                c.plan_no,
+                md_inline(&c.file),
+                md_inline(&c.version_id),
+                md_inline(&c.ledger_event_id)
+            )
+        }),
+    );
 
     line(&mut md, "## 7. 测试证据");
-    list_or_none(&mut md, r.evidence.iter().map(|e| {
-        let source = if e.source == "ledger" { "账本".to_string() } else { "hermes 报告，未核验".to_string() };
-        format!(
-            "{} [{}] {}，来源 {}，类型 {}，时间 {}",
-            md_inline(&e.task),
-            md_inline(&e.kind),
-            md_inline(&e.result),
-            source,
-            md_inline(&e.actor_kind),
-            md_inline(&e.created_at)
-        )
-    }));
+    list_or_none(
+        &mut md,
+        r.evidence.iter().map(|e| {
+            let source = if e.source == "ledger" {
+                "账本".to_string()
+            } else {
+                "hermes 报告，未核验".to_string()
+            };
+            format!(
+                "{} [{}] {}，来源 {}，类型 {}，时间 {}",
+                md_inline(&e.task),
+                md_inline(&e.kind),
+                md_inline(&e.result),
+                source,
+                md_inline(&e.actor_kind),
+                md_inline(&e.created_at)
+            )
+        }),
+    );
 
     line(&mut md, "## 8. 关联");
-    list_or_none(&mut md, r.links.iter().map(|l| {
-        let mut text = format!(
-            "{} [{}] {} {}",
-            md_inline(&l.task),
-            md_inline(&l.kind),
-            md_inline(&l.target_kind),
-            md_inline(&l.target)
-        );
-        if !l.label.is_empty() {
-            text.push_str(&format!(" ({})", md_inline(&l.label)));
-        }
-        text
-    }));
+    list_or_none(
+        &mut md,
+        r.links.iter().map(|l| {
+            let mut text = format!(
+                "{} [{}] {} {}",
+                md_inline(&l.task),
+                md_inline(&l.kind),
+                md_inline(&l.target_kind),
+                md_inline(&l.target)
+            );
+            if !l.label.is_empty() {
+                text.push_str(&format!(" ({})", md_inline(&l.label)));
+            }
+            text
+        }),
+    );
 
     line(&mut md, "## 9. 依赖与批次");
-    list_or_none(&mut md, r.dependencies.iter().map(|d| {
-        format!("{} -> {}", md_inline(&d.prerequisite), md_inline(&d.dependent))
-    }));
+    list_or_none(
+        &mut md,
+        r.dependencies.iter().map(|d| {
+            format!(
+                "{} -> {}",
+                md_inline(&d.prerequisite),
+                md_inline(&d.dependent)
+            )
+        }),
+    );
     line(&mut md, "");
     line(&mut md, "批次:");
     if r.batches.is_empty() {
@@ -564,7 +614,10 @@ pub fn render_markdown(input: &ReportInput, options: &ExportOptions) -> Result<S
     }
     for (index, batch) in r.batches.iter().enumerate() {
         let names: Vec<String> = batch.iter().map(|n| md_inline(n)).collect();
-        line(&mut md, &format!("- 批次 {}: {}", index + 1, names.join(", ")));
+        line(
+            &mut md,
+            &format!("- 批次 {}: {}", index + 1, names.join(", ")),
+        );
     }
     line(&mut md, "");
 
@@ -626,8 +679,7 @@ pub fn render_markdown(input: &ReportInput, options: &ExportOptions) -> Result<S
 /// Renders the audit report as JSON with two-space indentation. The text has no trailing newline.
 pub fn render_json(input: &ReportInput, options: &ExportOptions) -> Result<String, DocError> {
     let built = build(input, options)?;
-    serde_json::to_string_pretty(&built.report)
-        .map_err(|e| internal(&format!("json: {}", e)))
+    serde_json::to_string_pretty(&built.report).map_err(|e| internal(&format!("json: {}", e)))
 }
 
 /// Renders the .NEMA traceability graph and its task dependency domain. The text ends with one
@@ -638,8 +690,11 @@ pub fn render_nema(input: &ReportInput, options: &ExportOptions) -> Result<Strin
 }
 
 fn build(input: &ReportInput, options: &ExportOptions) -> Result<Built, DocError> {
-    let paths: BTreeMap<String, String> =
-        input.files.iter().map(|f| (f.id.clone(), f.path.clone())).collect();
+    let paths: BTreeMap<String, String> = input
+        .files
+        .iter()
+        .map(|f| (f.id.clone(), f.path.clone()))
+        .collect();
     let path_of = |id: &str| -> String { paths.get(id).cloned().unwrap_or_else(|| id.to_string()) };
     let gated_files: BTreeSet<String> = input
         .files
@@ -648,12 +703,15 @@ fn build(input: &ReportInput, options: &ExportOptions) -> Result<Built, DocError
         .map(|f| f.id.clone())
         .collect();
     let is_gated = |id: &str| gated_files.contains(id);
-    let local_only = |t: &TaskRecord| t.visibility == Visibility::LocalOnly && !options.include_local_only;
+    let local_only =
+        |t: &TaskRecord| t.visibility == Visibility::LocalOnly && !options.include_local_only;
 
     let scope_text = match &options.scope {
         Scope::All => "全部".to_string(),
         Scope::Task(id) => match input.tasks.iter().find(|t| &t.id == id) {
-            Some(t) if !is_gated(t.file_id.as_str()) && !local_only(t) => format!("任务 T-{}", t.task_no),
+            Some(t) if !is_gated(t.file_id.as_str()) && !local_only(t) => {
+                format!("任务 T-{}", t.task_no)
+            }
             _ => return Err(not_found(TASK_HINT)),
         },
         Scope::File { file_id, section } => match input.files.iter().find(|f| &f.id == file_id) {
@@ -678,8 +736,12 @@ fn build(input: &ReportInput, options: &ExportOptions) -> Result<Built, DocError
         match &options.scope {
             Scope::All => true,
             Scope::Task(_) => task_sections.contains(&(file_id.to_string(), section.to_string())),
-            Scope::File { file_id: wanted, section: wanted_section } => {
-                file_id == wanted.as_str() && wanted_section.as_deref().map_or(true, |s| s == section)
+            Scope::File {
+                file_id: wanted,
+                section: wanted_section,
+            } => {
+                file_id == wanted.as_str()
+                    && wanted_section.as_deref().map_or(true, |s| s == section)
             }
         }
     };
@@ -741,13 +803,18 @@ fn build(input: &ReportInput, options: &ExportOptions) -> Result<Built, DocError
     let mut clauses: Vec<&ReportClause> = input
         .clauses
         .iter()
-        .filter(|c| !is_gated(c.file_id.as_str()) && section_in(c.file_id.as_str(), c.section.as_str()))
+        .filter(|c| {
+            !is_gated(c.file_id.as_str()) && section_in(c.file_id.as_str(), c.section.as_str())
+        })
         .collect();
     clauses.sort_by_key(|c| (path_of(&c.file_id), c.ordinal, c.section.clone()));
 
     let mut groups: BTreeMap<(String, String), Vec<&ReportAnnotation>> = BTreeMap::new();
     for a in &annotations {
-        groups.entry((a.file_id.clone(), a.section.clone())).or_default().push(*a);
+        groups
+            .entry((a.file_id.clone(), a.section.clone()))
+            .or_default()
+            .push(*a);
     }
     let mut clause_rows: Vec<ClauseRow> = Vec::new();
     let mut used: BTreeSet<(String, String)> = BTreeSet::new();
@@ -775,12 +842,22 @@ fn build(input: &ReportInput, options: &ExportOptions) -> Result<Built, DocError
         });
     }
 
-    let mut plans: Vec<&PlanRecord> =
-        input.plans.iter().filter(|p| exported_ids.contains(&p.task_id)).collect();
+    let mut plans: Vec<&PlanRecord> = input
+        .plans
+        .iter()
+        .filter(|p| exported_ids.contains(&p.task_id))
+        .collect();
     plans.sort_by_key(|p| (no_of(&p.task_id), p.plan_no));
-    let plan_no_of: BTreeMap<&str, i64> = input.plans.iter().map(|p| (p.id.as_str(), p.plan_no)).collect();
-    let stats: BTreeMap<&str, (u64, u64)> =
-        input.plan_stats.iter().map(|s| (s.plan_id.as_str(), (s.added, s.removed))).collect();
+    let plan_no_of: BTreeMap<&str, i64> = input
+        .plans
+        .iter()
+        .map(|p| (p.id.as_str(), p.plan_no))
+        .collect();
+    let stats: BTreeMap<&str, (u64, u64)> = input
+        .plan_stats
+        .iter()
+        .map(|s| (s.plan_id.as_str(), (s.added, s.removed)))
+        .collect();
     let plan_rows: Vec<PlanRow> = plans
         .iter()
         .map(|p| {
@@ -792,7 +869,11 @@ fn build(input: &ReportInput, options: &ExportOptions) -> Result<Built, DocError
                 edit_kind: p.edit_kind.as_str().to_string(),
                 risk: p.risk.as_str().to_string(),
                 summary: one_line(&p.summary),
-                target_file: if p.target_file_id.is_empty() { String::new() } else { path_of(&p.target_file_id) },
+                target_file: if p.target_file_id.is_empty() {
+                    String::new()
+                } else {
+                    path_of(&p.target_file_id)
+                },
                 target_section: one_line(&p.target_section),
                 added: stat.map(|s| s.0),
                 removed: stat.map(|s| s.1),
@@ -802,8 +883,11 @@ fn build(input: &ReportInput, options: &ExportOptions) -> Result<Built, DocError
         })
         .collect();
 
-    let mut approvals: Vec<&ApprovalRecord> =
-        input.approvals.iter().filter(|a| exported_ids.contains(&a.task_id)).collect();
+    let mut approvals: Vec<&ApprovalRecord> = input
+        .approvals
+        .iter()
+        .filter(|a| exported_ids.contains(&a.task_id))
+        .collect();
     approvals.sort_by_key(|a| (no_of(&a.task_id), a.created_at.clone(), a.id.clone()));
     let approval_rows: Vec<ApprovalRow> = approvals
         .iter()
@@ -819,8 +903,11 @@ fn build(input: &ReportInput, options: &ExportOptions) -> Result<Built, DocError
         })
         .collect();
 
-    let mut evidence: Vec<&EvidenceRecord> =
-        input.evidence.iter().filter(|e| exported_ids.contains(&e.task_id)).collect();
+    let mut evidence: Vec<&EvidenceRecord> = input
+        .evidence
+        .iter()
+        .filter(|e| exported_ids.contains(&e.task_id))
+        .collect();
     evidence.sort_by_key(|e| (no_of(&e.task_id), e.created_at.clone(), e.id.clone()));
     let evidence_rows: Vec<EvidenceRow> = evidence
         .iter()
@@ -869,7 +956,14 @@ fn build(input: &ReportInput, options: &ExportOptions) -> Result<Built, DocError
             blocking.push((d.prerequisite.clone(), d.dependent.clone()));
         }
     }
-    let pair_key = |pair: &(String, String)| (no_of(&pair.0), no_of(&pair.1), pair.0.clone(), pair.1.clone());
+    let pair_key = |pair: &(String, String)| {
+        (
+            no_of(&pair.0),
+            no_of(&pair.1),
+            pair.0.clone(),
+            pair.1.clone(),
+        )
+    };
     dependency_pairs.sort_by_key(pair_key);
     blocking.sort_by_key(pair_key);
     let dependency_rows: Vec<DependencyRow> = dependency_pairs
@@ -880,9 +974,14 @@ fn build(input: &ReportInput, options: &ExportOptions) -> Result<Built, DocError
         })
         .collect();
 
-    let task_tokens: BTreeMap<String, String> =
-        exported.iter().map(|t| (t.id.clone(), format!("T-{}", t.task_no))).collect();
-    let batch_nodes: Vec<String> = exported.iter().map(|t| format!("T-{}", t.task_no)).collect();
+    let task_tokens: BTreeMap<String, String> = exported
+        .iter()
+        .map(|t| (t.id.clone(), format!("T-{}", t.task_no)))
+        .collect();
+    let batch_nodes: Vec<String> = exported
+        .iter()
+        .map(|t| format!("T-{}", t.task_no))
+        .collect();
     let batch_edges: Vec<Dependency> = blocking
         .iter()
         .map(|(p, n)| Dependency {
@@ -903,7 +1002,10 @@ fn build(input: &ReportInput, options: &ExportOptions) -> Result<Built, DocError
         .versions
         .iter()
         .filter(|v| {
-            !is_gated(v.file_id.as_str()) && scope_files.as_ref().map_or(true, |s| s.contains(&v.file_id))
+            !is_gated(v.file_id.as_str())
+                && scope_files
+                    .as_ref()
+                    .map_or(true, |s| s.contains(&v.file_id))
         })
         .collect();
     versions.sort_by_key(|v| (path_of(&v.file_id), v.version_no, v.id.clone()));
@@ -919,16 +1021,26 @@ fn build(input: &ReportInput, options: &ExportOptions) -> Result<Built, DocError
         };
         let starts_new_file = rollback.last().map_or(true, |current| current.file != file);
         if starts_new_file {
-            rollback.push(RollbackRow { file, versions: vec![row] });
+            rollback.push(RollbackRow {
+                file,
+                versions: vec![row],
+            });
         } else if let Some(current) = rollback.last_mut() {
             current.versions.push(row);
         }
     }
 
-    let mut commits: Vec<&ReportCommit> =
-        input.commits.iter().filter(|c| exported_ids.contains(&c.task_id)).collect();
+    let mut commits: Vec<&ReportCommit> = input
+        .commits
+        .iter()
+        .filter(|c| exported_ids.contains(&c.task_id))
+        .collect();
     commits.sort_by_key(|c| {
-        (no_of(&c.task_id), plan_no_of.get(c.plan_id.as_str()).copied().unwrap_or(0), c.version_id.clone())
+        (
+            no_of(&c.task_id),
+            plan_no_of.get(c.plan_id.as_str()).copied().unwrap_or(0),
+            c.version_id.clone(),
+        )
     });
     let commit_rows: Vec<CommitRow> = commits
         .iter()
@@ -942,7 +1054,11 @@ fn build(input: &ReportInput, options: &ExportOptions) -> Result<Built, DocError
             restore_command: if c.prev_version_id.is_empty() {
                 None
             } else {
-                Some(format!("{}{} --approve", RESTORE_PREFIX, id_chars(&c.prev_version_id)))
+                Some(format!(
+                    "{}{} --approve",
+                    RESTORE_PREFIX,
+                    id_chars(&c.prev_version_id)
+                ))
             },
         })
         .collect();
@@ -955,8 +1071,11 @@ fn build(input: &ReportInput, options: &ExportOptions) -> Result<Built, DocError
         .map(|e| e.seq)
         .max()
         .unwrap_or(0);
-    let prefix: Vec<EventRecord> =
-        sorted.iter().filter(|e| e.seq <= cutoff_seq).map(|e| (*e).clone()).collect();
+    let prefix: Vec<EventRecord> = sorted
+        .iter()
+        .filter(|e| e.seq <= cutoff_seq)
+        .map(|e| (*e).clone())
+        .collect();
     let first_break = first_chain_break(&prefix);
     let head_hash = prefix
         .last()
@@ -1035,7 +1154,10 @@ fn build(input: &ReportInput, options: &ExportOptions) -> Result<Built, DocError
             }
         }
         for session in open {
-            anomalies.push(NoteRow { subject: one_line(&session), detail: "会话未结束".to_string() });
+            anomalies.push(NoteRow {
+                subject: one_line(&session),
+                detail: "会话未结束".to_string(),
+            });
         }
     }
 
@@ -1140,7 +1262,8 @@ fn nema_text(built: &Built) -> Result<String, DocError> {
     let mut node_rows: Vec<String> = Vec::new();
     let mut seen_anchor: BTreeSet<String> = BTreeSet::new();
     for clause in &built.clauses {
-        if used_anchors.contains(&clause.anchor_id) && seen_anchor.insert(clause.anchor_id.clone()) {
+        if used_anchors.contains(&clause.anchor_id) && seen_anchor.insert(clause.anchor_id.clone())
+        {
             let token = clause_tokens[&clause.anchor_id].clone();
             let label = nema_label(&format!("{} {}", clause.number, clause.title));
             node_rows.push(format!("{} {}", token, label));
@@ -1172,13 +1295,25 @@ fn nema_text(built: &Built) -> Result<String, DocError> {
             .iter()
             .filter(|l| l.task_id == task.id && !l.target_file_id.is_empty())
         {
-            writer.push(&task_token, &file_tokens[&link.target_file_id], link_label(link.kind));
+            writer.push(
+                &task_token,
+                &file_tokens[&link.target_file_id],
+                link_label(link.kind),
+            );
         }
     }
     let domain_one_edges = writer.lines.len();
     for (prerequisite, dependent) in &built.blocking {
-        let from = built.task_tokens.get(prerequisite).cloned().unwrap_or_default();
-        let to = built.task_tokens.get(dependent).cloned().unwrap_or_default();
+        let from = built
+            .task_tokens
+            .get(prerequisite)
+            .cloned()
+            .unwrap_or_default();
+        let to = built
+            .task_tokens
+            .get(dependent)
+            .cloned()
+            .unwrap_or_default();
         writer.push(&from, &to, "Blocks");
     }
 
@@ -1215,7 +1350,8 @@ struct EdgeWriter {
 impl EdgeWriter {
     fn push(&mut self, from: &str, to: &str, label: &str) {
         let edge_id = format!("E{}", self.emitted.len() + 1);
-        self.lines.push(format!("{}>{}>{} {}", from, edge_id, to, label));
+        self.lines
+            .push(format!("{}>{}>{} {}", from, edge_id, to, label));
         self.emitted.push(Dependency {
             from: from.to_string(),
             edge_id,
@@ -1227,7 +1363,10 @@ impl EdgeWriter {
 
 /// Node tokens of one kind. Each id keeps its hexadecimal digits; the first eight are used, and
 /// ids whose tokens collide are lengthened by four until every token is distinct.
-fn assign_tokens(prefix: &str, ids: &BTreeSet<String>) -> Result<BTreeMap<String, String>, DocError> {
+fn assign_tokens(
+    prefix: &str,
+    ids: &BTreeSet<String>,
+) -> Result<BTreeMap<String, String>, DocError> {
     let mut keys: BTreeMap<String, String> = BTreeMap::new();
     for id in ids {
         let key: String = id
@@ -1248,7 +1387,10 @@ fn assign_tokens(prefix: &str, ids: &BTreeSet<String>) -> Result<BTreeMap<String
         let mut groups: BTreeMap<String, Vec<String>> = BTreeMap::new();
         for (id, key) in &keys {
             let len = lengths[id];
-            groups.entry(key[..len].to_string()).or_default().push(id.clone());
+            groups
+                .entry(key[..len].to_string())
+                .or_default()
+                .push(id.clone());
         }
         let mut grew = false;
         for members in groups.values() {
@@ -1323,8 +1465,16 @@ fn event_text(event: &EventRow) -> String {
         (true, true) => String::new(),
         _ => format!(
             "，{} -> {}",
-            if event.from_status.is_empty() { "（无）" } else { event.from_status.as_str() },
-            if event.to_status.is_empty() { "（无）" } else { event.to_status.as_str() }
+            if event.from_status.is_empty() {
+                "（无）"
+            } else {
+                event.from_status.as_str()
+            },
+            if event.to_status.is_empty() {
+                "（无）"
+            } else {
+                event.to_status.as_str()
+            }
         ),
     };
     format!(
@@ -1416,7 +1566,9 @@ fn sanitized(text: &str) -> String {
 
 /// Characters of an identifier that may appear in a command line.
 fn id_chars(id: &str) -> String {
-    id.chars().filter(|c| c.is_ascii_alphanumeric() || *c == '-').collect()
+    id.chars()
+        .filter(|c| c.is_ascii_alphanumeric() || *c == '-')
+        .collect()
 }
 
 fn internal(detail: &str) -> DocError {
@@ -1429,7 +1581,11 @@ fn internal(detail: &str) -> DocError {
 }
 
 fn dep_cycle() -> DocError {
-    DocError::new(ErrorCode::DepCycle, "依赖成环，无法导出", "删除成环的依赖后重试")
+    DocError::new(
+        ErrorCode::DepCycle,
+        "依赖成环，无法导出",
+        "删除成环的依赖后重试",
+    )
 }
 
 fn not_found(hint: &str) -> DocError {
@@ -1449,10 +1605,21 @@ mod tests {
     const ANCHOR: &str = "a1b2c3d4e5f60718";
 
     fn all_options() -> ExportOptions {
-        ExportOptions { scope: Scope::All, include_local_only: false, include_sensitive: false }
+        ExportOptions {
+            scope: Scope::All,
+            include_local_only: false,
+            include_sensitive: false,
+        }
     }
 
-    fn task(id: &str, no: i64, file: &str, section: &str, title: &str, vis: Visibility) -> TaskRecord {
+    fn task(
+        id: &str,
+        no: i64,
+        file: &str,
+        section: &str,
+        title: &str,
+        vis: Visibility,
+    ) -> TaskRecord {
         TaskRecord {
             id: id.into(),
             task_no: no,
@@ -1502,8 +1669,16 @@ mod tests {
         ReportInput {
             generated_at: "2026-11-25T10:00:00Z".into(),
             files: vec![
-                ReportFile { id: F1.into(), path: "docs/spec.md".into(), sensitive: false },
-                ReportFile { id: F2.into(), path: "tests/x.rs".into(), sensitive: false },
+                ReportFile {
+                    id: F1.into(),
+                    path: "docs/spec.md".into(),
+                    sensitive: false,
+                },
+                ReportFile {
+                    id: F2.into(),
+                    path: "tests/x.rs".into(),
+                    sensitive: false,
+                },
             ],
             clauses: vec![ReportClause {
                 file_id: F1.into(),
@@ -1535,7 +1710,10 @@ mod tests {
                     label: "用例".into(),
                 },
             ],
-            dependencies: vec![ReportDependency { prerequisite: "t1".into(), dependent: "t2".into() }],
+            dependencies: vec![ReportDependency {
+                prerequisite: "t1".into(),
+                dependent: "t2".into(),
+            }],
             ..ReportInput::default()
         }
     }
@@ -1582,7 +1760,9 @@ mod tests {
 
     /// A node row starts with its token, which holds no `>`; header and edge rows do not qualify.
     fn is_node_row(line: &str) -> bool {
-        !line.starts_with(' ') && !line.is_empty() && !line.split(' ').next().unwrap_or("").contains('>')
+        !line.starts_with(' ')
+            && !line.is_empty()
+            && !line.split(' ').next().unwrap_or("").contains('>')
     }
 
     fn node_tokens(text: &str) -> Vec<String> {
@@ -1617,7 +1797,14 @@ mod tests {
         let edges = nema_edges(&text);
         let rows: Vec<(String, String, String, String)> = edges
             .iter()
-            .map(|e| (e.from.clone(), e.edge_id.clone(), e.to.clone(), e.label.clone()))
+            .map(|e| {
+                (
+                    e.from.clone(),
+                    e.edge_id.clone(),
+                    e.to.clone(),
+                    e.label.clone(),
+                )
+            })
             .collect();
         let expected = vec![
             ("C-a1b2c3d4", "E1", "T-1", "Traces"),
@@ -1635,7 +1822,11 @@ mod tests {
         assert_eq!(all.len(), 5);
         topo_batches(&all, &edges).unwrap();
         let tasks = vec!["T-1".to_string(), "T-2".to_string()];
-        let blocks: Vec<Dependency> = edges.iter().filter(|e| e.label == "Blocks").cloned().collect();
+        let blocks: Vec<Dependency> = edges
+            .iter()
+            .filter(|e| e.label == "Blocks")
+            .cloned()
+            .collect();
         assert_eq!(
             topo_batches(&tasks, &blocks).unwrap(),
             vec![vec!["T-1".to_string()], vec!["T-2".to_string()]]
@@ -1645,32 +1836,56 @@ mod tests {
     fn tc921_nema_label_sanitising() {
         let mut input = base_input();
         input.tasks[0].title = "甲\t乙\u{3000}丙\n丁\r戊\u{1b}\u{202e}".into();
-        input.tasks.push(task("t3", 3, F1, "H2:其他#9", &"字".repeat(120), Visibility::Shared));
-        input.tasks.push(task("t4", 4, F1, "H2:其他#9", "", Visibility::Shared));
+        input.tasks.push(task(
+            "t3",
+            3,
+            F1,
+            "H2:其他#9",
+            &"字".repeat(120),
+            Visibility::Shared,
+        ));
+        input
+            .tasks
+            .push(task("t4", 4, F1, "H2:其他#9", "", Visibility::Shared));
         let text = render_nema(&input, &all_options()).unwrap();
         nema_edges(&text);
         let rows: Vec<&str> = text.lines().filter(|l| is_node_row(l)).collect();
         for row in &rows {
             let (token, label) = row.split_once(' ').unwrap();
-            assert!(token.chars().all(|c| c.is_ascii_alphanumeric() || c == '-'), "{}", token);
-            assert!(!label.contains('\t') && !label.contains('\u{3000}'), "{}", row);
+            assert!(
+                token.chars().all(|c| c.is_ascii_alphanumeric() || c == '-'),
+                "{}",
+                token
+            );
+            assert!(
+                !label.contains('\t') && !label.contains('\u{3000}'),
+                "{}",
+                row
+            );
             assert!(label.chars().count() <= NEMA_LABEL_CHARS, "{}", row);
         }
         let t1 = rows.iter().find(|r| r.starts_with("T-1 ")).unwrap();
         assert!(t1.contains("甲 乙 丙 丁 戊"), "{}", t1);
         assert!(t1.contains("<U+001B>") && t1.contains("<U+202E>"), "{}", t1);
         let t3 = rows.iter().find(|r| r.starts_with("T-3 ")).unwrap();
-        assert_eq!(t3.split_once(' ').unwrap().1.chars().count(), NEMA_LABEL_CHARS);
+        assert_eq!(
+            t3.split_once(' ').unwrap().1.chars().count(),
+            NEMA_LABEL_CHARS
+        );
         assert!(rows.iter().any(|r| *r == "T-4 -"));
         assert_eq!(one_line("a\u{3000}b\tc"), "a b c");
         assert_eq!(escape_md("a|b#c<d>"), "a\\|b\\#c\\<d\\>");
     }
 
     fn tc922_node_token_rules() {
-        let ids: BTreeSet<String> = ["abcdef0123456789aaaa", "abcdef0123459999aaaa", "1f-2e_3d:4c"]
-            .iter()
-            .map(|s| s.to_string())
-            .collect();
+        let ids: BTreeSet<String> = [
+            "abcdef0123456789aaaa",
+            "abcdef0123459999aaaa",
+            "1f-2e_3d:4c",
+        ]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
         let tokens = assign_tokens("C", &ids).unwrap();
         assert_eq!(tokens["abcdef0123456789aaaa"], "C-abcdef0123456789");
         assert_eq!(tokens["abcdef0123459999aaaa"], "C-abcdef0123459999");
@@ -1680,20 +1895,40 @@ mod tests {
         assert_eq!(assign_tokens("F", &file).unwrap()["F-1"], "F-f1");
 
         let no_digits: BTreeSet<String> = ["zz".to_string()].into_iter().collect();
-        assert_eq!(assign_tokens("F", &no_digits).unwrap_err().code, ErrorCode::Internal);
+        assert_eq!(
+            assign_tokens("F", &no_digits).unwrap_err().code,
+            ErrorCode::Internal
+        );
 
-        let same: BTreeSet<String> = ["ab-cd".to_string(), "abcd".to_string()].into_iter().collect();
-        assert_eq!(assign_tokens("C", &same).unwrap_err().code, ErrorCode::Internal);
+        let same: BTreeSet<String> = ["ab-cd".to_string(), "abcd".to_string()]
+            .into_iter()
+            .collect();
+        assert_eq!(
+            assign_tokens("C", &same).unwrap_err().code,
+            ErrorCode::Internal
+        );
     }
 
     fn tc923_dependency_errors() {
         let mut cycle = base_input();
-        cycle.dependencies.push(ReportDependency { prerequisite: "t2".into(), dependent: "t1".into() });
-        assert_eq!(render_nema(&cycle, &all_options()).unwrap_err().code, ErrorCode::DepCycle);
-        assert_eq!(render_markdown(&cycle, &all_options()).unwrap_err().code, ErrorCode::DepCycle);
+        cycle.dependencies.push(ReportDependency {
+            prerequisite: "t2".into(),
+            dependent: "t1".into(),
+        });
+        assert_eq!(
+            render_nema(&cycle, &all_options()).unwrap_err().code,
+            ErrorCode::DepCycle
+        );
+        assert_eq!(
+            render_markdown(&cycle, &all_options()).unwrap_err().code,
+            ErrorCode::DepCycle
+        );
 
         let mut dangling = base_input();
-        dangling.dependencies = vec![ReportDependency { prerequisite: "ghost".into(), dependent: "t2".into() }];
+        dangling.dependencies = vec![ReportDependency {
+            prerequisite: "ghost".into(),
+            dependent: "t2".into(),
+        }];
         let json = json_value(&render_json(&dangling, &all_options()).unwrap());
         assert_eq!(json["omitted"]["dependencies"], 1);
         let text = render_nema(&dangling, &all_options()).unwrap();
@@ -1706,7 +1941,11 @@ mod tests {
 
         let mut outside = base_input();
         outside.tasks[1].id = "t2".into();
-        let scope = ExportOptions { scope: Scope::Task("t2".into()), include_local_only: false, include_sensitive: false };
+        let scope = ExportOptions {
+            scope: Scope::Task("t2".into()),
+            include_local_only: false,
+            include_sensitive: false,
+        };
         let json = json_value(&render_json(&outside, &scope).unwrap());
         assert_eq!(json["dependencies"][0]["prerequisite"], "T-1");
         assert_eq!(json["dependencies"][0]["dependent"], "T-2");
@@ -1728,7 +1967,11 @@ mod tests {
             anchor_state: AnchorState::Valid,
         }];
         input.plans = vec![plan("p1", "t1", 1, "替换章节")];
-        input.plan_stats = vec![ReportPlanStat { plan_id: "p1".into(), added: 3, removed: 1 }];
+        input.plan_stats = vec![ReportPlanStat {
+            plan_id: "p1".into(),
+            added: 3,
+            removed: 1,
+        }];
         input.approvals = vec![ApprovalRecord {
             id: "ap1".into(),
             task_id: "t1".into(),
@@ -1753,8 +1996,22 @@ mod tests {
         }];
         input.files[0].path = "docs/spec.md".into();
         input.versions = vec![
-            ReportVersion { id: "ver1".into(), file_id: F1.into(), version_no: 1, content_hash: "3".repeat(64), ledger_event_id: "e1".into(), created_at: "2026-11-20T10:00:00Z".into() },
-            ReportVersion { id: "ver2".into(), file_id: F1.into(), version_no: 2, content_hash: "4".repeat(64), ledger_event_id: "e2".into(), created_at: "2026-11-21T10:00:00Z".into() },
+            ReportVersion {
+                id: "ver1".into(),
+                file_id: F1.into(),
+                version_no: 1,
+                content_hash: "3".repeat(64),
+                ledger_event_id: "e1".into(),
+                created_at: "2026-11-20T10:00:00Z".into(),
+            },
+            ReportVersion {
+                id: "ver2".into(),
+                file_id: F1.into(),
+                version_no: 2,
+                content_hash: "4".repeat(64),
+                ledger_event_id: "e2".into(),
+                created_at: "2026-11-21T10:00:00Z".into(),
+            },
         ];
         input.commits = vec![ReportCommit {
             task_id: "t1".into(),
@@ -1838,7 +2095,10 @@ mod tests {
             let timeline = json["timeline"].as_array().unwrap();
             assert!(timeline.iter().all(|e| e["kind"] != "dt.export.generated"));
         }
-        assert_eq!(render_json(&after, &options).unwrap(), render_json(&before, &options).unwrap());
+        assert_eq!(
+            render_json(&after, &options).unwrap(),
+            render_json(&before, &options).unwrap()
+        );
     }
 
     fn chain_event(seq: i64, prev: &str, kind: &str, task: &str) -> EventRecord {
@@ -1867,8 +2127,22 @@ mod tests {
 
     fn tc926_local_only_omitted() {
         let mut input = base_input();
-        input.tasks.push(task("t5", 5, F1, "H1:需求#1", "私密标题", Visibility::LocalOnly));
-        input.tasks.push(task("t6", 6, F1, "H1:需求#1", "公开标题", Visibility::Shared));
+        input.tasks.push(task(
+            "t5",
+            5,
+            F1,
+            "H1:需求#1",
+            "私密标题",
+            Visibility::LocalOnly,
+        ));
+        input.tasks.push(task(
+            "t6",
+            6,
+            F1,
+            "H1:需求#1",
+            "公开标题",
+            Visibility::Shared,
+        ));
         input.plans.push(plan("p5", "t5", 1, "私密方案"));
         input.annotations = vec![ReportAnnotation {
             id: "a9".into(),
@@ -1886,7 +2160,11 @@ mod tests {
         let js = render_json(&input, &options).unwrap();
         let nema = render_nema(&input, &options).unwrap();
         for text in [&md, &js, &nema] {
-            assert!(!text.contains("私密标题") && !text.contains("私密方案") && !text.contains("私密批注"));
+            assert!(
+                !text.contains("私密标题")
+                    && !text.contains("私密方案")
+                    && !text.contains("私密批注")
+            );
         }
         assert!(!md.contains("T-5") && !js.contains("\"T-5\"") && !nema.contains("T-5"));
         assert!(md.contains("公开标题") && nema.contains("公开标题"));
@@ -1894,25 +2172,45 @@ mod tests {
         assert_eq!(json["omitted"]["local_only_tasks"], 1);
         assert_eq!(json["omitted"]["local_only_annotations"], 1);
 
-        let scope = ExportOptions { scope: Scope::Task("t5".into()), include_local_only: false, include_sensitive: false };
+        let scope = ExportOptions {
+            scope: Scope::Task("t5".into()),
+            include_local_only: false,
+            include_sensitive: false,
+        };
         let err = render_markdown(&input, &scope).unwrap_err();
         assert_eq!(err.code, ErrorCode::NotFound);
         assert!(err.hint_zh.contains("--include-local-only"));
 
-        let open = ExportOptions { scope: Scope::All, include_local_only: true, include_sensitive: false };
+        let open = ExportOptions {
+            scope: Scope::All,
+            include_local_only: true,
+            include_sensitive: false,
+        };
         let md = render_markdown(&input, &open).unwrap();
         let js = render_nema(&input, &open).unwrap();
         assert!(md.contains("私密标题") && md.contains("私密方案") && md.contains("私密批注"));
         assert!(js.contains("私密标题"));
-        let scoped = ExportOptions { scope: Scope::Task("t5".into()), include_local_only: true, include_sensitive: false };
+        let scoped = ExportOptions {
+            scope: Scope::Task("t5".into()),
+            include_local_only: true,
+            include_sensitive: false,
+        };
         assert!(render_markdown(&input, &scoped).is_ok());
     }
 
     fn tc927_gated_file_omitted() {
         let mut input = base_input();
         input.files = vec![
-            ReportFile { id: F1.into(), path: "secret/keys.md".into(), sensitive: true },
-            ReportFile { id: F2.into(), path: "docs/open.md".into(), sensitive: false },
+            ReportFile {
+                id: F1.into(),
+                path: "secret/keys.md".into(),
+                sensitive: true,
+            },
+            ReportFile {
+                id: F2.into(),
+                path: "docs/open.md".into(),
+                sensitive: false,
+            },
         ];
         input.clauses = vec![ReportClause {
             file_id: F1.into(),
@@ -1951,7 +2249,13 @@ mod tests {
         let js = render_json(&input, &options).unwrap();
         let nema = render_nema(&input, &options).unwrap();
         for text in [&md, &js, &nema] {
-            for hidden in ["secret/keys.md", "机密条款", "机密批注", "机密任务标题", "T-7"] {
+            for hidden in [
+                "secret/keys.md",
+                "机密条款",
+                "机密批注",
+                "机密任务标题",
+                "T-7",
+            ] {
                 assert!(!text.contains(hidden), "{}", hidden);
             }
             assert!(text.contains("公开任务"));
@@ -1961,20 +2265,36 @@ mod tests {
         assert_eq!(json["omitted"]["gated_annotations"], 1);
 
         let file_scope = ExportOptions {
-            scope: Scope::File { file_id: F1.into(), section: None },
+            scope: Scope::File {
+                file_id: F1.into(),
+                section: None,
+            },
             include_local_only: false,
             include_sensitive: false,
         };
         let err = render_markdown(&input, &file_scope).unwrap_err();
         assert_eq!(err.code, ErrorCode::NotFound);
         assert!(err.hint_zh.contains("--include-sensitive"));
-        let task_scope = ExportOptions { scope: Scope::Task("t7".into()), include_local_only: false, include_sensitive: false };
-        assert_eq!(render_markdown(&input, &task_scope).unwrap_err().code, ErrorCode::NotFound);
+        let task_scope = ExportOptions {
+            scope: Scope::Task("t7".into()),
+            include_local_only: false,
+            include_sensitive: false,
+        };
+        assert_eq!(
+            render_markdown(&input, &task_scope).unwrap_err().code,
+            ErrorCode::NotFound
+        );
 
-        let open = ExportOptions { scope: Scope::All, include_local_only: false, include_sensitive: true };
+        let open = ExportOptions {
+            scope: Scope::All,
+            include_local_only: false,
+            include_sensitive: true,
+        };
         let md = render_markdown(&input, &open).unwrap();
         let nema = render_nema(&input, &open).unwrap();
-        assert!(md.contains("secret/keys.md") && md.contains("机密条款") && md.contains("机密批注"));
+        assert!(
+            md.contains("secret/keys.md") && md.contains("机密条款") && md.contains("机密批注")
+        );
         assert!(nema.contains("机密任务标题"));
     }
 
@@ -1985,15 +2305,53 @@ mod tests {
             task("t10", 10, F1, "H1:需求#1", "第二任务", Visibility::Shared),
         ];
         input.dependencies = Vec::new();
-        input.plans = vec![plan("p9", "t9", 1, "第一方案"), plan("p10", "t10", 1, "第二方案")];
+        input.plans = vec![
+            plan("p9", "t9", 1, "第一方案"),
+            plan("p10", "t10", 1, "第二方案"),
+        ];
         input.versions = vec![
-            ReportVersion { id: "ver1".into(), file_id: F1.into(), version_no: 1, content_hash: "5".repeat(64), ledger_event_id: "e1".into(), created_at: "2026-11-20T10:00:00Z".into() },
-            ReportVersion { id: "ver2".into(), file_id: F1.into(), version_no: 2, content_hash: "6".repeat(64), ledger_event_id: "e2".into(), created_at: "2026-11-21T10:00:00Z".into() },
-            ReportVersion { id: "ver3".into(), file_id: F1.into(), version_no: 3, content_hash: "7".repeat(64), ledger_event_id: "e3".into(), created_at: "2026-11-22T10:00:00Z".into() },
+            ReportVersion {
+                id: "ver1".into(),
+                file_id: F1.into(),
+                version_no: 1,
+                content_hash: "5".repeat(64),
+                ledger_event_id: "e1".into(),
+                created_at: "2026-11-20T10:00:00Z".into(),
+            },
+            ReportVersion {
+                id: "ver2".into(),
+                file_id: F1.into(),
+                version_no: 2,
+                content_hash: "6".repeat(64),
+                ledger_event_id: "e2".into(),
+                created_at: "2026-11-21T10:00:00Z".into(),
+            },
+            ReportVersion {
+                id: "ver3".into(),
+                file_id: F1.into(),
+                version_no: 3,
+                content_hash: "7".repeat(64),
+                ledger_event_id: "e3".into(),
+                created_at: "2026-11-22T10:00:00Z".into(),
+            },
         ];
         input.commits = vec![
-            ReportCommit { task_id: "t9".into(), plan_id: "p9".into(), file_id: F1.into(), version_id: "ver3".into(), prev_version_id: "ver2".into(), ledger_event_id: "e3".into() },
-            ReportCommit { task_id: "t10".into(), plan_id: "p10".into(), file_id: F1.into(), version_id: "ver1".into(), prev_version_id: String::new(), ledger_event_id: "e1".into() },
+            ReportCommit {
+                task_id: "t9".into(),
+                plan_id: "p9".into(),
+                file_id: F1.into(),
+                version_id: "ver3".into(),
+                prev_version_id: "ver2".into(),
+                ledger_event_id: "e3".into(),
+            },
+            ReportCommit {
+                task_id: "t10".into(),
+                plan_id: "p10".into(),
+                file_id: F1.into(),
+                version_id: "ver1".into(),
+                prev_version_id: String::new(),
+                ledger_event_id: "e1".into(),
+            },
         ];
 
         let options = all_options();
@@ -2010,7 +2368,10 @@ mod tests {
         assert_eq!(versions[2]["ledger_event_id"], "e3");
         assert_eq!(versions[0]["version_no"], 1);
         let commits = json["commits"].as_array().unwrap();
-        assert_eq!(commits[0]["restore_command"], "ladon restore ver2 --approve");
+        assert_eq!(
+            commits[0]["restore_command"],
+            "ladon restore ver2 --approve"
+        );
         assert!(commits[1]["restore_command"].is_null());
     }
 
