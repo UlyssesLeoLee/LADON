@@ -1718,6 +1718,184 @@ mod tests {
         }
     }
 
+    fn strings<T: Copy>(values: &[T], text: fn(T) -> &'static str) -> Vec<&'static str> {
+        values.iter().map(|value| text(*value)).collect()
+    }
+
+    fn assert_round_trip<T: Copy + PartialEq + std::fmt::Debug>(
+        values: &[T],
+        text: fn(T) -> &'static str,
+        parse: fn(&str) -> Option<T>,
+    ) {
+        for value in values {
+            assert_eq!(parse(text(*value)), Some(*value));
+        }
+    }
+
+    #[test]
+    fn tc830_value_domains_error_codes_and_conversions() {
+        assert_eq!(
+            strings(Principal::ALL, Principal::as_str),
+            ["human", "agent", "system"]
+        );
+        assert_eq!(
+            strings(ActorKind::ALL, ActorKind::as_str),
+            ["human", "agent", "system", "unknown"]
+        );
+        assert_eq!(
+            strings(ProposalState::ALL, ProposalState::as_str),
+            ["accepted", "proposed", "dismissed"]
+        );
+        assert_eq!(
+            strings(SourceKind::ALL, SourceKind::as_str),
+            ["cli", "console", "hermes", "legacy"]
+        );
+        assert_eq!(
+            strings(AnchorState::ALL, AnchorState::as_str),
+            [
+                "valid",
+                "needs_review",
+                "relocated",
+                "ambiguous",
+                "orphaned",
+                "unknown",
+                "file_missing",
+                "unchecked"
+            ]
+        );
+        assert_eq!(
+            strings(Visibility::ALL, Visibility::as_str),
+            ["shared", "local_only"]
+        );
+        assert_eq!(
+            strings(PlanStatus::ALL, PlanStatus::as_str),
+            [
+                "submitted",
+                "approved",
+                "applying",
+                "applied",
+                "conflicted",
+                "rejected",
+                "superseded"
+            ]
+        );
+        assert_eq!(
+            strings(EditKind::ALL, EditKind::as_str),
+            ["", "replace_section", "insert_after_section"]
+        );
+        assert_eq!(strings(Risk::ALL, Risk::as_str), ["low", "medium", "high"]);
+        assert_eq!(
+            strings(ApprovalKind::ALL, ApprovalKind::as_str),
+            ["plan", "result"]
+        );
+        assert_eq!(
+            strings(ApprovalDecision::ALL, ApprovalDecision::as_str),
+            ["approved", "rejected"]
+        );
+        assert_eq!(
+            strings(EvidenceKind::ALL, EvidenceKind::as_str),
+            [
+                "test_run",
+                "report",
+                "note",
+                "version",
+                "commit",
+                "agent_change",
+                "waiver"
+            ]
+        );
+        assert_eq!(
+            strings(EvidenceResult::ALL, EvidenceResult::as_str),
+            ["pass", "fail", "info"]
+        );
+        assert_eq!(
+            strings(EvidenceSource::ALL, EvidenceSource::as_str),
+            ["ledger", "reported"]
+        );
+        assert_eq!(
+            strings(LinkKind::ALL, LinkKind::as_str),
+            ["design", "detail", "code", "ut", "it", "st", "doc", "target", "other"]
+        );
+        assert_eq!(
+            strings(TargetKind::ALL, TargetKind::as_str),
+            ["file", "file_section", "git_commit", "url", "task"]
+        );
+        assert_eq!(
+            strings(LineageState::ALL, LineageState::as_str),
+            ["proposed", "confirmed", "rejected"]
+        );
+        assert_round_trip(AnchorState::ALL, AnchorState::as_str, AnchorState::parse);
+        assert_round_trip(EditKind::ALL, EditKind::as_str, EditKind::parse);
+        assert_round_trip(EvidenceKind::ALL, EvidenceKind::as_str, EvidenceKind::parse);
+        assert_round_trip(TargetKind::ALL, TargetKind::as_str, TargetKind::parse);
+        assert_eq!(AnchorState::parse("needs-review"), None);
+        assert_eq!(
+            EditKind::parse("insert_after_section"),
+            Some(EditKind::InsertAfterSection)
+        );
+
+        let codes: Vec<(&str, i32)> = ErrorCode::ALL
+            .iter()
+            .map(|code| (code.as_str(), code.exit_code()))
+            .collect();
+        assert_eq!(
+            codes,
+            [
+                ("E_INVALID_ARG", 4),
+                ("E_NOT_FOUND", 3),
+                ("E_AMBIGUOUS", 3),
+                ("E_SECTION_NOT_FOUND", 3),
+                ("E_NO_BASELINE", 4),
+                ("E_FILE_MISSING", 4),
+                ("E_TRANSITION_DENIED", 4),
+                ("E_GUARD_FAILED", 4),
+                ("E_HUMAN_ONLY", 5),
+                ("E_NOT_INTERACTIVE", 5),
+                ("E_POLICY_DENIED", 8),
+                ("E_STALE_PLAN", 6),
+                ("E_STALE_SUBJECT", 6),
+                ("E_CONFLICT", 6),
+                ("E_FILE_CHANGED", 6),
+                ("E_DEP_CYCLE", 4),
+                ("E_DEP_DANGLING", 4),
+                ("E_ANCHOR_BROKEN", 4),
+                ("E_UNSUPPORTED_FILE", 4),
+                ("E_PLAN_TOO_LARGE", 4),
+                ("E_QUOTA", 4),
+                ("E_RATE_LIMIT", 4),
+                ("E_STORE_BUSY", 7),
+                ("E_SCHEMA_OUTDATED", 4),
+                ("E_MIGRATION_BACKUP", 4),
+                ("E_INTEGRITY", 9),
+                ("E_INTERNAL", 1),
+            ]
+        );
+
+        let err = DocError::new(ErrorCode::StalePlan, "方案过期", "重新提交");
+        assert_eq!(err.to_string(), "E_STALE_PLAN: 方案过期");
+        assert_eq!(ActorKind::from(Principal::Human), ActorKind::Human);
+        assert_eq!(ActorKind::from(Principal::Agent), ActorKind::Agent);
+        assert_eq!(ActorKind::from(Principal::System), ActorKind::System);
+
+        let transitions = [
+            Transition::T1,
+            Transition::T2,
+            Transition::T3,
+            Transition::T4,
+            Transition::T5,
+            Transition::T6,
+            Transition::T7,
+            Transition::T8,
+            Transition::T9,
+            Transition::T10,
+            Transition::T11,
+        ];
+        assert_eq!(
+            transitions.iter().map(|t| t.code()).collect::<Vec<_>>(),
+            ["T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10", "T11"]
+        );
+    }
+
     #[test]
     fn tc831_transition_matrix_is_exhaustive() {
         use Principal::{Agent, Human, System};
