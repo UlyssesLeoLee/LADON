@@ -2,7 +2,7 @@
 
 Source: `src/doctask_report.rs`
 
-Source-SHA256: `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`
+Source-SHA256: `d956a1d7ed7a78850fbb1c6bacab8c3d0d4dc451edc59c46dbdaf6972159ac4c`
 
 ## Responsibility
 
@@ -53,28 +53,43 @@ A task or annotation is hidden when:
 1. its file is sensitive and `include_sensitive` is false (counted as `gated`), or
 2. its visibility is `LocalOnly` and `include_local_only` is false (counted as `local_only`).
 
-Hidden items are omitted from every section, from the NEMA text and from the timeline, together with their plans, approvals, evidence, links, commits, dependencies and timeline events. A hidden item contributes only to the counters of the `omitted` object (`local_only` and `gated`, for tasks and annotations; `dependencies` for dependencies that cannot be shown). Event payloads are never printed, so the event chain cannot leak text that the store kept out of the payloads.
+Hidden items are omitted from every section, from the NEMA text and from the timeline, together with their plans, approvals, evidence, links, commits, dependencies and timeline events. A hidden item contributes only to the counters of the `omitted` object (`local_only_tasks`, `local_only_annotations`, `gated_tasks`, `gated_annotations` and `dependencies`, the last one for dependencies that cannot be shown). Event payloads are never printed, so the event chain cannot leak text that the store kept out of the payloads. A link whose target file is gated is omitted with its file.
 
 ### Cutoff and chain
 
-`cutoff_seq` is the largest `seq` among the events whose kind is not `dt.export.generated`, or 0 when there is none. The chain check runs `first_chain_break` over the events with `seq <= cutoff_seq`. The head hash is the `hash` of the event at `cutoff_seq`, or `GENESIS_PREV_HASH` when there is none. Events with `seq` above the cutoff are not used anywhere in the output. The timeline excludes every `dt.export.generated` event, so an export never changes the text of a later export of the same data.
+`cutoff_seq` is the largest `seq` among the events whose kind is not `dt.export.generated`, or 0 when there is none. The chain check runs `first_chain_break` over the events with `seq <= cutoff_seq`, export events included, because they are part of the chain. The head hash is the `hash` of the event at `cutoff_seq`, or `GENESIS_PREV_HASH` when there is none, and `chain.events` counts the same events. Events with `seq` above the cutoff are not used anywhere in the output. The timeline excludes every `dt.export.generated` event, so an export never changes the text of a later export of the same data.
 
-A dependency is shown when both of its tasks are visible and at least one of them is exported. A dependency whose prerequisite is absent from `tasks`, or hidden, is omitted and counted in `omitted.dependencies`; its handle is never printed. A shown dependency whose other task is visible but outside the scope appears in section 9 by handle and is not counted.
+### Dependencies
 
-Timeline events are the events with `seq <= cutoff_seq` that refer to a visible item: a visible task (`task_id`), a visible file (`file_id`) with no task, or a file-level event of an in-scope file. Events that refer to a hidden item (through `task_id`, `subject_id` or `file_id`) are omitted. Events without a task and without a file appear only in the `All` scope.
+A dependency is shown when both of its tasks are visible and at least one of them is exported. A dependency that has an exported task at one end and an endpoint that is absent from `tasks`, or hidden, is omitted and counted in `omitted.dependencies`; its handle is never printed. A dependency with no exported task at either end is not counted. A shown dependency whose other task is visible but outside the scope appears in section 9 by handle and is not counted. The batches of section 9 and the `Blocks` edges of the NEMA text are computed over the exported tasks only.
+
+### Timeline
+
+The timeline holds the events with `seq <= cutoff_seq` that are not `dt.export.generated` and that refer to no hidden item (through `task_id`, `subject_id` or `file_id`). The scope selects among them:
+- `All`: every such event.
+- `Task(t)`: the events whose `task_id` or `subject_id` is `t`.
+- `File { f, .. }`: the events whose `file_id` is `f` and that have no task or a task among the exported tasks.
+
+Each timeline row carries the seq, kind, task handle (empty when none), status transition, actor, actor kind and timestamp. The payload is not included.
 
 ### Output
 
-`render_markdown(input, options) -> Result<String, DocError>`, `render_json(input, options) -> Result<String, DocError>` and `render_nema(input, options) -> Result<String, DocError>`. Each function builds the same selection and returns the text without a trailing newline in Markdown and JSON, and with one trailing newline in NEMA.
+`render_markdown(input, options) -> Result<String, DocError>`, `render_json(input, options) -> Result<String, DocError>` and `render_nema(input, options) -> Result<String, DocError>`. Each function builds the same selection. Markdown and JSON return the text without a trailing newline; NEMA returns the text with one trailing newline.
 
-**Markdown** has a title, a header block (generated time, cutoff, scope, chain result with the event count and the head hash, counts of omitted items) and these sections in order: 1 summary, 2 clauses and annotations, 3 tasks and timeline, 4 approvals, 5 plans and differences, 6 commits and ledger events, 7 test evidence with its source label, 8 links, 9 dependencies and batches, 10 rollback chain, 11 anomalies, 12 data of unknown origin. Headings and labels are Chinese; identifiers, hashes, codes and kinds are ASCII. An empty section shows `（无）`.
+**Markdown** has a title, a header block (generated time, cutoff, scope, chain result with the event count and the head hash, counts of omitted items) and these sections in order: 1 summary, 2 clauses and annotations, 3 tasks and timeline, 4 approvals, 5 plans and differences, 6 commits and ledger events, 7 test evidence with its source label, 8 links, 9 dependencies and batches, 10 rollback chain, 11 anomalies, 12 data of unknown origin. Section 3 lists each task with its timeline and then the events that belong to no task. Section 10 lists, for each file, its versions (number, version id, ledger event, hash, time) and, for each applied plan of that file, the line `回到应用前版本: \`ladon restore <id> --approve\`` or `（无前序版本）`. Headings and labels are Chinese; identifiers, hashes, codes and kinds are ASCII. An empty section shows `（无）`.
 
-**JSON** is `serde_json::to_string_pretty` of a `Report` value with `schema` set to `ladon.doctask.report.v1`. Its field order follows the struct declarations, so the output is fixed by the code, not by a map iteration order.
+**JSON** is `serde_json::to_string_pretty` of a `Report` value with `schema` set to `ladon.doctask.report.v1`. Its field order follows the struct declarations, so the output is fixed by the code, not by a map iteration order. `commits[].restore_command` is `null` when the file had no earlier version.
+
+### Anomalies and unknown origin
+
+Section 11 lists, for each exported task whose anchor state is `needs_review`, `relocated`, `ambiguous`, `orphaned`, `unknown` or `file_missing`, one line with the task handle and the state. In the `All` scope only, it also lists each session that has a `dt.session.started` event in the chain and no `dt.session.ended` event with the same `session` value, as unfinished.
+
+Section 12 lists each exported task whose source kind is `legacy` or whose creator kind is `unknown`, and each timeline event whose kind starts with `legacy.`. Each line states that the record is not verified.
 
 ### NEMA
 
 The text has two domains, in this order:
-- Domain 1, header ` \>1 1`: node rows and the trace edges. Node rows: clause nodes `C-<token>` for clauses that carry a task in the export, task nodes `T-<task_no>` for every exported task, and file nodes `F-<token>` for every file that an edge refers to.
+- Domain 1, header ` \>1 1`: node rows and the trace edges. Node rows: clause nodes `C-<token>` for clauses that an exported task refers to, task nodes `T-<task_no>` for every exported task, and file nodes `F-<token>` for every file that an edge refers to.
 - Domain 2, header ` \>2 1`: only the `Blocks` edges between exported tasks.
 
 Tokens: the anchor or file id with every character outside `[0-9a-fA-F]` removed (so the hyphens of UUIDs drop out), lowercased, then its first 8 characters. Ids whose tokens collide are lengthened by 4 characters at a time (12, 16, and so on up to the full filtered id) until every token of that node kind is distinct. An id that is empty after filtering, or whose filtered form equals another id's, returns `E_INTERNAL`.
@@ -85,28 +100,28 @@ Order of the text. Domain 1 node rows: clause nodes in clause order (file path, 
 
 Edges (`from>E<n>>to label`):
 - clause to task: `Traces`;
-- task to a file whose link kind is `design` or `detail`: `Refines`; `code`: `Implements`; `ut`, `it` or `st`: `VerifiedBy`; `doc`, `target` or `other`: `Targets`. Only links whose target file is an exported file produce an edge, and a file node is written only when an edge refers to it; links to URLs, commits or tasks appear in the Markdown and JSON only;
+- task to a file, for a link whose target file id is not empty: `Refines` for kind `design` or `detail`; `Implements` for `code`; `VerifiedBy` for `ut`, `it` or `st`; `Targets` for `doc`, `target` or `other`. A file node is written only when an edge refers to it. Links to URLs, commits or tasks appear in the Markdown and JSON only;
 - prerequisite to dependent: `Blocks`, domain 2, between exported tasks only.
 
-Read-back validation, before the text is returned: `parse_graph_edges(text)` must succeed; its edge list must equal the emitted list in order (`from`, `edge_id`, `to`, `label`); and `topo_batches` over all node tokens and all parsed edges must succeed. A parse or round-trip failure returns `E_INTERNAL`. The layering of the exported tasks, which is `topo_batches` over the task node tokens and the exported `Blocks` edges, gives the batches of section 9. A cycle among the exported `Blocks` edges returns `E_DEP_CYCLE`, and so does any other failure of that layering.
+Read-back validation, before the text is returned: `parse_graph_edges(text)` must succeed; its edge list must equal the emitted list in order (`from`, `edge_id`, `to`, `label`); and `topo_batches` over all node tokens and all parsed edges must succeed. A parse or round-trip failure returns `E_INTERNAL`. The layering of the exported tasks, which is `topo_batches` over the task node tokens and the exported `Blocks` edges, gives the batches of section 9 and is computed before any text is written, for all three renderers. A cycle among the exported `Blocks` edges returns `E_DEP_CYCLE`, and so does any other failure of that layering.
 
 ### Markdown and JSON text
 
-User text is sanitised with `sanitize_display` (control and bidirectional characters become `<U+XXXX>`). Line breaks in single-line contexts become spaces. In Markdown, inline text escapes the characters `\`, `` ` ``, `*`, `[`, `]`, `<`, `>`, `|`, `#` and `~` with a backslash. Annotation text, which may span lines, is printed as a blockquote with one `> ` prefix per line. JSON strings are the sanitised text, encoded by `serde_json`.
+User text is sanitised with `sanitize_display` (control and bidirectional characters become `<U+XXXX>`). Single-line text has line breaks, tabs and U+3000 replaced by spaces first. In Markdown, inline text escapes the characters `\`, `` ` ``, `*`, `[`, `]`, `<`, `>`, `|`, `#` and `~` with a backslash, and a tab becomes a space. Annotation text, which may span lines, is printed as a blockquote with one `> ` prefix per line, after normalising `\r\n` and `\r` to `\n`. JSON strings are the sanitised text, encoded by `serde_json`. A restore command contains only the ASCII letters, digits and hyphens of the version id.
 
 ### Errors
 
 | Condition | Code |
 |---|---|
-| Scope task or file absent (or file gated without `include_sensitive`) | `E_NOT_FOUND` |
+| Scope task or file absent or hidden (or file gated without `include_sensitive`) | `E_NOT_FOUND` |
 | Cycle among exported dependencies | `E_DEP_CYCLE` |
 | Token collision that cannot be resolved; read-back or topo failure of the NEMA text | `E_INTERNAL` |
 
-Dangling dependencies (a prerequisite absent from the input or hidden) are not errors: the edge is omitted and counted in `omitted.dependencies`.
+Dangling dependencies (a prerequisite or dependent absent from the input or hidden) are not errors: the edge is omitted and counted in `omitted.dependencies`.
 
 ## Determinism
 
-Every collection is sorted before it is rendered: tasks by `task_no`; annotations by `no`; clauses by file path then `ordinal`; plans by `(task_no, plan_no)`; approvals, evidence and versions by `created_at` then `id`; links by `(task_no, kind text, target)`; dependencies by `(prerequisite task_no, dependent task_no)`; commits by `(task_no, plan_no)`; events by `seq`. Maps are `BTreeMap` or `BTreeSet` only. The output therefore depends on the content of the input and on `generated_at` alone. Two calls with the same input and options return identical bytes, and an export that appends only a `dt.export.generated` event returns the same bytes as before.
+Every collection is sorted before it is rendered: tasks by `task_no`; annotations by `no`; clauses by file path then `ordinal` then section; plans by `(task_no, plan_no)`; approvals, evidence and versions by `created_at` then `id` (versions by file path, `version_no` then `id`); links by `(task_no, kind text, target)`; dependencies by `(prerequisite task_no, dependent task_no)`; commits by `(task_no, plan_no, version id)`; events by `seq`. Maps are `BTreeMap` or `BTreeSet` only. The output therefore depends on the content of the input and on `generated_at` alone. Two calls with the same input and options return identical bytes, and an export that appends only a `dt.export.generated` event returns the same bytes as before.
 
 ## Change Notes
 

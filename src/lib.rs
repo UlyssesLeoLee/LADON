@@ -46,3 +46,6 @@ pub mod doctask_reconcile;
 
 // Document-task rendering: message catalogues, display width, tables, screens and error text.
 pub mod doctask_render;
+
+// Document-task export: audit report in Markdown and JSON, and the .NEMA traceability graph.
+pub mod doctask_report;
