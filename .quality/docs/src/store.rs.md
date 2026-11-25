@@ -2,7 +2,7 @@
 
 Source: `src/store.rs`
 
-Source-SHA256: `8a0eadfd5ab375e4eb41c452518f6de95c661faa52a38b74fd50e2abd0c432ae`
+Source-SHA256: `38e8d8ba9b758f6b4274b945aafe34526eada7f133041e38a9a1edd1a431a7e3`
 
 ## Responsibility
 
