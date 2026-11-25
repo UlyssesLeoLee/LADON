@@ -26,7 +26,7 @@ Source-SHA256: `75e0d88af0c97c9d440520597c136915c3b39f2ec0d82494b4a945162cbb2340
 ## Module Declaration Check
 
 - `doctask_cli` is declared after `doctask_report`. Its check is the compilation of every test target and the tests named in `doctask_cli.rs.test.md` (TC-930 to TC-939).
-- `mcp` is declared after `doctask_cli`. Its check is the compilation of every test target and the tests named in `mcp.rs.test.md` (TC-940 to TC-949).
+- `mcp` is declared after `doctask_cli`. Its check is the compilation of every test target and the tests named in `mcp.rs.test.md` (TC-940 to TC-949). The entry test `ut_155_handshake_version_negotiation` runs the handshake cases, and `ut_156_notifications_ping_bad_lines` runs the remaining cases.
 
 ## Boundary & Failure Cases
 
