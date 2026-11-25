@@ -2,6 +2,7 @@
 //! reach the operating system. Every external effect is reached through the [`Host`] trait.
 use crate::{
     agent_api::{self, AgentApi},
+    doctask_cli::{self, DocArgs},
     engine::{normalise_relative, Engine},
     google_oauth,
     model::FileRecord,
@@ -99,6 +100,8 @@ pub enum Command {
         #[arg(long, default_value = "ROOT")]
         section: String,
         text: String,
+        #[arg(long, default_value = "human")]
+        actor: String,
     },
     Task {
         file: PathBuf,
@@ -107,7 +110,11 @@ pub enum Command {
         title: String,
         #[arg(long, default_value = "")]
         description: String,
+        #[arg(long, default_value = "human")]
+        actor: String,
     },
+    /// Document-task commands: `ladon doc <command>`.
+    Doc(DocArgs),
     Plan {
         version_id: String,
     },
@@ -303,8 +310,27 @@ impl Host for SystemHost {
     }
 }
 
+/// Stack size of the thread that parses the arguments and runs the command. The command tree of
+/// `clap` and the futures of the commands need more than the default main-thread stack.
+const COMMAND_STACK_BYTES: usize = 32 * 1024 * 1024;
+
 /// Parses the process arguments, runs the command on the system and returns its result.
+/// Parsing and running happen on a thread with [`COMMAND_STACK_BYTES`] of stack; a panic on that
+/// thread is propagated to the caller unchanged.
 pub fn main_entry() -> Result<()> {
+    let worker = std::thread::Builder::new()
+        .name("ladon-command".to_string())
+        .stack_size(COMMAND_STACK_BYTES)
+        .spawn(run_process)?;
+    match worker.join() {
+        Ok(result) => result,
+        Err(payload) => std::panic::resume_unwind(payload),
+    }
+}
+
+/// Parses the process arguments, runs the command on a runtime and maps a [`Reported`] failure to
+/// the process exit code.
+fn run_process() -> Result<()> {
     let cli = Cli::parse();
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
@@ -460,38 +486,54 @@ async fn command<H: Host>(host: &H, engine: &Engine, cmd: Command) -> Result<()>
             file,
             section,
             text,
+            actor,
         } => {
-            let record = resolve_record(engine, &file).await?;
-            let version = engine
-                .store
-                .latest_version(&record.id)
-                .await?
-                .context("file has no version")?;
-            println!(
-                "annotation id: {}",
-                engine
-                    .store
-                    .add_annotation(&record.id, &section, &version.id, &text)
-                    .await?
-            );
+            let file = file.to_string_lossy().into_owned();
+            let code = doctask_cli::annotate_legacy(
+                engine,
+                &actor,
+                &file,
+                &section,
+                &text,
+                &mut doctask_cli::SystemIo,
+            )
+            .await?;
+            if code != 0 {
+                return Err(Reported { code }.into());
+            }
         }
         Command::Task {
             file,
             section,
             title,
             description,
+            actor,
         } => {
-            let record = resolve_record(engine, &file).await?;
-            let version = engine
-                .store
-                .latest_version(&record.id)
-                .await?
-                .context("file has no version")?;
-            let id = engine
-                .store
-                .create_task(&record.id, &section, &version.id, &title, &description)
-                .await?;
-            println!("task id: {}", id);
+            let file = file.to_string_lossy().into_owned();
+            let code = doctask_cli::task_legacy(
+                engine,
+                &actor,
+                &file,
+                &section,
+                &title,
+                &description,
+                &mut doctask_cli::SystemIo,
+            )
+            .await?;
+            if code != 0 {
+                return Err(Reported { code }.into());
+            }
+        }
+        Command::Doc(args) => {
+            let code = Box::pin(doctask_cli::run_doc(
+                engine,
+                &args,
+                &mut doctask_cli::SystemIo,
+            ))
+            .await?;
+            if code != 0 {
+                return Err(Reported { code }.into());
+            }
         }
         Command::Plan { version_id } => println!("{}", engine.restore_plan(&version_id).await?),
         Command::Restore {
@@ -1232,9 +1274,12 @@ mod tests {
             &host,
         )
         .await;
+        let annotate = annotate.unwrap_err();
         assert_eq!(
-            annotate.unwrap_err().to_string(),
-            "file not found in ledger"
+            annotate
+                .downcast_ref::<Reported>()
+                .map(|reported| reported.code),
+            Some(3)
         );
         let task = run(
             parse(&[
@@ -1247,7 +1292,12 @@ mod tests {
             &host,
         )
         .await;
-        assert_eq!(task.unwrap_err().to_string(), "file not found in ledger");
+        let task = task.unwrap_err();
+        assert_eq!(
+            task.downcast_ref::<Reported>()
+                .map(|reported| reported.code),
+            Some(3)
+        );
     }
 
     #[test]

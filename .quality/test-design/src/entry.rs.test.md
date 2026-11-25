@@ -2,7 +2,7 @@
 
 Source: `src/entry.rs`
 
-Source-SHA256: `9a2b8b3ddff4b24648301e10fc962ca430e272e3796bdbbb5578cab40cda8379`
+Source-SHA256: `0a0103fa5f54097620b11e07daf492c16a617df5e48cd6c696b2861285604be7`
 
 ## Test Strategy
 

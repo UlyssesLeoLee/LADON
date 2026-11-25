@@ -49,3 +49,6 @@ pub mod doctask_render;
 
 // Document-task export: audit report in Markdown and JSON, and the .NEMA traceability graph.
 pub mod doctask_report;
+
+// Document-task one-shot command layer: the `ladon doc` tree, confirmations, output and exit codes.
+pub mod doctask_cli;

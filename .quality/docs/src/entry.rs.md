@@ -2,7 +2,7 @@
 
 Source: `src/entry.rs`
 
-Source-SHA256: `9a2b8b3ddff4b24648301e10fc962ca430e272e3796bdbbb5578cab40cda8379`
+Source-SHA256: `0a0103fa5f54097620b11e07daf492c16a617df5e48cd6c696b2861285604be7`
 
 ## Responsibility
 
@@ -68,7 +68,7 @@ pub struct SystemHost;
 
 ### Entry points
 
-- `pub fn main_entry() -> anyhow::Result<()>`: parses the process arguments, builds the multi-thread runtime, runs `run` with `SystemHost` and exits with the code of a `Reported` error.
+- `pub fn main_entry() -> anyhow::Result<()>`: starts a thread named `ladon-command` with a 32 MiB stack (`COMMAND_STACK_BYTES`) and waits for it. The thread parses the process arguments, builds the multi-thread runtime, runs `run` with `SystemHost` and exits with the code of a `Reported` error. A panic on the thread is resumed on the caller. The stack size is needed because the `clap` command tree of the `doc` subcommands and the command futures exceed the default 1 MiB main-thread stack of Windows in an unoptimised build.
 - `pub async fn run<H: Host>(cli: Cli, host: &H) -> anyhow::Result<()>`: runs one parsed command line.
 - `pub struct Reported { pub code: i32 }`: a failure that has already been printed. It implements `Display` and `std::error::Error`.
 

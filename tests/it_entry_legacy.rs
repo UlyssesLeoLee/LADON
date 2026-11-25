@@ -381,7 +381,7 @@ status: 0
 stdout:
 task id: <UUID>
 stderr:
-(empty)
+任务编号 T-1，查看: ladon doc show T-1
 $ ladon history docs/req.md
 status: 0
 stdout:
@@ -671,11 +671,12 @@ stdout:
 stderr:
 Error: file not found in ledger
 $ ladon annotate missing.md --section ROOT note
-status: 1
+status: 3
 stdout:
 (empty)
 stderr:
-Error: file not found in ledger
+错误 E_NOT_FOUND: 未找到记录
+提示: 确认句柄或文件引用后重试
 $ ladon diff unknown-version other-unknown
 status: 1
 stdout:
