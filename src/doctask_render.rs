@@ -1371,7 +1371,6 @@ mod tests {
         DocError::new(ErrorCode::StalePlan, "方案已过期", "重新提交方案").with_detail(detail)
     }
 
-    #[test]
     fn tc910_display_width_and_padding() {
         assert_eq!(display_width("abc"), 3);
         assert_eq!(display_width("文档"), 4);
@@ -1394,7 +1393,6 @@ mod tests {
         assert_eq!(pad_to("文", 3), "文 ");
     }
 
-    #[test]
     fn tc911_table_alignment_and_shape() {
         let table = Table {
             headers: vec!["名称".into(), "Name".into(), "数量".into()],
@@ -1422,6 +1420,11 @@ mod tests {
         for line in &lines {
             assert!(!line.ends_with(' '), "trailing space in {line:?}");
         }
+        let short = Table {
+            headers: vec!["A".into(), "B".into(), "C".into()],
+            rows: vec![vec!["1".into(), "2".into(), "3".into(), "4".into()]],
+        };
+        assert_eq!(short.render(Mode::Plain), "A  B  C\n-  -  -\n1  2  3");
         let empty = Table {
             headers: vec!["A".into()],
             rows: vec![],
@@ -1434,7 +1437,6 @@ mod tests {
         assert_eq!(none.render(Mode::Plain), "");
     }
 
-    #[test]
     fn tc912_catalogue_key_sets_identical_and_complete() {
         let mut zh = keys(catalog(Lang::Zh));
         let mut en = keys(catalog(Lang::En));
@@ -1512,7 +1514,6 @@ mod tests {
         }
     }
 
-    #[test]
     fn tc914_error_rendering_and_sanitisation() {
         let error = sample_error("a\u{1b}[31m\u{202E}x");
         assert_eq!(
@@ -1535,7 +1536,6 @@ mod tests {
         assert!(colour.contains("<U+001B>"));
     }
 
-    #[test]
     fn tc915_outline_screen_golden() {
         let zh = render_outline(&sample_outline(true), Lang::Zh, Mode::Plain);
         assert_eq!(
@@ -1571,7 +1571,6 @@ mod tests {
         );
     }
 
-    #[test]
     fn tc916_trace_screen_sections_and_golden() {
         let filled = render_trace(&sample_trace(true), Lang::Zh, Mode::Plain);
         assert_eq!(
@@ -1612,7 +1611,6 @@ mod tests {
         assert!(empty.ends_with("Next: 追踪 要件定义.md SPEC-12"));
     }
 
-    #[test]
     fn tc917_approval_screen_hashes_and_baseline_line() {
         let differs = render_approval(
             &sample_approval(BaselineCheck::Differs),
@@ -1639,9 +1637,28 @@ mod tests {
         assert!(none.contains("\nexpected_hash abcdef12\n"));
         assert!(none.contains("\nTarget file has no baseline\n"));
         assert!(none.contains("\nresult_hash xxxxxxxxxxxx\n"));
+        let zh_none = render_approval(
+            &sample_approval(BaselineCheck::NoBaseline),
+            Lang::Zh,
+            Mode::Plain,
+        );
+        assert!(zh_none.contains("\n目标文件无基线\n"));
+        let mut bare = sample_approval(BaselineCheck::Matches);
+        bare.other_plans.clear();
+        bare.dependencies.clear();
+        let bare_zh = render_approval(&bare, Lang::Zh, Mode::Plain);
+        assert!(bare_zh.contains("同一文件上的其他已批准方案: （无）\n"));
+        assert!(bare_zh.contains("依赖: （无）\n"));
+        let mut many = sample_approval(BaselineCheck::Matches);
+        many.options = (1..=6).map(|n| format!("option {n}")).collect();
+        let many_out = render_approval(&many, Lang::En, Mode::Plain);
+        assert!(many_out.contains("  5. option 5"));
+        assert!(!many_out.contains("option 6"));
+        let mut escaped = sample_approval(BaselineCheck::Matches);
+        escaped.diff = vec!["\u{1b}-old".into()];
+        assert!(render_approval(&escaped, Lang::En, Mode::Plain).contains("\n<U+001B>-old\n"));
     }
 
-    #[test]
     fn tc918_plain_mode_has_no_ansi_and_color_is_sgr_only() {
         let mut outline = sample_outline(true);
         outline.rows[0].title = hostile();
@@ -1705,6 +1722,10 @@ mod tests {
         assert_eq!(short_hash(&"a".repeat(64)).len(), 12);
         assert_eq!(short_hash(&"a".repeat(11)).len(), 11);
         assert_eq!(short_hash("abc"), "abc");
+        assert_eq!(short_hash(&"a".repeat(12)).len(), 12);
+        assert_eq!(short_hash(&"b".repeat(13)), "bbbbbbbbbbbb");
+        assert_eq!(cell("a\rb"), "a<U+000D>b");
+        assert_eq!(fill("a {b", &[("b", "x")]), "a {b");
         let source = include_str!("doctask_render.rs");
         for forbidden in [
             concat!("crate::", "store"),
@@ -1714,5 +1735,25 @@ mod tests {
         ] {
             assert!(!source.contains(forbidden), "forbidden import {forbidden}");
         }
+    }
+
+    #[test]
+    fn ut_145_control_and_bidi_rejection() {
+        tc914_error_rendering_and_sanitisation();
+    }
+
+    #[test]
+    fn ut_151_cjk_width_and_table_alignment() {
+        tc910_display_width_and_padding();
+        tc911_table_alignment_and_shape();
+    }
+
+    #[test]
+    fn ut_152_screen_golden_and_message_keys() {
+        tc912_catalogue_key_sets_identical_and_complete();
+        tc915_outline_screen_golden();
+        tc916_trace_screen_sections_and_golden();
+        tc917_approval_screen_hashes_and_baseline_line();
+        tc918_plain_mode_has_no_ansi_and_color_is_sgr_only();
     }
 }

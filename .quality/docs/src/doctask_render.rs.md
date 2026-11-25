@@ -2,7 +2,7 @@
 
 Source: `src/doctask_render.rs`
 
-Source-SHA256: `78de0da339b7e4e3d7a141d626b7dc423097c587179d34998f5703a9e773ea83`
+Source-SHA256: `cd2be14308cb79ee023eec64a0c83de6cf368a9262e07c518d1608ce636c54f5`
 
 ## Responsibility
 
@@ -55,7 +55,7 @@ Each enumeration key uses the stored string of the variant, so the catalogue is 
 
 ### Painter
 
-`Style` has `Heading` (bold), `Error` (bold red) and `Dim`. `paint(mode, style, text)` returns the text unchanged in `Plain` mode and wraps it in the matching SGR sequence and a reset in `Color` mode.
+The painter is private to the module. `Style` has `Heading` (bold), `Error` (bold red) and `Dim`. `paint(mode, style, text)` returns the text unchanged in `Plain` mode and wraps it in the matching SGR sequence and a reset in `Color` mode.
 
 ### Table
 
