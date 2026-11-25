@@ -43,7 +43,7 @@ Verification runs in the CI job `release.yml` (`cargo test --locked --all-target
 | Every legacy task has `dt.task.imported`; a re-import after an earlier binary changed the status leaves no status drift (IT-050, WBS WP05 acceptance) | TC-869 | Second run; raw status change; third run; legacy use after a backfill | Zero report on repeat; one imported event after drift; `status_drift` empty; chain intact; rows created by the earlier binary are imported |
 
 | Each service write is one transaction with its event (`write_with_event`); an `Update` that changes no row rolls back | TC-871, TC-872, TC-878 | Baseline insert and revoke; task and annotation edits; a stale update | Record and event appear together or not at all; the stale update returns `E_NOT_FOUND` with no event |
-| `ensure_anchor_clause` stores the clause fingerprint on creation and keeps an existing row unchanged | TC-870, TC-879 | Anchors created by the strict and the legacy path | Fingerprint columns set; repeated call returns the same id |
+| `ensure_anchor_clause` stores the clause fingerprint on creation and keeps an existing row unchanged | TC-870, TC-879 | Anchors created by the strict and the legacy path | Fingerprint columns and `current_hash` set; repeated call returns the same id |
 | `schema_current` reports migration 4 without writing | TC-877 | Engine before and after `open` | `false` before migration, `true` after; no row written by the check |
 | Typed read rows (`baselines`, `tasks`, `annotations`) return every column the service reads | TC-873, TC-874, TC-876 | Tasks, annotations and baselines with and without revocation, `local_only` and proposals | Field values equal the written values; order by number and time |
 
@@ -62,7 +62,7 @@ Verification runs in the CI job `release.yml` (`cargo test --locked --all-target
 
 ## Flow Primitives
 
-The step primitive `commit_step`, the row writes `UpdateWhere` and `Delete`, and the readers `plans`, `approvals`, `evidence`, `links` and `anchor_reviews` are exercised through the flow in `tests/it_doctask_flow.rs`: a failed compare-and-set, a failing row write and a duplicate identifier roll the whole step back (TC-882); the chain order of evidence and approvals decides the acceptance rule (TC-885); the delete of a dependency row and the update of several plan rows are checked by TC-895 and TC-890. The anchor review columns are read by the anchor guard of TC-892.
+The step primitive `commit_step`, the row writes `UpdateWhere` and `Delete`, and the readers `plans`, `approvals`, `evidence`, `links` and `anchor_reviews` are exercised through the flow; the readers `anchors` and `lineage` and the `current_hash` set on creation are exercised by the reconciliation tests TC-900 to TC-909 in `tests/it_doctask_reconcile.rs` in `tests/it_doctask_flow.rs`: a failed compare-and-set, a failing row write and a duplicate identifier roll the whole step back (TC-882); the chain order of evidence and approvals decides the acceptance rule (TC-885); the delete of a dependency row and the update of several plan rows are checked by TC-895 and TC-890. The anchor review columns are read by the anchor guard of TC-892.
 
 ## Regression Scope
 

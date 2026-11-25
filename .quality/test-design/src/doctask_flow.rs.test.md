@@ -74,5 +74,6 @@ Every clause of the WP07 acceptance column of `docs/05_operations/58_文档任�
 
 ## Regression Scope
 
+- `tests/it_doctask_reconcile.rs` (TC-900, TC-902, TC-905) covers the decision-time reconciliation before `approve` and `close`: a changed anchor refuses the guard with `E_ANCHOR_BROKEN` until it is acknowledged, and a deleted anchor file stays refused. The flow tests above create anchors whose fingerprints match their file, so the reconciliation writes nothing for them and their chain assertions hold.
 - `tests/it_doctask_store.rs` and `tests/it_doctask_service.rs` (WP05, WP06) must pass unchanged; the store gains the `RowWrite` variants `UpdateWhere` and `Delete`, which the existing matches do not need to cover because the store validates them in its own functions.
 - `tests/it_doctask_migration.rs` (IT-050) and `tests/it_nema_task.rs` (IT-005) are unaffected.

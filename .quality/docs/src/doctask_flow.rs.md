@@ -12,6 +12,8 @@ Every state change is one call to `DocStore::commit_step`: the compare-and-set o
 
 The module decides what may run. Principal checks use `doctask_model::authorize` for the operations of the authorization table and `doctask_model::lookup_transition` for transitions. Guards are evaluated with `doctask_model::check_guards` on a `GuardInput` filled from the stored rows. The module holds no SQL: every table access goes through `DocStore`. It writes no file: the controlled write of an edit plan belongs to the plan module (WP14), reached through `EditPlanSupport`.
 
+Before the guards of `approve` and `close` the flow reconciles the anchor of the task with `doctask_reconcile::reconcile_decision` (System actor, one commit per changed anchor, design 5.5 item 3) and reloads its snapshot, so an anchor whose file changed since the plan was shown is refused with `E_ANCHOR_BROKEN` until the owner acknowledges or relocates it. The reconciliation runs after the principal, the state and the adoption checks, so a refused transition writes nothing.
+
 Not covered here: anchor acknowledgement, relocation and rebase (WP08), the byte-level splice and the edit component itself (WP14), the command-line and console presentation (WP11, WP17), the MCP tool surface and the creation call of an agent task (WP13).
 
 ## Dependencies

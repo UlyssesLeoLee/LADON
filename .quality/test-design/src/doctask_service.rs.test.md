@@ -63,4 +63,5 @@ Verification runs in the CI job `release.yml` (`cargo test --locked --all-target
 
 - `tests/it_doctask_store.rs` (IT-049, IT-050) and `tests/it_doctask_migration.rs` (IT-047, IT-048) run unchanged against the `DocStore` methods that gain new public items.
 - `tests/it_nema_task.rs` (IT-005, IT-006) and the legacy tests of `tests/it_store.rs` keep their assertions.
+- The task list follows a confirmed lineage move to the successor's path (TC-908 in `tests/it_doctask_reconcile.rs`); without a confirmed edge the list is unchanged.
 - `tests/it_kernel_api_freeze.rs` compiles against the engine and store signatures used by the GUI; this package adds no engine or store signature.

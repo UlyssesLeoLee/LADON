@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "source": "src/doctask_reconcile.rs",
+  "baseline_source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "prepared_branch": "fix/compile-errors",
+  "technical_design": ".quality/docs/src/doctask_reconcile.rs.md",
+  "test_design": ".quality/test-design/src/doctask_reconcile.rs.test.md",
+  "prepared_technical_design_sha256": "ded0e3c95545f0c014db337825f65e438fd76228aea115127af0ab0fdaa6b5ff",
+  "prepared_test_design_sha256": "00552eca6901554fbfc917854f3c644bc9c6b9c91e58dccf60ab90859169a6e6",
+  "prepared_related_design_sha256": {}
+}

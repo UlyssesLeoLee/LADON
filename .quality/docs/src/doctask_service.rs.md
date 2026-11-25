@@ -127,6 +127,7 @@ Every agent read is projected through one `Projection` per call. The projection 
 - `list_tasks`, `show_task`, `list_annotations`, `list_baselines`: read operations. The human sees every record; the agent sees the projection.
 - `show_task` returns the events of the task in `seq` order.
 - `resolve_file`, `list_*` never write.
+- The file of a task is resolved with `doctask_reconcile::follow_file`: a file deleted by a confirmed lineage move is shown at its successor's path (design 5.7). Without a confirmed edge the file is the one the task names.
 
 ## Errors
 

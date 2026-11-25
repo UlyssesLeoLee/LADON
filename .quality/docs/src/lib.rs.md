@@ -30,4 +30,5 @@ The public modules are `archive`, `crypto`, `diff`, `engine`, `entry`, `google_o
 - `doctask_outline` is declared. It depends only on `doctask_model`, so it compiles and tests without the database layer.
 - `doctask_store` is declared. It is the only document-task module that writes the new tables; it depends on `store` and `doctask_model`.
 - `doctask_service` is declared. It depends on `engine`, `store`, `doctask_store`, `doctask_outline` and `doctask_model`; the command entry, the console and the MCP layer call it.
+- `doctask_reconcile` is declared. It depends on `engine`, `doctask_store`, `doctask_outline`, `doctask_model` and `doctask_service`; the decision flow, the command entry and the console call it.
 - `doctask_flow` is declared. It depends on `engine`, `doctask_service`, `doctask_store`, `doctask_outline` and `doctask_model`; the command entry, the console and the MCP layer call it.
