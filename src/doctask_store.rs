@@ -1363,4 +1363,55 @@ mod tests {
         let (note, _) = legacy_payload("annotation.created", "Secret Note Beta");
         assert!(!note.contains("Secret Note Beta"));
     }
+
+    #[tokio::test]
+    async fn tc864_retry_policy_bounds() {
+        let attempts = std::cell::Cell::new(0u32);
+
+        let exhausted: Result<()> = with_retry(|| {
+            attempts.set(attempts.get() + 1);
+            async { Err(anyhow::Error::from(turso::Error::Busy("locked".into()))) }
+        })
+        .await;
+        let busy = exhausted.unwrap_err();
+        assert!(busy.downcast_ref::<StoreBusy>().is_some());
+        assert_eq!(attempts.get(), LOCK_ATTEMPTS);
+
+        attempts.set(0);
+        let recovered: Result<u32> = with_retry(|| {
+            let n = attempts.get() + 1;
+            attempts.set(n);
+            async move {
+                if n < 3 {
+                    Err(anyhow::Error::from(turso::Error::Busy("locked".into())))
+                } else {
+                    Ok(n)
+                }
+            }
+        })
+        .await;
+        assert_eq!(recovered.unwrap(), 3);
+
+        attempts.set(0);
+        let conflict: Result<()> = with_retry(|| {
+            attempts.set(attempts.get() + 1);
+            async {
+                Err(anyhow::Error::from(turso::Error::Constraint(
+                    "UNIQUE constraint failed: doc_task_events.prev_hash".into(),
+                )))
+            }
+        })
+        .await;
+        assert!(is_chain_conflict(&conflict.unwrap_err()));
+        assert_eq!(attempts.get(), CHAIN_RETRIES + 1);
+
+        attempts.set(0);
+        let other: Result<()> = with_retry(|| {
+            attempts.set(attempts.get() + 1);
+            async { Err(anyhow::anyhow!("plain failure")) }
+        })
+        .await;
+        assert!(other.is_err());
+        assert_eq!(attempts.get(), 1);
+    }
 }

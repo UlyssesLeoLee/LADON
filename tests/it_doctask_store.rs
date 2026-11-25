@@ -5,7 +5,7 @@ use ladon_explorer::{
         sha256_hex, ActorKind, AnchorState, DocError, ErrorCode, ProposalState, SourceKind,
         Visibility, GENESIS_PREV_HASH,
     },
-    doctask_store::{BackfillReport, DocStore, NewEvent, NewTask},
+    doctask_store::{BackfillReport, DocStore, NewAnnotation, NewEvent, NewTask},
     store::{PendingVersion, Store},
 };
 use serde_json::{json, Value as Json};
@@ -432,12 +432,19 @@ async fn it_049_prev_hash_unique_index_rejects_a_second_successor() {
         .execute(&insert, ())
         .await
         .expect_err("a second successor of the genesis must be rejected");
+    assert!(
+        matches!(&err, turso::Error::Constraint(_)),
+        "the chain conflict must surface as a constraint error: {err:?}"
+    );
     let text = err.to_string();
     assert!(
         text.contains("UNIQUE constraint failed"),
         "unexpected error: {text}"
     );
-    assert!(text.contains("prev_hash"), "unexpected error: {text}");
+    assert!(
+        text.contains("doc_task_events.prev_hash"),
+        "unexpected error: {text}"
+    );
     assert_eq!(
         scalar_i64(&conn, "SELECT COUNT(*) FROM doc_task_events").await,
         1
@@ -720,5 +727,338 @@ async fn it_050_backfill_is_idempotent_and_reimports_status_drift() {
     let last = events.last().unwrap();
     assert_eq!(last.kind, "dt.task.imported");
     assert_eq!(last.to_status, "analysis");
+    assert_eq!(ds.verify_chain().await.unwrap(), None);
+}
+
+fn annotation(file_id: &str, anchor_id: &str, text: &str) -> NewAnnotation {
+    NewAnnotation {
+        file_id: file_id.into(),
+        anchor_id: anchor_id.into(),
+        text: text.into(),
+        author: "owner".into(),
+        author_kind: ActorKind::Human,
+        rationale: String::new(),
+        visibility: Visibility::Shared,
+        quote: String::new(),
+        line_start: 1,
+        line_end: 1,
+        session: String::new(),
+    }
+}
+
+fn baseline_row(
+    id: &str,
+    file_id: &str,
+    version_id: &str,
+    revoked_at: Value,
+) -> Vec<(&'static str, Value)> {
+    vec![
+        ("id", Value::from(id)),
+        ("file_id", Value::from(file_id)),
+        ("version_id", Value::from(version_id)),
+        ("version_no", Value::from(1i64)),
+        ("content_hash", Value::from("hash")),
+        ("approver", Value::from("owner")),
+        ("approver_kind", Value::from("human")),
+        ("created_at", Value::from("2026-01-01T00:00:00+00:00")),
+        ("revoked_at", revoked_at),
+    ]
+}
+
+#[tokio::test]
+async fn it_049_invalid_inputs_are_rejected_before_any_write() {
+    let f = fresh().await;
+    let anchor =
+        f.ds.ensure_anchor(&f.file_id, &f.version_id, "H1:A#1", AnchorState::Valid)
+            .await
+            .unwrap();
+    let again =
+        f.ds.ensure_anchor(&f.file_id, &f.version_id, "H1:A#1", AnchorState::Valid)
+            .await
+            .unwrap();
+    assert_eq!(anchor, again, "a second ensure returns the existing anchor");
+
+    let empty_kind = event("", "", &f.file_id, "", "", "{}");
+    assert_eq!(
+        code_of(f.ds.append_event(&empty_kind).await),
+        Some(ErrorCode::InvalidArg)
+    );
+    let not_json = event("t.a", "", &f.file_id, "", "", "not json");
+    assert_eq!(
+        code_of(f.ds.append_event(&not_json).await),
+        Some(ErrorCode::InvalidArg)
+    );
+    assert_eq!(
+        code_of(f.ds.transition(&not_json).await),
+        Some(ErrorCode::InvalidArg)
+    );
+
+    let mut zero = task(&f.file_id, &anchor, "Zero");
+    zero.priority = 0;
+    assert_eq!(
+        code_of(f.ds.create_task(&zero).await),
+        Some(ErrorCode::InvalidArg)
+    );
+    zero.priority = 4;
+    assert_eq!(
+        code_of(f.ds.create_task(&zero).await),
+        Some(ErrorCode::InvalidArg)
+    );
+    assert_eq!(
+        code_of(
+            f.ds.create_task(&task(&f.file_id, "no-such-anchor", "Missing"))
+                .await
+        ),
+        Some(ErrorCode::NotFound)
+    );
+
+    let other = f
+        .store
+        .append_version(pending("b.md", "h2"))
+        .await
+        .unwrap()
+        .0;
+    assert_eq!(
+        code_of(f.ds.create_task(&task(&other, &anchor, "Other file")).await),
+        Some(ErrorCode::InvalidArg)
+    );
+    assert_eq!(
+        code_of(
+            f.ds.add_annotation(&annotation(&other, &anchor, "stray"))
+                .await
+        ),
+        Some(ErrorCode::InvalidArg)
+    );
+
+    // An anchor whose file is not in `resources`, written through a connection without foreign keys.
+    let conn = raw(&f.store).await;
+    conn.execute(
+        "INSERT INTO doc_anchors (id, file_id, base_version_id, section_key, current_version_id, current_key, created_at, updated_at) VALUES ('ghost-anchor', 'ghost', 'v0', 'H1:A#1', 'v0', 'H1:A#1', '2026-01-01T00:00:00+00:00', '2026-01-01T00:00:00+00:00')",
+        (),
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        code_of(
+            f.ds.create_task(&task("ghost", "ghost-anchor", "Ghost file"))
+                .await
+        ),
+        Some(ErrorCode::NotFound)
+    );
+
+    assert_eq!(scalar_i64(&conn, "SELECT COUNT(*) FROM doc_tasks").await, 0);
+    assert_eq!(
+        scalar_i64(&conn, "SELECT COUNT(*) FROM doc_task_events").await,
+        1
+    );
+}
+
+#[tokio::test]
+async fn it_049_generic_writer_rejects_unknown_columns_and_writes_nothing() {
+    let f = fresh().await;
+    let rejected =
+        f.ds.insert_row(
+            "doc_counters",
+            &[("name", Value::from("z")), ("nosuch", Value::from(1i64))],
+        )
+        .await;
+    assert!(rejected.is_err(), "an unknown column must fail");
+    let conn = raw(&f.store).await;
+    assert_eq!(
+        scalar_i64(&conn, "SELECT COUNT(*) FROM doc_counters WHERE name = 'z'").await,
+        0
+    );
+}
+
+#[tokio::test]
+async fn it_049_dependency_edges_are_ordered_and_duplicate_baselines_counted() {
+    let f = fresh().await;
+    let anchor =
+        f.ds.ensure_anchor(&f.file_id, &f.version_id, "H1:A#1", AnchorState::Valid)
+            .await
+            .unwrap();
+    let a =
+        f.ds.create_task(&task(&f.file_id, &anchor, "A"))
+            .await
+            .unwrap()
+            .task_id;
+    let b =
+        f.ds.create_task(&task(&f.file_id, &anchor, "B"))
+            .await
+            .unwrap()
+            .task_id;
+    for (task_id, depends_on) in [(b.as_str(), a.as_str()), (a.as_str(), b.as_str())] {
+        f.ds.insert_row(
+            "doc_task_deps",
+            &[
+                ("task_id", Value::from(task_id)),
+                ("depends_on", Value::from(depends_on)),
+                ("created_by", Value::from("owner")),
+                ("created_at", Value::from("2026-01-01T00:00:00+00:00")),
+            ],
+        )
+        .await
+        .unwrap();
+    }
+    let mut expected = vec![(a.clone(), b.clone()), (b.clone(), a.clone())];
+    expected.sort();
+    assert_eq!(f.ds.dependency_edges().await.unwrap(), expected);
+
+    let active = |id: &str| baseline_row(id, &f.file_id, &f.version_id, Value::Null);
+    f.ds.insert_row("doc_baselines", &active("base-1"))
+        .await
+        .unwrap();
+    f.ds.insert_row("doc_baselines", &active("base-2"))
+        .await
+        .unwrap();
+    f.ds.insert_row(
+        "doc_baselines",
+        &baseline_row(
+            "base-3",
+            &f.file_id,
+            &f.version_id,
+            Value::from("2026-02-01T00:00:00+00:00"),
+        ),
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        f.ds.duplicate_baselines().await.unwrap(),
+        vec![(f.file_id.clone(), f.version_id.clone(), 2)],
+        "the revoked baseline does not count"
+    );
+}
+
+#[tokio::test]
+async fn it_050_backfill_on_empty_library_reports_zero_and_counts_runs() {
+    let f = fresh().await;
+    assert_eq!(f.ds.backfill().await.unwrap(), BackfillReport::default());
+    let conn = raw(&f.store).await;
+    assert_eq!(
+        scalar_i64(
+            &conn,
+            "SELECT value FROM doc_counters WHERE name = 'backfill_v4'"
+        )
+        .await,
+        1
+    );
+    assert_eq!(f.ds.backfill().await.unwrap(), BackfillReport::default());
+    assert_eq!(
+        scalar_i64(
+            &conn,
+            "SELECT value FROM doc_counters WHERE name = 'backfill_v4'"
+        )
+        .await,
+        2
+    );
+}
+
+#[tokio::test]
+async fn it_050_native_annotation_is_chained_without_its_text() {
+    let f = fresh().await;
+    let anchor =
+        f.ds.ensure_anchor(&f.file_id, &f.version_id, "H1:A#1", AnchorState::Valid)
+            .await
+            .unwrap();
+    let text = "Native Secret Gamma";
+    let first =
+        f.ds.add_annotation(&annotation(&f.file_id, &anchor, text))
+            .await
+            .unwrap();
+    let second =
+        f.ds.add_annotation(&annotation(&f.file_id, &anchor, "second note"))
+            .await
+            .unwrap();
+    assert_eq!(first.annotation_no, 1);
+    assert_eq!(second.annotation_no, 2);
+
+    let events = f.ds.events().await.unwrap();
+    let created = events.iter().find(|e| e.seq == first.event_seq).unwrap();
+    assert_eq!(created.kind, "dt.annotation.created");
+    assert_eq!(created.subject_id, first.annotation_id);
+    let body: Json = serde_json::from_str(&created.payload_json).unwrap();
+    assert_eq!(body["text_sha256"], json!(sha256_hex(text.as_bytes())));
+    assert_eq!(body["text_len"], json!(text.chars().count()));
+    for e in &events {
+        for field in [
+            &e.task_id,
+            &e.file_id,
+            &e.subject_id,
+            &e.kind,
+            &e.actor,
+            &e.payload_json,
+            &e.from_status,
+            &e.to_status,
+            &e.session,
+        ] {
+            assert!(!field.contains(text), "annotation text leaked into {e:?}");
+        }
+    }
+    assert_eq!(f.ds.verify_chain().await.unwrap(), None);
+}
+
+#[tokio::test]
+async fn it_050_backfill_after_legacy_use_imports_new_rows_and_status() {
+    let (_tmp, store, file_id, t1, t2) = legacy_fixture().await;
+    store.ensure_schema(false).await.unwrap();
+    let ds = DocStore::new(store.clone());
+    ds.backfill().await.unwrap();
+
+    // The earlier binary creates a task and changes a status; it writes events and rows but no
+    // document-task state.
+    let conn = raw(&store).await;
+    let version_id = scalar_text(
+        &conn,
+        &format!("SELECT base_version_id FROM doc_tasks WHERE id = '{t1}'"),
+    )
+    .await;
+    let t3 = store
+        .create_task(&file_id, "H1:A#1", &version_id, "Title three", "d")
+        .await
+        .unwrap();
+    store
+        .set_task_status(&t2, "working", "human")
+        .await
+        .unwrap();
+
+    let report = ds.backfill().await.unwrap();
+    assert_eq!(report.tasks_imported, 1);
+    assert_eq!(report.annotations_imported, 0);
+    assert_eq!(
+        report.events_imported, 2,
+        "the new task's created event and the status change"
+    );
+    assert_eq!(
+        report.status_events_added, 1,
+        "only the new task needs an import event"
+    );
+
+    assert_eq!(
+        scalar_i64(
+            &conn,
+            &format!("SELECT task_no FROM doc_task_meta WHERE task_id = '{t3}'")
+        )
+        .await,
+        3
+    );
+    assert_eq!(
+        scalar_text(
+            &conn,
+            &format!("SELECT visibility FROM doc_task_meta WHERE task_id = '{t3}'")
+        )
+        .await,
+        "local_only"
+    );
+
+    let events = ds.events().await.unwrap();
+    assert!(events.iter().any(|e| e.kind == "legacy.task.state_changed"
+        && e.task_id == t2
+        && e.to_status == "working"));
+    let imported = events
+        .iter()
+        .find(|e| e.kind == "dt.task.imported" && e.task_id == t3)
+        .unwrap();
+    assert_eq!(imported.to_status, "open");
+    assert!(ds.status_drift().await.unwrap().is_empty());
     assert_eq!(ds.verify_chain().await.unwrap(), None);
 }
