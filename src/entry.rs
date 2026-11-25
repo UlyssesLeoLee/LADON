@@ -3,6 +3,7 @@
 use crate::{
     agent_api::{self, AgentApi},
     doctask_cli::{self, DocArgs},
+    doctask_mcp,
     engine::{normalise_relative, Engine},
     google_oauth,
     model::FileRecord,
@@ -115,6 +116,15 @@ pub enum Command {
     },
     /// Document-task commands: `ladon doc <command>`.
     Doc(DocArgs),
+    /// Runs the MCP server of the document-task module on standard input and output.
+    McpServe {
+        /// Launch identifier of the Hermes session that started the server.
+        #[arg(long)]
+        launch: String,
+        /// Global rule file that the disclosure gate of this process reads.
+        #[arg(long)]
+        global_ignore: Option<PathBuf>,
+    },
     Plan {
         version_id: String,
     },
@@ -357,6 +367,16 @@ pub async fn run<H: Host>(cli: Cli, host: &H) -> Result<()> {
         }
         Command::GoogleLogin => google_login(host).await,
         Command::GoogleLogout => google_logout(host),
+        Command::McpServe {
+            launch,
+            global_ignore,
+        } => {
+            let code = doctask_mcp::serve(&root, &launch, global_ignore.as_deref()).await?;
+            if code != 0 {
+                return Err(Reported { code }.into());
+            }
+            Ok(())
+        }
         cmd => {
             let engine = Engine::open(&root).await?;
             command(host, &engine, cmd).await
@@ -592,7 +612,8 @@ async fn command<H: Host>(host: &H, engine: &Engine, cmd: Command) -> Result<()>
         | Command::ShellMenu { .. }
         | Command::ShellHostInternal { .. }
         | Command::GoogleLogin
-        | Command::GoogleLogout => unreachable!("handled by run"),
+        | Command::GoogleLogout
+        | Command::McpServe { .. } => unreachable!("handled by run"),
     }
     Ok(())
 }
@@ -1298,6 +1319,58 @@ mod tests {
                 .map(|reported| reported.code),
             Some(3)
         );
+    }
+
+    #[test]
+    fn mcp_serve_arguments_parse() {
+        let cli = parse(&[
+            "--root",
+            "R",
+            "mcp-serve",
+            "--launch",
+            "20261125-101010-ab",
+            "--global-ignore",
+            "G",
+        ]);
+        assert_eq!(cli.root, PathBuf::from("R"));
+        match cli.cmd {
+            Command::McpServe {
+                launch,
+                global_ignore,
+            } => {
+                assert_eq!(launch, "20261125-101010-ab");
+                assert_eq!(global_ignore, Some(PathBuf::from("G")));
+            }
+            _ => panic!("expected the mcp-serve command"),
+        }
+    }
+
+    #[test]
+    fn mcp_serve_requires_launch() {
+        assert!(Cli::try_parse_from(["ladon", "--root", "R", "mcp-serve"]).is_err());
+    }
+
+    #[tokio::test]
+    async fn mcp_serve_reports_uninitialized_workspace() {
+        let dir = tempfile::tempdir().unwrap();
+        let root_text = dir.path().to_string_lossy().into_owned();
+        let host = FakeHost::default();
+        let outcome = run(
+            parse(&[
+                "--root",
+                root_text.as_str(),
+                "mcp-serve",
+                "--launch",
+                "20261125-101010-ab",
+            ]),
+            &host,
+        )
+        .await;
+        let reported = outcome
+            .expect_err("an uninitialized workspace is refused")
+            .downcast::<Reported>()
+            .expect("the refusal is a reported exit code");
+        assert_eq!(reported.code, 1);
     }
 
     #[test]

@@ -56,3 +56,7 @@ pub mod doctask_cli;
 // MCP protocol layer: JSON-RPC line handling, lifecycle methods, version negotiation, the
 // ToolHost seam and bounded line reading. It performs no I/O of its own.
 pub mod mcp;
+
+// Document-task MCP tools: the thirteen tools of `ladon mcp-serve`, argument rules, disclosure
+// records, the panic guard and the stdio serve loop.
+pub mod doctask_mcp;

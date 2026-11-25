@@ -2,7 +2,7 @@
 
 Source: `src/entry.rs`
 
-Source-SHA256: `0a0103fa5f54097620b11e07daf492c16a617df5e48cd6c696b2861285604be7`
+Source-SHA256: `fad375d62c373ac5e685e4f70203da3201f4cc6afe6865d84b610ea22aa8ebe2`
 
 ## Test Strategy
 
@@ -45,7 +45,7 @@ Acceptance items of WP00C, mapped to test cases:
 ## Change Notes
 
 - `doc` parsing and the `doc` branch are covered by `tests/it_doctask_cli.rs`, `tests/it_doctask_cli_binary.rs` and the unit tests of `src/doctask_cli.rs` (TC-930 to TC-939).
-- The `annotate` and `task` branches now call `doctask_cli`; their expected outcomes in this table are the ones above.
+- The `annotate` and `task` branches call `doctask_cli`; their expected outcomes in this table are the ones above.
 
 ## Boundary & Failure Cases
 
@@ -64,6 +64,6 @@ Every command of `Command`, the clap help text and defaults, the watch loop, Goo
 
 | Case ID | Input / Setup | Expected Outcome | Test Location |
 | --- | --- | --- | --- |
-| TC-957 | `Cli::parse_from(["ladon","--root","R","mcp-serve","--launch","20261125-101010-ab"])`. | `root` is `R`; the command is `McpServe` with the launch id and no global rule file. | src/entry.rs::tests::mcp_serve_arguments_parse |
-| TC-957 | `mcp-serve` with `--global-ignore G` and no `--launch`. | Parsing fails with the clap error for the missing required option. | src/entry.rs::tests::mcp_serve_requires_launch |
-| TC-957 | `run` with `mcp-serve` on a root that has no `.ladon/meta.turso`. | `Err` carrying `Reported { code: 1 }`; no `Engine::open` is attempted. | src/entry.rs::tests::mcp_serve_reports_uninitialized_workspace |
+| TC-1030 | `Cli::parse_from(["ladon","--root","R","mcp-serve","--launch","20261125-101010-ab"])`. | `root` is `R`; the command is `McpServe` with the launch id and no global rule file. | src/entry.rs::tests::mcp_serve_arguments_parse |
+| TC-1031 | `mcp-serve` with `--global-ignore G` and no `--launch`. | Parsing fails with the clap error for the missing required option. | src/entry.rs::tests::mcp_serve_requires_launch |
+| TC-1032 | `run` with `mcp-serve` on a root that has no `.ladon/meta.turso`. | `Err` carrying `Reported { code: 1 }`; no `Engine::open` is attempted. | src/entry.rs::tests::mcp_serve_reports_uninitialized_workspace |

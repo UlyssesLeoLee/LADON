@@ -2,17 +2,17 @@
 
 Source: `src/doctask_mcp.rs`
 
-Source-SHA256: `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`
+Source-SHA256: `6f780cce040c42406090f890c96f7c0f5dd8a873a0f9e6b94918cd7948bc93ab`
 
 ## Responsibility
 
-`doctask_mcp` is the tool host of `ladon mcp-serve`. It offers the thirteen tools of design 57 section 10.2 that WP13 delivers (`doc_plan_submit` is appended by WP14), validates the arguments of each call, maps the call to the operations of `DocTaskService` and `DocFlow` for the agent principal, writes the disclosure record before any content leaves the process, wraps each call in a panic guard and turns the outcome into the result envelope of design 57 section 10.3. It also runs the stdio server loop: it reads the process arguments already parsed by `entry`, opens the engine lazily on the first `tools/call`, installs the panic hook and returns the exit code.
+`doctask_mcp` is the tool host of `ladon mcp-serve`. It offers the thirteen tools of design 57 section 10.2, validates the arguments of each call, maps the call to the operations of `DocTaskService` and `DocFlow` for the agent principal, writes the disclosure record before any content leaves the process, wraps each call in a panic guard and turns the outcome into the result envelope of design 57 section 10.3. It also runs the stdio server loop: it reads the process arguments already parsed by `entry`, opens the engine lazily on the first `tools/call`, installs the panic hook and returns the exit code.
 
 The module holds no SQL. Storage is reached through `Engine`, `DocStore` (the disclosure insert only, through `insert_row`) and the services. The protocol framing, lifecycle and version negotiation belong to `mcp.rs`; this module implements `mcp::ToolHost` and passes the result object back unchanged.
 
 The module writes nothing to standard output. Its single diagnostic line per call goes to standard error through `std::io::Write`, never through the print macros, and it never contains arguments or content.
 
-Not covered here: the operations themselves (`doctask_service`, `doctask_flow`, `doctask_reconcile`), the edit plan tool `doc_plan_submit` (WP14), the one-shot command layer (`doctask_cli`), the Hermes launcher (`hermes`).
+Not covered here: the operations themselves (`doctask_service`, `doctask_flow`, `doctask_reconcile`), the edit plan tool `doc_plan_submit`, the one-shot command layer (`doctask_cli`), the Hermes launcher (`hermes`).
 
 ## Dependencies
 
@@ -95,8 +95,8 @@ Read tools. Every read tool attaches with `DocTaskService::attach` (or `DocFlow:
 | `doc_clause_read` | `file_ref` (1–200), `section` (1–200), `version?`, `offset?` (≥ 0), `max_chars?` (200–6000) | `{text, version_no, hash, truncated, next_offset}`. `offset` and `max_chars` count characters. `next_offset` is the offset of the next window or null. `hash` is the SHA-256 of the clause bytes of the whole clause. |
 | `doc_mentions_find` | `token` (2–80), `limit?` (1–30) | `{matches:[{file_ref, path, section, line}], truncated}`. The search is a literal, case-sensitive substring test on the latest version of each tracked `md`, `nema` or `txt` file of at most 1 MiB, in path order, over at most 2000 candidate files. `section` is the key of the clause containing the line, or `ROOT`. `line` is 1-based. `truncated` is true when the limit or the file bound stopped the scan. |
 | `doc_task_list` | `status?` (array of the seven states, at most 7), `file_ref?` (1–200), `owner?` (1–200), `proposed_only?` (boolean), `limit?` (1–50), `cursor?` (1–20 characters) | `{tasks:[{task, id, title, status, priority, owner, file_ref, section, anchor_state, proposal_state, blocked_by, updated_at}], hidden, next_cursor, truncated}`. The cursor is the decimal offset of the next item of the filtered, visible list; an invalid cursor is `E_INVALID_ARG`. `file_ref` matches the file id or the path. |
-| `doc_task_get` | `task` (1–20), `events?` (0–30) | `{task:{…task fields of doc_task_list, description}, events:[{seq, kind, from_status, to_status, actor, actor_kind, timestamp}], last_decision, clause_text, clause_truncated, annotations}`. `events` is the last N events of the chain in `seq` order; payloads are never present. `last_decision` is `{decision, comment, by, at}` of the latest approval row of the task, or null. `clause_text` is the clause of the task section in its base version, cut to `CLAUSE_TEXT_LIMIT` characters, or null when the base version is refused or the section does not resolve. `annotations` are the shared annotations of the section. |
-| `doc_trace_get` | `task?` (1–20), `file_ref?` (1–200), `section?` (1–200) | `{traces:[{task, status, links:[…], evidence:[…]}], hidden}`. Either `task`, or both `file_ref` and `section`, is required; otherwise `E_INVALID_ARG`. A link to a task that the caller cannot see is counted in `hidden` and not named. Evidence is `{kind, result, source, actor_kind, created_at}`. |
+| `doc_task_get` | `task` (1–20), `events?` (0–30) | `{task:{…task fields of doc_task_list, description}, events:[{seq, kind, from_status, to_status, actor, actor_kind, timestamp}], last_decision, clause_text, clause_truncated, annotations}`. `events` is the last N events of the chain in `seq` order; payloads are never present. `last_decision` is `{decision, comment, by, at}` of the latest approval row of the task, or null. `clause_text` is the clause of the task section in its base version, cut to `CLAUSE_TEXT_LIMIT` characters, or null when the base version is refused or the section does not resolve. `annotations` are the shared annotations of the section, cut to half of the list budget, with `annotations_truncated` set when items were dropped. |
+| `doc_trace_get` | `task?` (1–20), `file_ref?` (1–200), `section?` (1–200) | `{traces:[{task, status, links:[…], evidence:[…]}], hidden, truncated}`. Either `task`, or both `file_ref` and `section`, is required; otherwise `E_INVALID_ARG`. A link to a task that the caller cannot see is counted in `hidden` and not named. Evidence is `{kind, result, source, actor_kind, created_at}`. |
 | `doc_schedule_get` | none | `{batches, conflicts:[{file, tasks}], blocked:[{task, reason}], hidden}` from `DocFlow::schedule`. |
 
 Mutating tools. None of them writes a disclosure row. Each records its result through the service or flow it calls.
@@ -166,7 +166,7 @@ For each read tool that returns bytes or text derived from bytes, the handler co
 
 ## Change Notes
 
-- New module. It adds the thirteen tools of design 57 section 10.2 that WP13 delivers and the stdio serve loop behind `ladon mcp-serve`.
+- The module offers the thirteen tools of design 57 section 10.2 and the stdio serve loop behind `ladon mcp-serve`.
 - It depends on existing services only and changes none of their signatures. The disclosure rows use the generic `DocStore::insert_row`, so `doctask_store` gains no method.
 - The command entry gains one subcommand, `mcp-serve`, that calls `serve` before any engine is opened. Existing commands are unchanged.
 - Compatibility: the tool names, argument names and envelope keys are the contract with Hermes configurations; changing them requires a new design revision and a new snapshot in TC-950.
