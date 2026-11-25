@@ -2,7 +2,7 @@
 
 Source: `src/mcp.rs`
 
-Source-SHA256: `1ba786993da5819566538cb7c0004e403b44824bbe7ca5e7842b3d7aa6041059`
+Source-SHA256: `fba076cf9f0312f70c3c926ec09c3ca49bda7327ae6d406ca75b0501bc3f6e86`
 
 ## Responsibility
 

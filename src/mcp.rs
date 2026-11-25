@@ -5,7 +5,9 @@
 
 #![deny(clippy::print_stdout, clippy::print_stderr, clippy::dbg_macro)]
 
+use std::future::Future;
 use std::io::{self, BufRead, Write};
+use std::pin::Pin;
 
 use serde_json::{json, Map, Value};
 
@@ -32,15 +34,19 @@ pub struct ServerInfo {
     pub version: &'static str,
 }
 
+/// The future a host returns for one tool call. It is not required to be `Send`.
+pub type ToolCall<'a> = Pin<Box<dyn Future<Output = Option<Value>> + 'a>>;
+
 /// The tools the server offers. The protocol layer neither inspects the descriptors nor
 /// validates the arguments; both belong to the host.
 pub trait ToolHost {
     /// Descriptors returned verbatim as the `tools` array of `tools/list`.
     fn tools(&self) -> Vec<Value>;
 
-    /// Runs the named tool. Returns `None` when no listed tool has that name; otherwise the
-    /// complete `CallToolResult` object, returned verbatim as the `result` member.
-    fn call(&mut self, name: &str, arguments: Value) -> Option<Value>;
+    /// Starts the named tool. The future resolves to `None` when no listed tool has that
+    /// name; otherwise to the complete `CallToolResult` object, returned verbatim as the
+    /// `result` member. The server awaits the future.
+    fn call<'a>(&'a mut self, name: &'a str, arguments: Value) -> ToolCall<'a>;
 }
 
 /// A classified message from the client.
@@ -224,7 +230,7 @@ impl<H: ToolHost> Server<H> {
     }
 
     /// Returns the reply for one line, or `None` when the line gets no reply.
-    pub fn handle_line(&mut self, line: &[u8]) -> Option<Value> {
+    pub async fn handle_line(&mut self, line: &[u8]) -> Option<Value> {
         if line.iter().all(u8::is_ascii_whitespace) {
             return None;
         }
@@ -232,21 +238,25 @@ impl<H: ToolHost> Server<H> {
             Err(rejection) => Some(error_reply(rejection.id, rejection.code, rejection.message)),
             Ok(Incoming::Notification { .. } | Incoming::Response) => None,
             Ok(Incoming::Request { id, method, params }) => {
-                Some(self.dispatch(id, &method, &params))
+                Some(self.dispatch(id, &method, &params).await)
             }
         }
     }
 
     /// Reads lines from `input` and writes one reply per answered line to `output`, until
     /// `input` ends.
-    pub fn serve<R: BufRead, W: Write>(&mut self, mut input: R, mut output: W) -> io::Result<()> {
+    pub async fn serve<R: BufRead, W: Write>(
+        &mut self,
+        mut input: R,
+        mut output: W,
+    ) -> io::Result<()> {
         let mut buf = Vec::new();
         loop {
             buf.clear();
             let reply = match read_bounded_line(&mut input, MAX_LINE_BYTES, &mut buf)? {
                 LineRead::Eof => return Ok(()),
                 LineRead::Oversized => Some(oversized_line_reply()),
-                LineRead::Line => self.handle_line(&buf),
+                LineRead::Line => self.handle_line(&buf).await,
             };
             if let Some(reply) = reply {
                 write_reply(&mut output, &reply)?;
@@ -254,12 +264,12 @@ impl<H: ToolHost> Server<H> {
         }
     }
 
-    fn dispatch(&mut self, id: Value, method: &str, params: &Value) -> Value {
+    async fn dispatch(&mut self, id: Value, method: &str, params: &Value) -> Value {
         match method {
             "initialize" => self.initialize(id, params),
             "ping" => result_reply(id, json!({})),
             "tools/list" => result_reply(id, json!({ "tools": self.host.tools() })),
-            "tools/call" => self.call_tool(id, params),
+            "tools/call" => self.call_tool(id, params).await,
             _ => error_reply(id, METHOD_NOT_FOUND, "Method not found"),
         }
     }
@@ -281,7 +291,7 @@ impl<H: ToolHost> Server<H> {
         }
     }
 
-    fn call_tool(&mut self, id: Value, params: &Value) -> Value {
+    async fn call_tool(&mut self, id: Value, params: &Value) -> Value {
         let name = match params.get("name") {
             None | Some(Value::Null) => {
                 return error_reply(id, INVALID_PARAMS, "name is required");
@@ -293,7 +303,7 @@ impl<H: ToolHost> Server<H> {
             None | Some(Value::Null) => Value::Object(Map::new()),
             Some(arguments) => arguments.clone(),
         };
-        match self.host.call(name, arguments) {
+        match self.host.call(name, arguments).await {
             Some(result) => result_reply(id, result),
             None => error_reply(id, INVALID_PARAMS, "Unknown tool"),
         }
@@ -304,6 +314,7 @@ impl<H: ToolHost> Server<H> {
 mod tests {
     use super::*;
     use std::io::{BufReader, Cursor, Read};
+    use std::task::{Context, Poll, Waker};
 
     struct RecordingHost {
         tools: Vec<Value>,
@@ -326,13 +337,25 @@ mod tests {
             self.tools.clone()
         }
 
-        fn call(&mut self, name: &str, arguments: Value) -> Option<Value> {
-            self.calls.push((name.to_owned(), arguments));
-            if name == "probe_echo" {
-                self.reply.clone()
-            } else {
-                None
-            }
+        fn call<'a>(&'a mut self, name: &'a str, arguments: Value) -> ToolCall<'a> {
+            Box::pin(async move {
+                self.calls.push((name.to_owned(), arguments));
+                if name == "probe_echo" {
+                    self.reply.clone()
+                } else {
+                    None
+                }
+            })
+        }
+    }
+
+    /// Drives a future to completion. Every future of these tests is ready on its first poll.
+    fn block_on<F: Future>(future: F) -> F::Output {
+        let mut future = std::pin::pin!(future);
+        let mut context = Context::from_waker(Waker::noop());
+        match future.as_mut().poll(&mut context) {
+            Poll::Ready(output) => output,
+            Poll::Pending => panic!("a test future is not ready on its first poll"),
         }
     }
 
@@ -347,7 +370,7 @@ mod tests {
     }
 
     fn reply_of(server: &mut Server<RecordingHost>, line: &str) -> Option<Value> {
-        server.handle_line(line.as_bytes())
+        block_on(server.handle_line(line.as_bytes()))
     }
 
     fn error_parts(reply: &Value) -> (i64, String) {
@@ -364,9 +387,7 @@ mod tests {
     /// Runs `serve` over `input` and returns each output line as a parsed JSON object.
     fn run_serve(server: &mut Server<RecordingHost>, input: &[u8]) -> Vec<Value> {
         let mut output = Vec::new();
-        server
-            .serve(Cursor::new(input), &mut output)
-            .expect("serve succeeds");
+        block_on(server.serve(Cursor::new(input), &mut output)).expect("serve succeeds");
         let text = String::from_utf8(output).expect("UTF-8 output");
         assert!(text.is_empty() || text.ends_with('\n'));
         text.split_terminator('\n')
@@ -716,7 +737,7 @@ mod tests {
         let bad_method: &[u8] = b"{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"\xff\"}";
         let bad_pair: &[u8] = b"\xc3\x28";
         for line in [bad_method, bad_pair] {
-            let reply = server.handle_line(line).expect("invalid UTF-8 is answered");
+            let reply = block_on(server.handle_line(line)).expect("invalid UTF-8 is answered");
             assert_eq!(reply["id"], Value::Null);
             assert_eq!(error_parts(&reply), (PARSE_ERROR, "Parse error".to_owned()));
         }
@@ -726,9 +747,7 @@ mod tests {
             "{\"jsonrpc\":\"2.0\",\"id\":\"中文\",\"method\":\"ping\"}\n".as_bytes(),
         );
         let mut output = Vec::new();
-        server
-            .serve(Cursor::new(input), &mut output)
-            .expect("serve succeeds");
+        block_on(server.serve(Cursor::new(input), &mut output)).expect("serve succeeds");
         let text = String::from_utf8(output).expect("UTF-8 output");
         let lines: Vec<&str> = text.split_terminator('\n').collect();
         assert_eq!(lines.len(), 2);
@@ -819,8 +838,7 @@ mod tests {
         assert_eq!(oversized_line_reply(), replies[1]);
 
         let mut output = Vec::new();
-        server
-            .serve(Cursor::new(Vec::new()), &mut output)
+        block_on(server.serve(Cursor::new(Vec::new()), &mut output))
             .expect("serve returns Ok at end of input");
         assert!(output.is_empty());
     }
