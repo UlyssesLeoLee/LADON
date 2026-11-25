@@ -2,7 +2,7 @@
 
 Source: `src/lib.rs`
 
-Source-SHA256: `5019b4afbbb718bbe2e27e81017f12919deb3625feba52bc000a852737e72d6b`
+Source-SHA256: `b5b2ca8e55c289ff85a6fe527855ddb9c8069836e511c9fa9db29aba4b13597e`
 
 ## Test Strategy
 

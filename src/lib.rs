@@ -23,3 +23,6 @@ pub mod storage_rules;
 pub mod cloud_journal;
 pub mod ui_layout;
 pub mod emergence;
+
+// Document-task pure model: states, transitions, errors, hashes, limits, scheduling.
+pub mod doctask_model;

@@ -2,7 +2,7 @@
 
 Source: `src/doctask_model.rs`
 
-Source-SHA256: `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`
+Source-SHA256: `8289f3f53e881137509fc0a4719279412d97748c7df6bfbdb24b101692cbbf7b`
 
 ## Responsibility
 
@@ -36,7 +36,7 @@ Each value domain is a Rust enum with `as_str()` returning the stored string, `p
 
 `allowed_from(from, principal) -> Vec<(TaskState, Transition)>` lists the transitions the principal may take from a state. The `E_TRANSITION_DENIED` detail carries this list.
 
-Guard inputs and evaluation: `GuardInput<'a>` carries the principal and the facts a guard reads: `proposal_accepted`, `anchor`, `baseline_bound`, `anchor_reviewed`, `summary`, `reason`, `plan_applied_or_no_edit`, `latest_evidence_failed`, `has_applying_plan`, `latest_plan_submitted`, `subject_hash_matches`, `dependencies_done`, `plan_stale` and `evidence_accepted`. `check_guards(t, &GuardInput) -> Result<(), DocError>` evaluates the pure guards in the order of section 4:
+Guard inputs and evaluation: `GuardInput<'a>` carries the principal and the facts a guard reads. `GuardInput::new(principal)` is the input in which every guard holds; T7 by an agent additionally needs `latest_evidence_failed`, and T11 needs `plan_stale`. The fields are: `proposal_accepted`, `anchor`, `baseline_bound`, `anchor_reviewed`, `summary`, `reason`, `plan_applied_or_no_edit`, `latest_evidence_failed`, `has_applying_plan`, `latest_plan_submitted`, `subject_hash_matches`, `dependencies_done`, `plan_stale` and `evidence_accepted`. `check_guards(t, &GuardInput) -> Result<(), DocError>` evaluates the pure guards in the order of section 4:
 
 | Transition | Check and error |
 |---|---|
@@ -67,7 +67,7 @@ Guard inputs and evaluation: `GuardInput<'a>` carries the principal and the fact
 - For the human principal only: a decimal string, read as a number; a full UUID in the 8-4-4-4-12 hexadecimal form, read case-insensitively; a hexadecimal string of at least 8 characters that contains a letter from `a` to `f`, read as a prefix.
 - Any other input, and for agents any input other than the prefixed number, is `E_INVALID_ARG`.
 
-`SectionSelector` is `Root`, `Ordinal(usize)`, `Clause(String)` (uppercase), `Key(String)` or `Text(String)`. `parse_section_selector(Option<&str>)` maps an absent or blank input to `Root`. `#n` with `n >= 1` is `Ordinal`. `key:` followed by a non-empty exact key is `Key`. A whole input matching `[A-Za-z][A-Za-z0-9]*-[0-9]+` is `Clause`. Any other non-blank trimmed input is `Text`. Resolution against an outline belongs to the outline module.
+`SectionSelector` is `Root`, `Ordinal(usize)`, `Clause(String)` (uppercase), `Key(String)` or `Text(String)`. `parse_section_selector(Option<&str>)` maps an absent or blank input to `Root`, and rejects any control character, including newline and tab, with `E_INVALID_ARG`. `#n` with `n >= 1` is `Ordinal`. `key:` followed by a non-empty exact key is `Key`. A whole input matching `[A-Za-z][A-Za-z0-9]*-[0-9]+` is `Clause`. Any other non-blank trimmed input is `Text`. Resolution against an outline belongs to the outline module.
 
 ### Limits and text validation
 
@@ -79,7 +79,7 @@ Lengths count Unicode scalar values. The constants are: task title 1 to 200; tas
 
 `check_plan_target(extension, bytes)` requires the extension `md`, `markdown`, `nema` or `nemat` (case-insensitive) and returns `E_UNSUPPORTED_FILE` otherwise; more than 1 MiB gives `E_PLAN_TOO_LARGE`; a NUL byte, a UTF-16 byte order mark (`FF FE` or `FE FF` at the start) or bytes that are not valid UTF-8 give `E_UNSUPPORTED_FILE`. A UTF-8 byte order mark is accepted.
 
-`validate_priority(i64) -> Result<u8, DocError>` accepts 1 to 3.
+`required_text(field, value, max)` requires a non-blank value of at most `max` characters. `validate_plan_text(summary, rationale, impact, options)` applies the plan bounds: summary 1 to 500, rationale at most 4000, impact at most 2000, and at most five options of 1 to 500 characters each. `validate_priority(i64) -> Result<u8, DocError>` accepts 1 to 3.
 
 ### Display sanitiser
 
