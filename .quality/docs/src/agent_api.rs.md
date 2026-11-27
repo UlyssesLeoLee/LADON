@@ -2,7 +2,7 @@
 
 Source: `src/agent_api.rs`
 
-Source-SHA256: `c8c92a65d82fde0be18575a2999357d5dee338f61d9ef20c1992c262308519c4`
+Source-SHA256: `01f7bb7974e9e6113ccc3d10dec1983a14fc69a3e1a8e228fb95579007d7708f`
 
 ## Responsibility
 
@@ -10,7 +10,7 @@ Source-SHA256: `c8c92a65d82fde0be18575a2999357d5dee338f61d9ef20c1992c262308519c4
 
 ## Dependencies
 
-- `engine::Engine` (workspace root, path resolution, file lookup, content exclusion check), `store::Store` (through the engine: `find_path`, `versions`, `verify_chain`), `policy::LadonPolicy` (external transfer rules), `search::grep` (regex search), `model::VersionRecord`.
+- `engine::Engine` (workspace root, path resolution, file lookup, the transfer gate `remote_path_allowed` and `refresh_policy_if_stale`), `store::Store` (through the engine: `find_path`, `versions`, `verify_chain`), `search::grep` (regex search), `model::VersionRecord`.
 - `serde::Serialize` for the response types `ResourceInfo`, `HistoryView`, `ApiCapability`; `anyhow` for errors; `std::fs`.
 - Callers: the `agent-list` and `agent-capabilities` CLI commands in `src/entry.rs`, and the integration tests in `tests/it_agent_folder.rs`. The module comment names future MCP and IPC adapters; no MCP or IPC adapter calls `AgentApi` in the current source tree (`src/mcp.rs` and `src/doctask_mcp.rs` do not reference this module).
 

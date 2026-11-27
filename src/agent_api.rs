@@ -1,7 +1,7 @@
 //! Local-first agent-facing folder service; usable from CLI or future MCP/IPC.
 //! External callers must first authenticate; `AgentApi` here deliberately does
 //! NOT expose a network listener or trust user-provided tenant IDs.
-use crate::{engine::Engine,model::VersionRecord,policy::LadonPolicy,search};
+use crate::{engine::Engine,model::VersionRecord,search};
 use anyhow::{bail, Result};
 use serde::Serialize;
 use std::{fs,path::Path};
@@ -66,15 +66,12 @@ impl<'a> AgentApi<'a>{
         let md=path.metadata()?;if md.len()>max_bytes {bail!("file exceeds caller limit");}
         Ok(fs::read(path)?)
     }
-    /// The path rules run first. A tracked file is then refused when its bytes are excluded, so a copy or a directory
-    /// alias of excluded content does not pass. A path that does not resolve to a regular workspace file is looked up as written.
+    /// Refreshes the rules first, so a rule file that cannot be loaded fails the call with its error. The decision is then
+    /// taken by `Engine::remote_path_allowed`, the gate that the remote transfer paths use.
     pub async fn allow_remote_read(&self,relative:&Path)->Result<()> {
-        LadonPolicy::load(&self.engine.root)?.allow_external(relative)?;
-        let key=self.engine.relative_for_input(relative).unwrap_or_else(|_|relative.to_string_lossy().replace('\\',"/"));
-        if let Some(file)=self.engine.store.find_path(&key).await? {
-            if self.engine.content_is_excluded(&file.current_hash).await? {
-                bail!("LADON policy denies external data transfer: {}",relative.display());
-            }
+        self.engine.refresh_policy_if_stale()?;
+        if !self.engine.remote_path_allowed(relative).await? {
+            bail!("LADON policy denies external data transfer: {}",relative.display());
         }
         Ok(())
     }

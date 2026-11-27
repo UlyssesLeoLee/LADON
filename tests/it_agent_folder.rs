@@ -194,3 +194,19 @@ async fn tc410_allow_remote_read_refuses_copy_of_excluded_content(){
         }
     }
 }
+
+#[tokio::test]
+async fn tc411_allow_remote_read_fails_while_root_rule_is_missing(){
+    let tmp=tempfile::tempdir().unwrap();
+    let root=tmp.path();
+    fs::write(root.join(".LADONignore"),"*.key\n").unwrap();
+    let engine=Engine::init(root).await.unwrap();
+    fs::write(root.join("ok.md"),"ok").unwrap();
+    let api=AgentApi{engine:&engine};
+    api.allow_remote_read(Path::new("ok.md")).await.unwrap();
+    fs::remove_file(root.join(".LADONignore")).unwrap();
+    let err=api.allow_remote_read(Path::new("ok.md")).await.unwrap_err();
+    assert!(err.to_string().contains(".LADONignore"),"{err}");
+    fs::write(root.join(".LADONignore"),"*.key\n").unwrap();
+    api.allow_remote_read(Path::new("ok.md")).await.unwrap();
+}

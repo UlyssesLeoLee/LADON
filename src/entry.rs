@@ -8,7 +8,7 @@ use crate::{
     google_oauth,
     model::FileRecord,
     nema,
-    policy::{self, is_root_rule_event, needs_full_scan, LadonPolicy},
+    policy::{self, is_root_rule_event, needs_full_scan},
     provider::provider_from_env,
     search, shell,
     shell::ShellResult,
@@ -461,16 +461,7 @@ async fn command<H: Host>(host: &H, engine: &Engine, cmd: Command) -> Result<()>
             }
         }
         Command::IgnoreCheck { file } => {
-            let policy = LadonPolicy::load(&engine.root)?;
-            let excluded = policy.excluded(&file)?;
-            println!(
-                "{}",
-                if excluded {
-                    "EXCLUDED: local only"
-                } else {
-                    "ALLOWED: subject to explicit archive action"
-                }
-            );
+            println!("{}", ignore_check_label(&engine, &file).await?);
         }
         Command::Grep { regex, limit } => {
             println!(
@@ -699,9 +690,20 @@ struct TagOptions<'a> {
     recursive: bool,
 }
 
+/// The label printed by `ignore-check`: the gate's decision for the path, taken after the rules are refreshed. A rule
+/// file that cannot be loaded fails the command with its error.
+async fn ignore_check_label(engine: &Engine, file: &Path) -> Result<&'static str> {
+    engine.refresh_policy_if_stale()?;
+    Ok(if engine.remote_path_allowed(file).await? {
+        "ALLOWED: subject to explicit archive action"
+    } else {
+        "EXCLUDED: local only"
+    })
+}
+
 /// Tags the tracked files of the workspace and returns how many files received tags.
 async fn tag_folder<H: Host>(host: &H, engine: &Engine, options: &TagOptions<'_>) -> Result<usize> {
-    let policy = LadonPolicy::load(&engine.root)?;
+    engine.refresh_policy_if_stale()?;
     let mut count = 0;
     let depth = if options.recursive { 32 } else { 1 };
     let walker = walkdir::WalkDir::new(&engine.root)
@@ -738,10 +740,9 @@ async fn tag_folder<H: Host>(host: &H, engine: &Engine, options: &TagOptions<'_>
         let content = String::from_utf8_lossy(&buf);
         let mut tags = tagging::heuristic_tags(&rel, &content);
         if let (Some(url), Some(model)) = (options.endpoint, options.model) {
-            // Sensitive files, and copies of their content at other paths, may only be sent to a loopback local model if explicitly requested.
-            let excluded = policy.excluded(entry.path())?
-                || engine.content_is_excluded(&file.current_hash).await?;
-            if excluded && !tagging::local_endpoint(url)? {
+            // A file the gate refuses (flagged, excluded by path or by content, or rules not usable) is sent only to a loopback local model.
+            let allowed = engine.remote_read_allowed(&file).await?;
+            if !allowed && !tagging::local_endpoint(url)? {
                 eprintln!("skipped remote AI tagging for excluded file: {}", rel);
             } else {
                 let description =
@@ -1188,6 +1189,77 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn ignore_check_reports_copy_of_excluded_content_as_local_only() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        fs::write(root.join(".LADONignore"), "/contracts/\n").unwrap();
+        let engine = Engine::init(root).await.unwrap();
+        fs::create_dir_all(root.join("contracts")).unwrap();
+        fs::create_dir_all(root.join("shared")).unwrap();
+        fs::write(root.join("contracts/a.txt"), "contract terms\n").unwrap();
+        engine
+            .capture(&root.join("contracts/a.txt"), "human", "init")
+            .await
+            .unwrap();
+        fs::copy(root.join("contracts/a.txt"), root.join("shared/a.txt")).unwrap();
+        engine
+            .capture(&root.join("shared/a.txt"), "human", "copy")
+            .await
+            .unwrap();
+        fs::write(root.join("docs.md"), "public text\n").unwrap();
+        assert_eq!(
+            ignore_check_label(&engine, Path::new("shared/a.txt"))
+                .await
+                .unwrap(),
+            "EXCLUDED: local only"
+        );
+        assert_eq!(
+            ignore_check_label(&engine, Path::new("docs.md"))
+                .await
+                .unwrap(),
+            "ALLOWED: subject to explicit archive action"
+        );
+    }
+
+    #[tokio::test]
+    async fn ignore_check_fails_while_root_rule_is_missing() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        fs::write(root.join(".LADONignore"), "*.key\n").unwrap();
+        let engine = Engine::init(root).await.unwrap();
+        fs::remove_file(root.join(".LADONignore")).unwrap();
+        let err = ignore_check_label(&engine, Path::new("notes.txt"))
+            .await
+            .unwrap_err();
+        assert!(err.to_string().contains(".LADONignore"), "{err}");
+    }
+
+    #[tokio::test]
+    async fn tag_folder_fails_while_root_rule_is_missing_and_never_calls_ai() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        fs::write(root.join(".LADONignore"), "*.key\n").unwrap();
+        let engine = Engine::init(root).await.unwrap();
+        fs::write(root.join("notes.txt"), "meeting notes\n").unwrap();
+        engine.scan("tester").await.unwrap();
+        fs::remove_file(root.join(".LADONignore")).unwrap();
+        let host = FakeHost {
+            ai_reply: vec!["spec".into()],
+            ..Default::default()
+        };
+        let options = TagOptions {
+            presets: "topic",
+            description: "",
+            endpoint: Some("https://ai.example.test/v1"),
+            model: Some("m"),
+            recursive: false,
+        };
+        let err = tag_folder(&host, &engine, &options).await.unwrap_err();
+        assert!(err.to_string().contains(".LADONignore"), "{err}");
+        assert!(host.ai_calls.lock().unwrap().is_empty());
+    }
+
+    #[tokio::test]
     async fn shell_menu_opens_explorer_on_failed_host() {
         let dir = tempfile::tempdir().unwrap();
         let file = dir.path().join("doc.md");
@@ -1260,7 +1332,7 @@ mod tests {
         )
         .await
         .unwrap();
-        let policy = LadonPolicy::load(root).unwrap();
+        let policy = crate::policy::LadonPolicy::load(root).unwrap();
         let canonical = file.canonicalize().unwrap();
         assert!(policy.excluded(&canonical).unwrap());
     }

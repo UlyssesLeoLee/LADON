@@ -333,3 +333,37 @@ fn it_054_same_size_same_mtime_edit_is_detected() {
         assert_eq!(e.rule_traversals(), base + 1, "the edit starts exactly one traversal");
     });
 }
+
+#[test]
+fn tc860_path_gate_matches_rules_for_untracked_paths() {
+    let _gate = gate_scope();
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path();
+    write(&root.join(".LADONignore"), "*.key\n");
+
+    block_on(async {
+        let e = Engine::init(root).await.unwrap();
+        write(&root.join("a.md"), "tracked");
+        e.capture(&root.join("a.md"), "human", "tc860").await.unwrap();
+        assert!(!e.remote_path_allowed(Path::new("secret.key")).await.unwrap(), "an untracked path matched by the rules is refused");
+        assert!(e.remote_path_allowed(Path::new("notes.txt")).await.unwrap(), "an untracked path no rule matches is allowed");
+        assert!(e.remote_path_allowed(Path::new("a.md")).await.unwrap(), "a tracked path the rules allow is allowed");
+    });
+}
+
+#[test]
+fn tc861_path_gate_refuses_while_root_rule_is_missing() {
+    let _gate = gate_scope();
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path();
+    write(&root.join(".LADONignore"), "*.key\n");
+
+    block_on(async {
+        let e = Engine::init(root).await.unwrap();
+        assert!(e.remote_path_allowed(Path::new("notes.txt")).await.unwrap());
+        fs::remove_file(root.join(".LADONignore")).unwrap();
+        assert!(!e.remote_path_allowed(Path::new("notes.txt")).await.unwrap(), "a missing root rule file refuses the path");
+        write(&root.join(".LADONignore"), "*.key\n");
+        assert!(e.remote_path_allowed(Path::new("notes.txt")).await.unwrap(), "the restored rules allow the path again");
+    });
+}

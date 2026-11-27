@@ -2,7 +2,7 @@
 
 Source: `src/engine.rs`
 
-Source-SHA256: `bb181e0f9d22e3fdc818b2c9d50ab5c07ccbcf3ce5fd5b967d44e7f8aad8323f`
+Source-SHA256: `1cb26834f519a2c14e0a0552f35d3b2d0917d9915267f654eea74f81ea2c1be9`
 
 ## Responsibility
 
@@ -13,7 +13,7 @@ Source-SHA256: `bb181e0f9d22e3fdc818b2c9d50ab5c07ccbcf3ce5fd5b967d44e7f8aad8323f
 - `store::Store` and `PendingVersion` (ledger persistence), `archive::CasStore` and `assert_under_workspace` (content store and path containment), `crypto::{digest,load_archive_key,seal,open}` (SHA-256, AES-GCM archive envelope), `diff::changed_sections` (section-level change detection), `policy::{LadonPolicy,PendingPolicy,RuleStamp,walk_entry}` (ignore rules, the rule-set stamp, the background rule scan and walk error conversion), `provider::StorageProvider` (external archive transport), `model` records (`FileRecord` and `VersionRecord` for the remote gates).
 - `walkdir` for scans, `chrono` for archive verification timestamps, `uuid` for temporary and backup file names, `sha2` and `hex` for `digest_file`, `anyhow` for errors, `tokio` for the async runtime that callers provide.
 - `config/examples/.LADONignore` embedded with `include_str!` as the default rule file. The optional environment variable `LADON_GLOBAL_IGNORE` adds a global rule file to the policy; when the variable is set and names a file that cannot be read, loading the rules fails.
-- Callers: the `ladon` CLI commands in `src/entry.rs` (`tag-folder` and `resolve_record` among them); `agent_api::AgentApi::allow_remote_read`, which calls `content_is_excluded`; `doctask_service::EngineGate`, which implements the transfer gate with `refresh_policy_if_stale`, `remote_read_allowed` and `remote_version_allowed`, and is used by `doctask_mcp`, which also calls `Engine::open`; the Slint GUI crate in `ui-prototype` (`Engine::open`, `Engine::init`, `archive_version`, `capture`, `restore`, `load_version`, `reload_policy`); integration tests.
+- Callers: the `ladon` CLI commands in `src/entry.rs` (`tag-folder` and `resolve_record` among them); `agent_api::AgentApi::allow_remote_read`, which calls `refresh_policy_if_stale` and `remote_path_allowed`; `doctask_service::EngineGate`, which implements the transfer gate with `refresh_policy_if_stale`, `remote_read_allowed` and `remote_version_allowed`, and is used by `doctask_mcp`, which also calls `Engine::open`; the Slint GUI crate in `ui-prototype` (`Engine::open`, `Engine::init`, `archive_version`, `capture`, `restore`, `load_version`, `reload_policy`); integration tests.
 
 ## Public Contract
 

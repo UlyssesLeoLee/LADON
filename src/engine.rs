@@ -184,6 +184,21 @@ impl Engine {
         if !self.rules_usable()?||version.sensitive{return Ok(false);}
         Ok(!self.content_is_excluded(&version.content_hash).await?)
     }
+    /// Path-level gate for a path that may be untracked (design 13.1). It returns `Ok(false)` when the rules in force
+    /// are not usable, and when `LadonPolicy::allow_external` refuses the path. A tracked path is decided by
+    /// `remote_read_allowed` on its record, so a flagged file, a tracked copy of excluded content and a directory alias
+    /// are refused. Callers treat an error as a refusal too.
+    pub async fn remote_path_allowed(&self,relative:&Path)->Result<bool>{
+        if !self.rules_usable()?{return Ok(false);}
+        let external=self.policy.read().map_err(|_|anyhow!("policy lock poisoned"))?
+            .with(|policy| policy.allow_external(relative)).is_ok();
+        if !external{return Ok(false);}
+        let key=self.relative_for_input(relative).unwrap_or_else(|_|relative.to_string_lossy().replace('\\',"/"));
+        match self.store.find_path(&key).await?{
+            Some(file)=>self.remote_read_allowed(&file).await,
+            None=>Ok(true),
+        }
+    }
     pub fn resolve(&self,path:&Path)->Result<(PathBuf,String)> {
         let path=if path.is_absolute(){path.to_path_buf()}else{self.root.join(path)};
         let canonical=assert_under_workspace(&self.root,&path)?;
