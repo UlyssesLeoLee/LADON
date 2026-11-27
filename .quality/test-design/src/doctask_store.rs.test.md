@@ -67,3 +67,9 @@ The step primitive `commit_step`, the row writes `UpdateWhere` and `Delete`, and
 ## Regression Scope
 
 `doctask_service`, `doctask_flow` and `doctask_reconcile` (WP06 to WP08) call these methods and depend on the event hash tuple, the payload shapes, the legacy payload rule and the counter names; changing any of them changes persisted chains and must fail TC-862, TC-867 to TC-869 before any other module is changed. `Store` and `Engine` are used read-only by these tests: the tests in `tests/it_store.rs`, `tests/it_doctask_migration.rs` (IT-047, IT-073 and the probe tests) and `tests/it_engine.rs` must keep passing unchanged. The pure model tests (UT-141 to UT-146) must keep passing because the hashes come from `doctask_model`.
+
+## Task Edit Write Case
+
+| Case ID | Input / Setup | Expected Outcome | Test Location |
+| --- | --- | --- | --- |
+| TC-1053 | `validate_write` for an `Update` of `doc_tasks` keyed by `id` that sets `title` and `description`; for an `Update` of `doc_tasks` that sets `status`; for a `Delete` of `doc_tasks`. | The first write is accepted; the other two fail with `E_INVALID_ARG`. | src/doctask_store.rs::ut_validate_write_allows_only_title_and_description_on_doc_tasks |
