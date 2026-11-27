@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "source": "src/store.rs",
-  "baseline_source_sha256": "8a0eadfd5ab375e4eb41c452518f6de95c661faa52a38b74fd50e2abd0c432ae",
+  "baseline_source_sha256": "38e8d8ba9b758f6b4274b945aafe34526eada7f133041e38a9a1edd1a431a7e3",
   "prepared_branch": "fix/compile-errors",
   "technical_design": ".quality/docs/src/store.rs.md",
   "test_design": ".quality/test-design/src/store.rs.test.md",
-  "prepared_technical_design_sha256": "c25d9ecbdde4812b19bbac13087372ecc35e4fba258e46ab18af92abbc81c5d9",
-  "prepared_test_design_sha256": "75b48703e9dd98e83daecd6542fb4860dbd71767d8d77ba90e513d9f59165bb5",
+  "prepared_technical_design_sha256": "db15f36d03d0e17daeaa546995ed2dc33fafab885467148078049b3db82b73e7",
+  "prepared_test_design_sha256": "19f804c05764d662569245db6408bd7db0ca68e07e85f08a5509eda488c61949",
   "prepared_related_design_sha256": {}
 }

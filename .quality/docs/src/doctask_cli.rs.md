@@ -59,7 +59,7 @@ Console access is injected through the `DocIo` trait, so every confirmation path
 - `Anchors { file, check }`, `Ack { handle, yes, expect_hash }`, `Relocate { handle, selector, yes, expect_hash }`, `Rebase { handle, yes, expect_hash }`
 - `Lineage(LineageCmd)`: `Scan`, `List`, `Confirm { id, yes, expect_hash }`, `Reject { id, yes, expect_hash }`
 - `Schedule`, `Verify { handle }`
-- `Export(ExportCmd)`: `Nema { scope, output }`, `Report { scope, format, output }`. `ExportScope` holds `--task`, `--file`, `--section` (requires `--file`) and `--all`; `--task` conflicts with `--file` and `--all`, and `--file` conflicts with `--all`. `ExportOutput` holds `--out`, `--force`, `--include-local-only`, `--include-sensitive` and `--generated-at`. `--format` accepts `md` or `json` and defaults to `md`.
+- `Export(ExportCmd)`: `Nema { scope, output }`, `Report { scope, format, output }`. `ExportScope` holds `--task`, `--file`, `--section` (requires `--file`) and `--all`; `--task` conflicts with `--file` and `--all`, and `--file` conflicts with `--all`. `ExportOutput` holds `--out`, `--force`, `--include-local-only`, `--include-sensitive` and `--generated-at`. `--format` accepts `md` or `json` and defaults to `md`. The report input marks a file sensitive when `Engine::remote_read_allowed` refuses it or fails, not by the stored `sensitive` flag alone; unless `--include-sensitive` is given, such files and their records are omitted from both exports.
 - `Migrate { import_legacy, accept_unverified_backup }`
 
 Forms outside this package are not variants: `doc apply`, `doc recover`, `doc plan show --diff`, and the edit options of `doc plan new` (`--file --section --kind --text-file`). clap rejects them as unknown arguments.

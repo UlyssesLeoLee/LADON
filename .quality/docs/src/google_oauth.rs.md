@@ -43,7 +43,7 @@ Source-SHA256: `4cf5b483493fe0a1c63ec332f1a6d6227c4c6a0e265bfb7845c7f6aca5caa4c5
   1. Binds `127.0.0.1` on an ephemeral port. The redirect URI is `http://127.0.0.1:<port>/`.
   2. Generates the verifier and a 32-character state.
   3. Starts accepting on the listener, then calls `open_url` with the authorization URL. Accepting starts before the URL is opened, so the redirect is not missed.
-  4. Waits up to `timeout` for one connection. The connection is answered with a fixed HTML page and its request line is passed on. The listener is closed after that one request. When no connection arrives before the deadline, accepting stops.
+  4. Waits up to `timeout` for the callback. A connection whose request line is `GET /?<query> HTTP/1.x` with a `state` equal to the expected state is answered with a fixed HTML page, and its request line is passed on; any other connection is answered with `404 Not Found` and accepting continues. The listener is closed after the callback. When no callback arrives before the deadline, accepting stops.
   5. Parses the callback, exchanges the code, and returns the refresh token.
   - Without a request in time the result is `sign-in timed out`.
   - When Google returns no refresh token the result is `Google did not return a refresh token; revoke the access of LADON in the Google account and sign in again`.
@@ -61,7 +61,7 @@ Source-SHA256: `4cf5b483493fe0a1c63ec332f1a6d6227c4c6a0e265bfb7845c7f6aca5caa4c5
 
 ## Limits
 
-- The loopback listener accepts one connection per login. A second connection is not served.
+- The loopback listener serves connections until the callback arrives or the deadline passes; a connection without the expected state gets a 404. A connection that sends nothing holds the loop for its read timeout of ten seconds.
 - The token refresh runs on every Drive request that needs a token. No access token is cached.
 
 ## Change Notes

@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "source": "src/archive.rs",
+  "baseline_source_sha256": "753686475c7df58dacbcd31e52bd64bd08860444b805b2623b3559e1fd82b460",
+  "prepared_branch": "fix/compile-errors",
+  "technical_design": ".quality/docs/src/archive.rs.md",
+  "test_design": ".quality/test-design/src/archive.rs.test.md",
+  "prepared_technical_design_sha256": "5fd434b85002ae3c2812cb10cfca87ba89c6b27232273d3a06f0c5c14804e588",
+  "prepared_test_design_sha256": "0e04c6c34a85167c805eca39f72f721e055ebf2f31dcb2e2f0a62c497a1cfe09",
+  "prepared_related_design_sha256": {}
+}

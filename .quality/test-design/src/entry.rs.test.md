@@ -75,3 +75,9 @@ Every command of `Command`, the clap help text and defaults, the watch loop, Goo
 | TC-1033 | `ignore_check_label` on a tracked copy `shared/a.txt` of excluded content `contracts/a.txt` (rule `/contracts/`), and on an untracked `docs/req.md` that no rule matches. | `EXCLUDED: local only` for the copy; `ALLOWED: subject to explicit archive action` for `docs/req.md`. | src/entry.rs::tests::ignore_check_reports_copy_of_excluded_content_as_local_only |
 | TC-1034 | `ignore_check_label` after the root `.LADONignore` has been removed from an initialised workspace. | `Err` whose text names `.LADONignore`; no label is returned. | src/entry.rs::tests::ignore_check_fails_while_root_rule_is_missing |
 | TC-1035 | `tag-folder` with `--endpoint` (a remote URL) and `--model`, after the root `.LADONignore` has been removed. | `Err` whose text names `.LADONignore`; the tagger is never called. | src/entry.rs::tests::tag_folder_fails_while_root_rule_is_missing_and_never_calls_ai |
+
+## Watch Batch Case
+
+| Case ID | Input / Setup | Expected Outcome | Test Location |
+| --- | --- | --- | --- |
+| TC-1051 | Twenty runs of `process_batch` over a batch that holds a new `cert<n>.pem` and the root `.LADONignore`, which was rewritten to hold `*.pem` after the engine opened. | Every `cert<n>.pem` is captured with `sensitive` true, whatever the order the paths come in. | src/entry.rs::tests::process_batch_handles_rule_events_before_other_paths |

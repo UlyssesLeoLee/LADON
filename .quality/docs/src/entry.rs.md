@@ -102,10 +102,10 @@ pub struct SystemHost;
 
 1. If `stop_requested()` is true, it returns `Ok(())` without reading the source.
 2. It waits for an event. `None` returns the error `watcher disconnected`; an event that carries a notify error returns that error.
-3. It collects the paths of the event, waits 350 ms and collects the paths of every queued event. A notify error among the queued events returns that error.
+3. It collects the paths of the event, waits 350 ms without blocking the runtime (`tokio::time::sleep`) and collects the paths of every queued event. A notify error among the queued events returns that error.
 4. It calls `process_batch` with the collected paths.
 
-`process_batch(engine, actor, paths)` handles one batch of paths:
+`process_batch(engine, actor, paths)` handles one batch of paths. Root rule events and rule files in any ASCII case are handled first, so every other path of the batch is captured under the reloaded rules:
 
 - paths below `.ladon` or `.git` are skipped;
 - a root rule event or a `.LADONignore` file reloads the policy and prints `policy reloaded: <path>`, or prints `policy reload failed, check external-transfer protections: <error>` on stderr;

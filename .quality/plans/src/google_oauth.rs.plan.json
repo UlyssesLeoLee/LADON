@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "source": "src/google_oauth.rs",
-  "baseline_source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "baseline_source_sha256": "4cf5b483493fe0a1c63ec332f1a6d6227c4c6a0e265bfb7845c7f6aca5caa4c5",
   "prepared_branch": "fix/compile-errors",
   "technical_design": ".quality/docs/src/google_oauth.rs.md",
   "test_design": ".quality/test-design/src/google_oauth.rs.test.md",
-  "prepared_technical_design_sha256": "1201420060159ea11a66cecacae9c1bf7b1fc24e5fce6784242fb10425cdcd1e",
-  "prepared_test_design_sha256": "f6ebb918c13e1a028857a93f8fcb04c2e01eca4ccf243cdaac3732883f02ba4a",
+  "prepared_technical_design_sha256": "1a1b3a363ab81e08d60036232bfda84243005b681ede7edaa7bd394f2bf35b9e",
+  "prepared_test_design_sha256": "a0fc271e5d21656b722547165c5b205d131a969fc5429a482e126f2fa3e1d463",
   "prepared_related_design_sha256": {}
 }

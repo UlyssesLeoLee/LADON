@@ -64,3 +64,9 @@ Each test workspace is a `tempfile` directory with `Engine::init`. Each one runs
 - `tests/it_cli_binary_smoke.rs` continues to pass; the `doc` command is listed in the help output.
 - `tc108`, `tc109` and `it_05` in the store tests keep passing because `Store::add_annotation`, `create_task`, `set_task_status` and `list_tasks` are unchanged.
 - The `doctask_service`, `doctask_flow`, `doctask_reconcile` and `doctask_report` unit tests are not changed by this package.
+
+## Export Gate Case
+
+| Case ID | Input / Setup | Expected Outcome | Test Location |
+| --- | --- | --- | --- |
+| TC-1048 | A workspace with `a.md` captured and a baseline, a note and a task on it; then `a.md` is added to the root rules after the capture, and `doc export report` runs without `--include-sensitive`, and again with it. | The first report does not mention `a.md`; the second report does. | tests/it_doctask_cli.rs::it_940_export_omits_a_file_excluded_after_capture |
