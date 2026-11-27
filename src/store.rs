@@ -195,8 +195,14 @@ impl Store {
     /// five counted tables of the copy with `counts`, read from the open source connection.
     async fn backup_before_migration(&self,counts:&[(&'static str,i64)])->Result<BackupState> {
         let backup_dir=self.path.parent().unwrap_or_else(||Path::new(".")).join("backup");
-        let main_copy=backup_dir.join("meta.turso.pre-004");
-        let wal_copy=backup_dir.join("meta.turso.pre-004-wal");
+        // An earlier backup file is never overwritten: a new attempt takes the first free name.
+        let mut copy_no=1u32;
+        let (main_copy,wal_copy)=loop{
+            let suffix=if copy_no==1{String::new()}else{format!("-{copy_no}")};
+            let main=backup_dir.join(format!("meta.turso.pre-004{suffix}"));
+            if !main.is_file(){break (main,backup_dir.join(format!("meta.turso.pre-004{suffix}-wal")));}
+            copy_no+=1;
+        };
         if let Err(err)=copy_backup_pair(&self.path,&wal_file_of(&self.path),&main_copy,&wal_copy) {
             return Ok(BackupState::Unverified{reason:format!("copy failed: {err}")});
         }

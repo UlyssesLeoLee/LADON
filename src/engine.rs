@@ -68,6 +68,24 @@ fn copy_without_replacing(src:&Path,dst:&Path)->io::Result<()>{
     copied.map(|_|())
 }
 
+/// Refuses a restore target whose existing ancestor directories pass through a link or resolve outside the workspace.
+fn assert_restore_target_inside(root:&Path,target:&Path)->Result<()>{
+    let mut ancestor=target.parent();
+    while let Some(dir)=ancestor{
+        if dir==root{return Ok(());}
+        match fs::symlink_metadata(dir){
+            Ok(meta)=>{
+                if meta.file_type().is_symlink(){bail!("restore target is reached through a link: {}",dir.display());}
+                if !dir.canonicalize()?.starts_with(root){bail!("path escapes the workspace");}
+            }
+            Err(err) if err.kind()==io::ErrorKind::NotFound=>{}
+            Err(err)=>return Err(err.into()),
+        }
+        ancestor=dir.parent();
+    }
+    Ok(())
+}
+
 /// Time after which a content-related call starts a background traversal for nested rule files.
 const NESTED_REFRESH_INTERVAL:Duration=Duration::from_secs(30);
 
@@ -109,6 +127,9 @@ impl Engine {
     /// Reload `.LADONignore` after FS events without rescanning all rule files per capture.
     /// A missing root rule file also fails the rules in force, so capture refuses as archive does.
     pub fn reload_policy(&self)->Result<()> {
+        let mut state=self.rules.lock().map_err(|_|anyhow!("rule state lock poisoned"))?;
+        // A traversal that an earlier refresh started may have read older rule files, so it is dropped.
+        state.inflight=None;
         if let Err(err)=LadonPolicy::check_root(&self.root){
             self.policy_valid.store(false,Ordering::SeqCst);
             if !LadonPolicy::has_root_rule_file(&self.root){
@@ -116,6 +137,8 @@ impl Engine {
             }
             return Err(err);
         }
+        state.stamp=RuleStamp::read(&self.root);
+        state.last_scan=Instant::now();
         *self.policy.write().map_err(|_|anyhow!("policy lock poisoned"))?=PendingPolicy::start(&self.root);
         self.policy_valid.store(true,Ordering::SeqCst);
         Ok(())
@@ -264,7 +287,7 @@ impl Engine {
             if entry.file_type().is_dir(){continue;}
             if !entry.file_type().is_file(){continue;}
             let rel=entry.path().strip_prefix(&self.root)?.to_string_lossy().replace('\\',"/");
-            if rel==".LADONignore"||rel.starts_with(".ladon/")||rel.starts_with(".git/"){continue;}
+            if rel.eq_ignore_ascii_case(".LADONignore")||rel.starts_with(".ladon/")||rel.starts_with(".git/"){continue;}
             self.rules_ready()?;
             match self.capture(entry.path(),actor,"scan").await {
                 Ok(result)=>out.push(result),
@@ -356,6 +379,7 @@ impl Engine {
         let file=self.store.list_files().await?.into_iter().find(|f|f.id==v.file_id).ok_or_else(||anyhow!("file not found"))?;
         // TOCTOU guard: refuse if current file diverged from last captured hash.
         let target=self.root.join(&file.relative_path);
+        assert_restore_target_inside(&self.root,&target)?;
         if target.exists() && digest_file(&target)?!=file.current_hash {bail!(LIVE_CHANGED_MESSAGE);}
         let data=self.load_version(version_id,provider).await?;
         if let Some(parent)=target.parent(){fs::create_dir_all(parent)?;}
@@ -780,5 +804,29 @@ mod tests {
         wait_for_background_scan(&e);
         assert!(e.remote_read_allowed(&file).await.unwrap(), "the repaired traversal restores transfers");
         assert_eq!(e.rule_traversals(), base + 2);
+    }
+
+    #[tokio::test]
+    async fn ut_reload_policy_discards_a_finished_older_traversal() {
+        let _env = crate::policy::lock_global_ignore();
+        let tmp = tempfile::tempdir().unwrap();
+        fs::write(tmp.path().join(".LADONignore"), "").unwrap();
+        let e = Engine::init(tmp.path()).await.unwrap();
+        fs::create_dir(tmp.path().join("sub")).unwrap();
+        fs::write(tmp.path().join("sub").join("a.txt"), "nested one").unwrap();
+        e.capture(&tmp.path().join("sub").join("a.txt"), "human", "tc1042").await.unwrap();
+        let file = e.file_by_path("sub/a.txt").await.unwrap();
+
+        // The first call starts a traversal that reads the rules as they are now; it finishes but is not installed yet.
+        backdate_last_scan(&e);
+        assert!(e.remote_read_allowed(&file).await.unwrap());
+        wait_for_background_scan(&e);
+
+        fs::write(tmp.path().join("sub").join(".LADONignore"), "a.txt\n").unwrap();
+        e.reload_policy().unwrap();
+        assert!(
+            !e.remote_read_allowed(&file).await.unwrap(),
+            "the rule set that reload_policy started stays in force; the older traversal is not installed over it"
+        );
     }
 }

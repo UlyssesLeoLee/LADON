@@ -722,7 +722,7 @@ async fn tag_folder<H: Host>(host: &H, engine: &Engine, options: &TagOptions<'_>
             .path()
             .components()
             .any(|s| s.as_os_str() == ".git" || s.as_os_str() == ".ladon")
-            || entry.file_name() == ".LADONignore"
+            || entry.file_name().eq_ignore_ascii_case(".LADONignore")
         {
             continue;
         }
@@ -783,7 +783,7 @@ async fn watch<H: Host>(host: &H, engine: &Engine, actor: &str) -> Result<()> {
             .recv()
             .ok_or_else(|| anyhow!("watcher disconnected"))??;
         let mut paths: HashSet<PathBuf> = event.paths.into_iter().collect();
-        std::thread::sleep(Duration::from_millis(350));
+        tokio::time::sleep(Duration::from_millis(350)).await;
         while let Some(next) = source.try_recv() {
             paths.extend(next?.paths);
         }
@@ -791,22 +791,29 @@ async fn watch<H: Host>(host: &H, engine: &Engine, actor: &str) -> Result<()> {
     }
 }
 
+/// True for a root rule event, or for a rule file in any ASCII case at any depth.
+fn is_rule_event(root: &Path, path: &Path) -> bool {
+    is_root_rule_event(root, path)
+        || path
+            .file_name()
+            .map(|s| s.eq_ignore_ascii_case(".LADONignore"))
+            .unwrap_or(false)
+}
+
 /// Handles one batch of changed paths: captures files, marks removals and runs scans when needed.
 async fn process_batch(engine: &Engine, actor: &str, paths: HashSet<PathBuf>) -> Result<()> {
     let mut full_scan = false;
-    for path in paths {
+    // Rule-file events come first, so every other path of the batch is captured under the reloaded rules.
+    let mut ordered: Vec<PathBuf> = paths.into_iter().collect();
+    ordered.sort_by_key(|path| !is_rule_event(&engine.root, path));
+    for path in ordered {
         if path
             .components()
             .any(|c| c.as_os_str() == ".ladon" || c.as_os_str() == ".git")
         {
             continue;
         }
-        if is_root_rule_event(&engine.root, &path)
-            || path
-                .file_name()
-                .map(|s| s == ".LADONignore")
-                .unwrap_or(false)
-        {
+        if is_rule_event(&engine.root, &path) {
             if let Err(err) = engine.reload_policy() {
                 eprintln!("policy reload failed, check external-transfer protections: {err:#}");
             } else {
@@ -1257,6 +1264,30 @@ mod tests {
         let err = tag_folder(&host, &engine, &options).await.unwrap_err();
         assert!(err.to_string().contains(".LADONignore"), "{err}");
         assert!(host.ai_calls.lock().unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn process_batch_handles_rule_events_before_other_paths() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        fs::write(root.join(".LADONignore"), "").unwrap();
+        let engine = Engine::init(root).await.unwrap();
+        fs::write(root.join(".LADONignore"), "*.pem\n").unwrap();
+        let mut batch = HashSet::new();
+        batch.insert(engine.root.join(".LADONignore"));
+        for n in 0..20 {
+            let name = format!("cert{n}.pem");
+            fs::write(root.join(&name), "key bytes").unwrap();
+            batch.insert(engine.root.join(&name));
+        }
+        process_batch(&engine, "tester", batch).await.unwrap();
+        for n in 0..20 {
+            let file = engine.file_by_path(&format!("cert{n}.pem")).await.unwrap();
+            assert!(
+                file.sensitive,
+                "cert{n}.pem must be captured under the reloaded rules"
+            );
+        }
     }
 
     #[tokio::test]

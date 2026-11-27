@@ -202,7 +202,7 @@ impl LadonPolicy {
             let entry = walk_entry(step)?;
             if entry.file_type().is_dir() && entry.file_name()==".ladon" { continue; }
             // Nested rule files only; the root rule file was added above.
-            if entry.depth()>=2 && entry.file_type().is_file() && entry.file_name()==".LADONignore" {
+            if entry.depth()>=2 && entry.file_type().is_file() && entry.file_name().eq_ignore_ascii_case(".LADONignore") {
                 add_nested_rule_file(&mut builder, &root, entry.path())?;
             }
         }
@@ -212,8 +212,9 @@ impl LadonPolicy {
     pub fn excluded(&self, path: &Path) -> Result<bool> {
         let path=if path.is_absolute(){path.to_path_buf()}else{self.root.join(path)};
         if !path.starts_with(&self.root) {anyhow::bail!("outside workspace");}
+        if path.components().any(|c|matches!(c,std::path::Component::ParentDir)) {anyhow::bail!("outside workspace");}
         if path.components().any(|c|c.as_os_str()==".ladon"||c.as_os_str()==".git") {return Ok(true);}
-        if path.file_name().map(|s|s==".LADONignore").unwrap_or(false){return Ok(true);}
+        if path.file_name().map(|s|s.eq_ignore_ascii_case(".LADONignore")).unwrap_or(false){return Ok(true);}
         let is_dir=path.is_dir();
         Ok(self.matcher.matched_path_or_any_parents(&path,is_dir).is_ignore())
     }
@@ -357,6 +358,26 @@ mod tests {
         std::fs::write(root.join(".LADONignore"),"").unwrap();
         let p=LadonPolicy::load(&root).unwrap();
         assert!(p.excluded(&root.join(".LADONignore")).unwrap());
+    }
+    #[test] fn ut_nested_rule_file_name_is_matched_in_any_case() {
+        let _env=lock_global_ignore();
+        let t=tempfile::tempdir().unwrap();
+        let root=t.path().canonicalize().unwrap();
+        std::fs::write(root.join(".LADONignore"),"").unwrap();
+        std::fs::create_dir(root.join("private")).unwrap();
+        std::fs::write(root.join("private/.ladonignore"),"secret.md\n").unwrap();
+        let policy=LadonPolicy::load(&root).unwrap();
+        assert!(policy.excluded(&root.join("private/secret.md")).unwrap());
+    }
+    #[test] fn ut_excluded_rejects_dot_dot_and_any_case_rule_file_name() {
+        let _env=lock_global_ignore();
+        let t=tempfile::tempdir().unwrap();
+        let root=t.path().canonicalize().unwrap();
+        std::fs::write(root.join(".LADONignore"),"/private/\n").unwrap();
+        let policy=LadonPolicy::load(&root).unwrap();
+        assert!(policy.excluded(Path::new("docs/../private/x.md")).is_err());
+        assert!(policy.excluded(&root.join("docs").join("..").join("private").join("x.md")).is_err());
+        assert!(policy.excluded(&root.join("sub").join(".LADONIGNORE")).unwrap());
     }
     #[test] fn ut_policy_lowercase_rule_file_is_applied() {
         let _env=lock_global_ignore();

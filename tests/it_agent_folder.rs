@@ -122,17 +122,17 @@ async fn tc405_read_file_local_limits(){
     fs::write(tmp.path().join("big.bin"),"0123456789").unwrap();
     let api=AgentApi{engine:&engine};
     for bad in [0u64,8*1024*1024+1]{
-        let err=api.read_file_local(Path::new("big.bin"),bad).unwrap_err();
+        let err=api.read_file_local(Path::new("big.bin"),bad).await.unwrap_err();
         assert!(err.to_string().contains("read limit must be 1..8MiB"),"{err}");
     }
-    let err=api.read_file_local(Path::new("big.bin"),5).unwrap_err();
+    let err=api.read_file_local(Path::new("big.bin"),5).await.unwrap_err();
     assert!(err.to_string().contains("file exceeds caller limit"),"{err}");
-    assert_eq!(api.read_file_local(Path::new("big.bin"),10).unwrap(),b"0123456789");
-    assert_eq!(api.read_file_local(Path::new("big.bin"),8*1024*1024).unwrap().len(),10);
+    assert_eq!(api.read_file_local(Path::new("big.bin"),10).await.unwrap(),b"0123456789");
+    assert_eq!(api.read_file_local(Path::new("big.bin"),8*1024*1024).await.unwrap().len(),10);
 
     let outside=tempfile::tempdir().unwrap();
     fs::write(outside.path().join("x.txt"),"x").unwrap();
-    assert!(api.read_file_local(&outside.path().join("x.txt"),10).is_err());
+    assert!(api.read_file_local(&outside.path().join("x.txt"),10).await.is_err());
 }
 
 #[tokio::test]
@@ -142,7 +142,7 @@ async fn tc406_history_unknown_and_grep_limit(){
     let api=AgentApi{engine:&engine};
     let err=api.history("nope.md").await.unwrap_err();
     assert!(err.to_string().contains("file not found in ledger"),"{err}");
-    let hits=api.grep_local("needle",1).unwrap();
+    let hits=api.grep_local("needle",1).await.unwrap();
     assert_eq!(hits.len(),1);
     assert_eq!(hits[0].line,2);
     assert_eq!(hits[0].path,"notes.txt");
@@ -209,4 +209,25 @@ async fn tc411_allow_remote_read_fails_while_root_rule_is_missing(){
     assert!(err.to_string().contains(".LADONignore"),"{err}");
     fs::write(root.join(".LADONignore"),"*.key\n").unwrap();
     api.allow_remote_read(Path::new("ok.md")).await.unwrap();
+}
+
+#[tokio::test]
+async fn tc1047_read_paths_apply_the_transfer_gate(){
+    let tmp=tempfile::tempdir().unwrap();
+    let root=tmp.path();
+    fs::write(root.join(".LADONignore"),"/keys/\n").unwrap();
+    let engine=Engine::init(root).await.unwrap();
+    fs::create_dir_all(root.join("keys")).unwrap();
+    fs::write(root.join("keys/id.pem"),"needle in a key").unwrap();
+    fs::write(root.join("ok.md"),"needle in a note").unwrap();
+    let api=AgentApi{engine:&engine};
+    let err=api.read_file_local(Path::new("keys/id.pem"),1024).await.unwrap_err();
+    assert!(err.to_string().contains("denies external data transfer"),"{err}");
+    assert_eq!(api.read_file_local(Path::new("ok.md"),1024).await.unwrap(),b"needle in a note");
+    let names:Vec<String>=api.list_folder(Path::new("."),100).await.unwrap().into_iter().map(|x|x.name).collect();
+    assert!(names.iter().any(|n|n=="ok.md"),"{names:?}");
+    assert!(!names.iter().any(|n|n=="keys"),"{names:?}");
+    let hits=api.grep_local("needle",10).await.unwrap();
+    assert!(hits.iter().any(|h|h.path=="ok.md"),"{hits:?}");
+    assert!(!hits.iter().any(|h|h.path.replace('\\',"/")=="keys/id.pem"),"{hits:?}");
 }

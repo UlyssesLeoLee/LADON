@@ -35,7 +35,12 @@ impl CasStore {
             }
             let hash=hex::encode(hasher.finalize());let target=self.local_object_path(&hash)?;
             fs::create_dir_all(target.parent().unwrap())?;
-            if target.exists(){fs::remove_file(&tmp)?;} else {fs::rename(&tmp,&target)?;}
+            // An object that already exists is kept only when its bytes hash to its name; a damaged one is replaced.
+            if target.exists()&&object_matches(&target,&hash){fs::remove_file(&tmp)?;}
+            else {
+                if target.exists(){fs::remove_file(&target)?;}
+                fs::rename(&tmp,&target)?;
+            }
             Ok((hash,bytes))
         })();
         if result.is_err(){let _=fs::remove_file(tmp);}
@@ -43,12 +48,15 @@ impl CasStore {
     }
     pub fn put_bytes(&self,bytes:&[u8])->Result<String>{
         let hash=digest(bytes);let target=self.local_object_path(&hash)?;
-        if target.exists(){return Ok(hash);}
+        if target.exists()&&object_matches(&target,&hash){return Ok(hash);}
         fs::create_dir_all(target.parent().unwrap())?;
         let tmp=self.base.join(format!(".tmp-{}",Uuid::new_v4()));
         let result=(||->Result<()>{
             let compressed=zstd::stream::encode_all(bytes,3)?;
-            fs::write(&tmp,compressed)?;
+            let mut out=fs::File::create(&tmp)?;
+            out.write_all(&compressed)?;out.sync_all()?;
+            drop(out);
+            if target.exists(){fs::remove_file(&target)?;}
             fs::rename(&tmp,&target)?;
             Ok(())
         })();
@@ -69,6 +77,21 @@ impl CasStore {
         let p=self.local_object_path(hash)?;
         if p.exists(){fs::remove_file(p)?;}Ok(())
     }
+}
+
+/// True when the object at `target` decompresses to bytes whose digest is `hash`. The object is read in chunks.
+fn object_matches(target:&Path,hash:&str)->bool{
+    let Ok(file)=fs::File::open(target) else {return false;};
+    let Ok(mut decoder)=zstd::Decoder::new(file) else {return false;};
+    let mut hasher=Sha256::new();let mut buf=[0u8;65536];
+    loop {
+        match decoder.read(&mut buf){
+            Ok(0)=>break,
+            Ok(n)=>hasher.update(&buf[..n]),
+            Err(_)=>return false,
+        }
+    }
+    hex::encode(hasher.finalize())==hash
 }
 
 pub fn assert_under_workspace(root:&Path,path:&Path)->Result<PathBuf>{
@@ -97,5 +120,23 @@ mod tests {
     #[test] fn ut_cas_03_limit(){
         let tmp=tempfile::tempdir().unwrap();let c=CasStore::new(tmp.path().join("cas"));
         let hash=c.put_bytes(&[0u8;100]).unwrap();assert!(c.load_bytes(&hash,99).is_err());
+    }
+    #[test] fn ut_cas_04_put_file_replaces_a_damaged_object(){
+        let tmp=tempfile::tempdir().unwrap();let c=CasStore::new(tmp.path().join("cas"));
+        let path=tmp.path().join("x.txt");fs::write(&path,"hello hello hello").unwrap();
+        let (hash,_)=c.put_file(&path).unwrap();
+        let object=c.local_object_path(&hash).unwrap();
+        let bytes=fs::read(&object).unwrap();fs::write(&object,&bytes[..bytes.len()/2]).unwrap();
+        assert!(c.load_bytes(&hash,128).is_err());
+        let (again,_)=c.put_file(&path).unwrap();
+        assert_eq!(again,hash);assert_eq!(c.load_bytes(&hash,128).unwrap(),b"hello hello hello");
+    }
+    #[test] fn ut_cas_05_put_bytes_replaces_a_damaged_object(){
+        let tmp=tempfile::tempdir().unwrap();let c=CasStore::new(tmp.path().join("cas"));
+        let hash=c.put_bytes(b"some bytes to store").unwrap();
+        fs::write(c.local_object_path(&hash).unwrap(),b"garbage").unwrap();
+        assert!(c.load_bytes(&hash,128).is_err());
+        assert_eq!(c.put_bytes(b"some bytes to store").unwrap(),hash);
+        assert_eq!(c.load_bytes(&hash,128).unwrap(),b"some bytes to store");
     }
 }

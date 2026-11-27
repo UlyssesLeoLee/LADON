@@ -2,7 +2,7 @@
 
 Source: `src/archive.rs`
 
-Source-SHA256: `753686475c7df58dacbcd31e52bd64bd08860444b805b2623b3559e1fd82b460`
+Source-SHA256: `faf504decb958071e1bb3204dd650f9b4f7480d06970405c9f670be28d2952f4`
 
 ## Test Strategy
 

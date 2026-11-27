@@ -365,3 +365,41 @@ fn hold_unshared(path: &Path) -> fs::File {
 fn hold_unshared(_path: &Path) -> fs::File {
     unreachable!("tc328 is ignored off Windows")
 }
+
+#[cfg(windows)]
+fn make_dir_junction(target: &Path, link: &Path) -> bool {
+    std::process::Command::new("cmd")
+        .args(["/C", "mklink", "/J"])
+        .arg(link)
+        .arg(target)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
+
+#[cfg(windows)]
+#[tokio::test]
+async fn tc1043_restore_refuses_a_target_behind_a_junction() {
+    let (tmp, e) = workspace().await;
+    let root = tmp.path();
+    let outside = tempfile::tempdir().unwrap();
+    fs::create_dir_all(root.join("docs")).unwrap();
+    let file = root.join("docs").join("a.md");
+    fs::write(&file, "tracked text").unwrap();
+    let captured = e.capture(&file, "human", "tc1043").await.unwrap();
+    let version_id = captured.version_id.unwrap();
+
+    fs::remove_dir_all(root.join("docs")).unwrap();
+    if !make_dir_junction(outside.path(), &root.join("docs")) {
+        assert!(
+            std::env::var_os("LADON_REQUIRE_LINK_TESTS").is_none(),
+            "directory junctions are required but unavailable on this host"
+        );
+        eprintln!("directory junctions cannot be created here; skipping the case");
+        return;
+    }
+    let err = e.restore(&version_id, true, None).await.unwrap_err();
+    let text = format!("{err:#}");
+    assert!(text.contains("link") || text.contains("escapes the workspace"), "{text}");
+    assert_eq!(fs::read_dir(outside.path()).unwrap().count(), 0, "nothing may be written outside the workspace");
+}

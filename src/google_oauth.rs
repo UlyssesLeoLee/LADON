@@ -306,8 +306,9 @@ async fn login_at(token_endpoint: &str, client: &OAuthClient, open_url: impl FnO
     let state = random_state();
     // The listener must accept before the browser is opened, so the redirect is never missed.
     let (sender, receiver) = mpsc::channel::<Option<String>>();
+    let expected_state = state.clone();
     std::thread::spawn(move || {
-        let _ = sender.send(accept_callback(listener, timeout));
+        let _ = sender.send(accept_callback(listener, timeout, &expected_state));
     });
     let url = authorization_url(client, &redirect_uri, &code_challenge(&verifier), &state);
     open_url(url.as_str());
@@ -321,32 +322,41 @@ async fn login_at(token_endpoint: &str, client: &OAuthClient, open_url: impl FnO
     tokens.refresh_token.ok_or_else(|| anyhow!(NO_REFRESH_TOKEN))
 }
 
-/// Accepts one connection before the deadline, answers it with the fixed page, and returns its request line.
-fn accept_callback(listener: TcpListener, timeout: Duration) -> Option<String> {
+/// Accepts connections until the callback arrives or the deadline passes. A request line `GET /?...` that carries the
+/// expected state is answered with the fixed page and returned; any other connection gets a 404 and is ignored.
+fn accept_callback(listener: TcpListener, timeout: Duration, expected_state: &str) -> Option<String> {
     let deadline = Instant::now() + timeout;
     listener.set_nonblocking(true).ok()?;
-    let mut stream = loop {
-        match listener.accept() {
-            Ok((stream, _)) => break stream,
+    let marker = format!("state={expected_state}");
+    loop {
+        if Instant::now() >= deadline {
+            return None;
+        }
+        let mut stream = match listener.accept() {
+            Ok((stream, _)) => stream,
             Err(error) if error.kind() == ErrorKind::WouldBlock => {
-                if Instant::now() >= deadline {
-                    return None;
-                }
                 std::thread::sleep(Duration::from_millis(25));
+                continue;
             }
             Err(_) => return None,
+        };
+        if stream.set_nonblocking(false).is_err() || stream.set_read_timeout(Some(Duration::from_secs(10))).is_err() {
+            continue;
         }
-    };
-    stream.set_nonblocking(false).ok()?;
-    stream.set_read_timeout(Some(Duration::from_secs(10))).ok()?;
-    let request_line = read_request_line(&mut stream)?;
-    let reply = format!(
-        "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-        CALLBACK_PAGE.len(),
-        CALLBACK_PAGE
-    );
-    let _ = stream.write_all(reply.as_bytes());
-    Some(request_line)
+        let Some(request_line) = read_request_line(&mut stream) else {
+            continue;
+        };
+        if request_line.starts_with("GET /?") && request_line.contains(&marker) {
+            let reply = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                CALLBACK_PAGE.len(),
+                CALLBACK_PAGE
+            );
+            let _ = stream.write_all(reply.as_bytes());
+            return Some(request_line);
+        }
+        let _ = stream.write_all(b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+    }
 }
 
 fn read_request_line(stream: &mut TcpStream) -> Option<String> {
@@ -621,6 +631,28 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(refresh, "login-refresh-value");
+    }
+
+    #[tokio::test]
+    async fn login_ignores_a_stray_connection_before_the_callback() {
+        let endpoint = mock_endpoint(200, r#"{"access_token":"a-value","refresh_token":"stray-refresh-value","expires_in":3599}"#);
+        let open = |url: &str| {
+            let query = url.split_once('?').map(|(_, query)| query).unwrap_or("");
+            let redirect = query
+                .split('&')
+                .find_map(|pair| pair.strip_prefix("redirect_uri="))
+                .map(|value| percent_decode(value).unwrap())
+                .unwrap();
+            let address = redirect.trim_start_matches("http://").trim_end_matches('/').to_string();
+            let mut stray = TcpStream::connect(address).unwrap();
+            write!(stray, "GET /favicon.ico HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n").unwrap();
+            let mut reply = String::new();
+            stray.read_to_string(&mut reply).unwrap();
+            assert!(reply.starts_with("HTTP/1.1 404"), "{reply}");
+            answer_like_browser(url, "code-stray");
+        };
+        let refresh = login_at(&endpoint, &client(), open, Duration::from_secs(5)).await.unwrap();
+        assert_eq!(refresh, "stray-refresh-value");
     }
 
     #[tokio::test]

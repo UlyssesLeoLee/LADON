@@ -53,16 +53,18 @@ impl<'a> AgentApi<'a>{
             let e=entry?;let md=e.metadata()?;
             if md.file_type().is_symlink() {continue;}
             let rel=e.path().strip_prefix(&self.engine.root)?.to_string_lossy().replace('\\',"/");
-            if rel.starts_with(".ladon") || rel.starts_with(".git") || rel==".LADONignore" {continue;}
+            if rel.starts_with(".ladon") || rel.starts_with(".git") || rel.eq_ignore_ascii_case(".LADONignore") {continue;}
+            if !self.engine.remote_path_allowed(Path::new(&rel)).await.unwrap_or(false) {continue;}
             let r=self.engine.store.find_path(&rel).await?;
             out.push(ResourceInfo{name:e.file_name().to_string_lossy().into(),kind:if md.is_dir(){"directory".into()}else{"file".into()},bytes:md.len(),relative_path:rel,tracked_file_ref:r.map(|x|x.id)});
             if out.len()==limit{break;}
         }
         out.sort_by(|a,b|a.name.cmp(&b.name));Ok(out)
     }
-    pub fn read_file_local(&self,relative:&Path,max_bytes:u64)->Result<Vec<u8>>{
+    pub async fn read_file_local(&self,relative:&Path,max_bytes:u64)->Result<Vec<u8>>{
         if max_bytes==0 || max_bytes>8*1024*1024 {bail!("read limit must be 1..8MiB");}
         let (path,_) =self.engine.resolve(relative)?;
+        self.allow_remote_read(relative).await?;
         let md=path.metadata()?;if md.len()>max_bytes {bail!("file exceeds caller limit");}
         Ok(fs::read(path)?)
     }
@@ -81,8 +83,34 @@ impl<'a> AgentApi<'a>{
         let chain_valid=self.engine.store.verify_chain(&f.id).await?;
         Ok(HistoryView{file_ref:f.id,versions,chain_valid})
     }
-    pub fn grep_local(&self,pattern:&str,limit:usize)->Result<Vec<search::SearchHit>> {
-        search::grep(&self.engine.root,pattern,limit)
+    /// Keeps the hits whose path the transfer gate allows. `search::grep` is asked for `limit` hits, and again for twice
+    /// as many (up to `MAX_FETCH`) while refused hits leave fewer than `limit` and more hits may exist.
+    pub async fn grep_local(&self,pattern:&str,limit:usize)->Result<Vec<search::SearchHit>> {
+        const MAX_FETCH:usize=100_000;
+        let want=limit.max(1);
+        let mut fetch=want;
+        let mut allowed=std::collections::HashMap::<String,bool>::new();
+        loop {
+            let hits=search::grep(&self.engine.root,pattern,fetch)?;
+            let total=hits.len();
+            let mut out=Vec::new();
+            for hit in hits {
+                let ok=match allowed.get(&hit.path){
+                    Some(known)=>*known,
+                    None=>{
+                        let ok=self.engine.remote_path_allowed(Path::new(&hit.path)).await.unwrap_or(false);
+                        allowed.insert(hit.path.clone(),ok);
+                        ok
+                    }
+                };
+                if ok {
+                    out.push(hit);
+                    if out.len()>=want {break;}
+                }
+            }
+            if out.len()>=want || total<fetch || fetch>=MAX_FETCH {return Ok(out);}
+            fetch=fetch.saturating_mul(2).min(MAX_FETCH);
+        }
     }
 }
 

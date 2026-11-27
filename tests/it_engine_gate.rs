@@ -367,3 +367,20 @@ fn tc861_path_gate_refuses_while_root_rule_is_missing() {
         assert!(e.remote_path_allowed(Path::new("notes.txt")).await.unwrap(), "the restored rules allow the path again");
     });
 }
+#[test]
+fn tc1044_path_gate_refuses_dot_dot_components() {
+    let _gate = gate_scope();
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path();
+    write(&root.join(".LADONignore"), "/private/\n");
+
+    block_on(async {
+        let e = Engine::init(root).await.unwrap();
+        assert!(
+            !e.remote_path_allowed(Path::new("docs/../private/x.md")).await.unwrap(),
+            "a path that reaches an excluded folder through `..` is refused"
+        );
+        assert!(!e.remote_path_allowed(Path::new("private/x.md")).await.unwrap());
+        assert!(e.remote_path_allowed(Path::new("docs/ok.md")).await.unwrap());
+    });
+}

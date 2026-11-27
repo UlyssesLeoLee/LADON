@@ -313,3 +313,85 @@ async fn it_939_one_shot_flow_in_process() {
         "the .NEMA file is written under .ladon/exports"
     );
 }
+
+/// The names in the exports folder, so a test can find the file one export wrote.
+fn export_names(tmp: &tempfile::TempDir) -> Vec<String> {
+    let dir = tmp.path().join(".ladon").join("exports");
+    let mut names: Vec<String> = fs::read_dir(dir)
+        .map(|entries| {
+            entries
+                .flatten()
+                .map(|entry| entry.file_name().to_string_lossy().into_owned())
+                .collect()
+        })
+        .unwrap_or_default();
+    names.sort();
+    names
+}
+
+#[tokio::test]
+async fn it_940_export_omits_a_file_excluded_after_capture() {
+    let (tmp, engine) = workspace().await;
+    assert_eq!(
+        run(
+            &engine,
+            &["baseline", "add", "a.md"],
+            &mut ScriptedIo::console(&["y"])
+        )
+        .await,
+        0
+    );
+    assert_eq!(
+        run(
+            &engine,
+            &["note", "a.md", "1", "reviewed"],
+            &mut ScriptedIo::default()
+        )
+        .await,
+        0
+    );
+    // The rule comes after the capture, so the stored flag of a.md is still false.
+    ladon_explorer::policy::add_sensitive(tmp.path(), &tmp.path().join("a.md")).unwrap();
+
+    let before = export_names(&tmp);
+    assert_eq!(
+        run(
+            &engine,
+            &["export", "report", "--all"],
+            &mut ScriptedIo::default()
+        )
+        .await,
+        0
+    );
+    let after = export_names(&tmp);
+    let first = after
+        .iter()
+        .find(|name| !before.contains(name))
+        .expect("the first report is written");
+    let text = fs::read_to_string(tmp.path().join(".ladon").join("exports").join(first)).unwrap();
+    assert!(
+        !text.contains("a.md"),
+        "a file the gate refuses is left out of the report: {text}"
+    );
+
+    let before = export_names(&tmp);
+    assert_eq!(
+        run(
+            &engine,
+            &["export", "report", "--all", "--include-sensitive"],
+            &mut ScriptedIo::default()
+        )
+        .await,
+        0
+    );
+    let after = export_names(&tmp);
+    let second = after
+        .iter()
+        .find(|name| !before.contains(name))
+        .expect("the second report is written");
+    let text = fs::read_to_string(tmp.path().join(".ladon").join("exports").join(second)).unwrap();
+    assert!(
+        text.contains("a.md"),
+        "--include-sensitive brings the file back: {text}"
+    );
+}

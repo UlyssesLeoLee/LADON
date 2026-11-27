@@ -2,7 +2,7 @@
 
 Source: `src/google_oauth.rs`
 
-Source-SHA256: `4cf5b483493fe0a1c63ec332f1a6d6227c4c6a0e265bfb7845c7f6aca5caa4c5`
+Source-SHA256: `8e03d2cc59f9ff26d954612c568a3f794698394f08f84ef760cda70458b82349`
 
 ## Responsibility
 

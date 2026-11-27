@@ -3359,10 +3359,12 @@ async fn build_input(cx: &Ctx<'_>, generated_at: String) -> Result<ReportInput> 
                 created_at: version.created_at,
             });
         }
+        // The gate decides now, so a rule added after the capture counts; the stored flag alone would miss it.
+        let refused = !engine.remote_read_allowed(&file).await.unwrap_or(false);
         input.files.push(ReportFile {
             id: file.id,
             path: file.relative_path,
-            sensitive: file.sensitive,
+            sensitive: refused,
         });
     }
     let mut anchor_states = BTreeMap::new();

@@ -426,3 +426,19 @@ async fn it_048_cross_process_lock_observation() {
     let line = text.lines().find(|l| l.contains("IT-048 child:")).unwrap_or("IT-048 child: no line reported");
     eprintln!("IT-048 probe: cross_process {line}");
 }
+
+#[tokio::test]
+async fn it_1050_an_existing_backup_is_never_overwritten() {
+    let (tmp, store, _) = legacy_library().await;
+    let backup_dir = tmp.path().join(".ladon/backup");
+    std::fs::create_dir_all(&backup_dir).unwrap();
+    std::fs::write(backup_dir.join("meta.turso.pre-004"), b"earlier backup").unwrap();
+
+    match store.ensure_schema(false).await.unwrap() {
+        SchemaOutcome::Applied { backup: BackupState::Verified { path } } => {
+            assert_eq!(path, backup_dir.join("meta.turso.pre-004-2"))
+        }
+        other => panic!("unexpected outcome {other:?}"),
+    }
+    assert_eq!(std::fs::read(backup_dir.join("meta.turso.pre-004")).unwrap(), b"earlier backup");
+}

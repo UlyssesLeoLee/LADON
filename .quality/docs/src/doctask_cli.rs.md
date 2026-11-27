@@ -2,7 +2,7 @@
 
 Source: `src/doctask_cli.rs`
 
-Source-SHA256: `ab810ef314aa5ae26038d524a4a4fea3c150f908dbce1a601bb5c3be7b0b6ff4`
+Source-SHA256: `541cba47ebecec14188937567bde6fd71414dd63efd9eb23b15fae243949db23`
 
 ## Responsibility
 
