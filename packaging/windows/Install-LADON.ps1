@@ -15,7 +15,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2.0
-$Version = '0.0.3'
+$Version = '0.0.4'
 $AppName = 'LADON'
 
 . (Join-Path $PSScriptRoot 'LADON-Common.ps1')
@@ -303,7 +303,7 @@ if ($ScreenshotDir) {
   $form.Show()
   for ($i = 0; $i -lt 4; $i++) {
     Show-Page $i
-    if ($i -eq 2) { $logBox.Text = "安装目录：示例`r`n  复制 ladon.exe`r`n自检通过：ladon 0.0.3" }
+    if ($i -eq 2) { $logBox.Text = "安装目录：示例`r`n  复制 ladon.exe`r`n自检通过：ladon 0.0.4" }
     if ($i -eq 3) { $lblDone.Text = "安装完成。`r`n`r`n程序位置：示例`r`n已加入用户 PATH。`r`n示例工作区：示例（内有 QUICKSTART.txt）`r`n`r`n卸载：开始菜单「卸载 LADON」。"; $cbOpen.Visible = $true }
     [System.Windows.Forms.Application]::DoEvents(); Start-Sleep -Milliseconds 300; [System.Windows.Forms.Application]::DoEvents()
     $bmp = New-Object System.Drawing.Bitmap($form.Width, $form.Height)

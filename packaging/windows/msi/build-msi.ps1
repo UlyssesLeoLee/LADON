@@ -1,10 +1,10 @@
 ﻿# 用 WiX Toolset 5 生成 LADON 的 MSI 安装包。
 # 前置：dotnet tool install --global wix --version 5.*
-# 用法：build-msi.ps1 -SourceDir <已组装的安装目录> [-Version 0.0.3] [-OutDir E:\LADON-dist]
+# 用法：build-msi.ps1 -SourceDir <已组装的安装目录> [-Version 0.0.4] [-OutDir E:\LADON-dist]
 # SourceDir 应为 Build-Package.ps1 生成的 LADON-<版本>-Setup 目录（含 ladon.exe 与 ladon-gui.exe）。
 param(
   [Parameter(Mandatory = $true)][string]$SourceDir,
-  [string]$Version = '0.0.3',
+  [string]$Version = '0.0.4',
   [string]$OutDir = 'E:\LADON-dist'
 )
 $ErrorActionPreference = 'Stop'
