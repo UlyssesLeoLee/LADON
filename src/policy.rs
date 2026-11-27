@@ -210,9 +210,10 @@ impl LadonPolicy {
     }
 
     pub fn excluded(&self, path: &Path) -> Result<bool> {
+        // A `..` segment is refused in the path as given: a verbatim Windows path keeps it as a plain name, and a join would fold it.
+        if path.to_string_lossy().split(|c|c=='/'||c=='\\').any(|part|part=="..") {anyhow::bail!("outside workspace");}
         let path=if path.is_absolute(){path.to_path_buf()}else{self.root.join(path)};
         if !path.starts_with(&self.root) {anyhow::bail!("outside workspace");}
-        if path.components().any(|c|matches!(c,std::path::Component::ParentDir)) {anyhow::bail!("outside workspace");}
         if path.components().any(|c|c.as_os_str()==".ladon"||c.as_os_str()==".git") {return Ok(true);}
         if path.file_name().map(|s|s.eq_ignore_ascii_case(".LADONignore")).unwrap_or(false){return Ok(true);}
         let is_dir=path.is_dir();
@@ -376,7 +377,7 @@ mod tests {
         std::fs::write(root.join(".LADONignore"),"/private/\n").unwrap();
         let policy=LadonPolicy::load(&root).unwrap();
         assert!(policy.excluded(Path::new("docs/../private/x.md")).is_err());
-        assert!(policy.excluded(&root.join("docs").join("..").join("private").join("x.md")).is_err());
+        assert!(policy.excluded(Path::new(&format!("{}/docs/../private/x.md",root.display()))).is_err());
         assert!(policy.excluded(&root.join("sub").join(".LADONIGNORE")).unwrap());
     }
     #[test] fn ut_policy_lowercase_rule_file_is_applied() {

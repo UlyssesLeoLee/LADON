@@ -6,8 +6,8 @@ use async_trait::async_trait;
 use ladon_explorer::{
     doctask_flow::{DocFlow, EditPlanSupport, EditSpec, EditSubject, PlanSpec},
     doctask_model::{
-        evidence_hash, sha256_hex, ActorKind, DocError, EditKind, ErrorCode, ProposalState,
-        SourceKind, Visibility,
+        evidence_hash, sha256_hex, ActorKind, AnchorState, DocError, EditKind, ErrorCode,
+        ProposalState, SourceKind, Visibility,
     },
     doctask_service::{Caller, DocTaskService, Shown, TaskSpec},
     doctask_store::{DocStore, NewEvent, NewTask, RowWrite, StatusChange, StepEvent},
@@ -483,9 +483,12 @@ async fn tc886_agent_is_refused_every_human_operation() {
 
 #[tokio::test]
 async fn tc887_proposals_wait_for_the_owner() {
-    let (_tmp, e, file_id, _v1, _b) = setup().await;
+    let (_tmp, e, file_id, v1, _b) = setup().await;
     let ds = DocStore::new(e.store.clone());
-    let anchor = ds.tasks().await.unwrap()[0].anchor_id.clone();
+    let anchor = ds
+        .ensure_anchor(&file_id, &v1, "H1:A#1", AnchorState::Valid)
+        .await
+        .unwrap();
     let proposal = |title: &str| NewTask {
         file_id: file_id.clone(),
         anchor_id: anchor.clone(),
@@ -973,9 +976,12 @@ async fn tc897_evidence_states_kinds_and_version_rules() {
 
 #[tokio::test]
 async fn tc898_proposal_quota_and_rate_window() {
-    let (_tmp, e, file_id, _v1, _b) = setup().await;
+    let (_tmp, e, file_id, v1, _b) = setup().await;
     let ds = DocStore::new(e.store.clone());
-    let anchor = ds.tasks().await.unwrap()[0].anchor_id.clone();
+    let anchor = ds
+        .ensure_anchor(&file_id, &v1, "H1:A#1", AnchorState::Valid)
+        .await
+        .unwrap();
     let proposal = |n: usize| NewTask {
         file_id: file_id.clone(),
         anchor_id: anchor.clone(),

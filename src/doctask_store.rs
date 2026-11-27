@@ -1866,7 +1866,13 @@ fn validate_write(write: &RowWrite) -> Result<()> {
         && key.map_or(true, |name| is_identifier(name));
     let shape_ok =
         (!values_required || !values.is_empty()) && (!filters_required || !filters.is_empty());
-    if !is_doc_table(table) || !shape_ok || !names_ok {
+    // A task edit changes the title and description, which live in the legacy `doc_tasks` table.
+    let legacy_task_edit = matches!(
+        write,
+        RowWrite::Update { table: "doc_tasks", key: "id", values, .. }
+            if values.iter().all(|(column, _)| matches!(*column, "title" | "description"))
+    );
+    if !(is_doc_table(table) || legacy_task_edit) || !shape_ok || !names_ok {
         return Err(doc_error(
             ErrorCode::InvalidArg,
             "非法的表名或列名",
@@ -2163,6 +2169,29 @@ mod tests {
         assert!(!is_identifier("9a"));
         assert!(!is_doc_table("doc_tasks"));
         assert!(is_doc_table("doc_counters"));
+    }
+
+    #[test]
+    fn ut_validate_write_allows_only_title_and_description_on_doc_tasks() {
+        let edit = RowWrite::Update {
+            table: "doc_tasks",
+            key: "id",
+            key_value: Value::from("t"),
+            values: vec![("title", Value::from("x")), ("description", Value::from("y"))],
+        };
+        assert!(validate_write(&edit).is_ok());
+        let status = RowWrite::Update {
+            table: "doc_tasks",
+            key: "id",
+            key_value: Value::from("t"),
+            values: vec![("status", Value::from("done"))],
+        };
+        assert!(validate_write(&status).is_err());
+        let delete = RowWrite::Delete {
+            table: "doc_tasks",
+            filters: vec![("id", Value::from("t"))],
+        };
+        assert!(validate_write(&delete).is_err());
     }
 
     #[test]

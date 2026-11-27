@@ -2,7 +2,7 @@
 
 Source: `src/policy.rs`
 
-Source-SHA256: `8e7fadfc55693253a20b98201fbc5cf00b54944a0784e9269b7cf59c670605c8`
+Source-SHA256: `3026c245befc41ff30ddbb28a1de497300c8c2f9453ef0b8b2e512de0986c265`
 
 ## Test Strategy
 
