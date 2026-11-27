@@ -115,15 +115,18 @@ pub struct SystemHost;
 
 ### Tag folder
 
-`tag-folder` loads the policy, walks the workspace (depth 1, or 32 with `--recursive`, without following links and without `.ladon` and `.git`) and, for each tracked file:
+`tag-folder` refreshes the rules with `Engine::refresh_policy_if_stale` first (a root or global rule file that cannot be loaded fails the command with its error), then walks the workspace (depth 1, or 32 with `--recursive`, without following links and without `.ladon` and `.git`) and, for each tracked file:
 
 - reads at most 16384 bytes and derives heuristic tags;
-- when both `--endpoint` and `--model` are given, asks `ai_tags` for more tags with the description `<description>; dimensions: <presets>`, unless the file is excluded by policy or its content is excluded and the endpoint is not local. In that case it prints `skipped remote AI tagging for excluded file: <path>` on stderr and sends nothing;
+- when both `--endpoint` and `--model` are given, asks `ai_tags` for more tags with the description `<description>; dimensions: <presets>`, unless `Engine::remote_read_allowed` refuses the file: it is flagged sensitive, its path is excluded by the rules in force, its current content is excluded, or the rules in force are not usable. A refused file is sent only to a local (loopback) endpoint; otherwise the command prints `skipped remote AI tagging for excluded file: <path>` on stderr and sends nothing;
 - adds `rule-described` when `--description` is not empty, sorts the tags and removes duplicates;
 - stores the tags with source `ai+rules` when both endpoint and model are given, otherwise `heuristic`, and counts the file.
 
 The command prints `tagged <count> file(s)`.
 
+### Ignore check
+
+`ignore-check <file>` refreshes the rules like `tag-folder` (a rule file that cannot be loaded fails the command with its error). It then prints `ALLOWED: subject to explicit archive action` when `Engine::remote_path_allowed` allows the path and `EXCLUDED: local only` otherwise. The label is produced by `ignore_check_label`, so the command reports the same decision that the archive and remote read paths use: a tracked copy of excluded content is reported as `EXCLUDED: local only`.
 ### Doc, annotate and task
 
 - `doc <…>`: the workspace is opened with `Engine::open(--root)`, then `doctask_cli::run_doc(engine, args, &SystemIo)` runs the command. It returns an exit code; a non-zero code is returned as `Reported { code }`, so `main_entry` exits with that code and prints nothing more. Its output and its errors are described in `doctask_cli.rs.md`.

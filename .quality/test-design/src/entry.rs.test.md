@@ -67,3 +67,11 @@ Every command of `Command`, the clap help text and defaults, the watch loop, Goo
 | TC-1030 | `Cli::parse_from(["ladon","--root","R","mcp-serve","--launch","20261125-101010-ab"])`. | `root` is `R`; the command is `McpServe` with the launch id and no global rule file. | src/entry.rs::tests::mcp_serve_arguments_parse |
 | TC-1031 | `mcp-serve` with `--global-ignore G` and no `--launch`. | Parsing fails with the clap error for the missing required option. | src/entry.rs::tests::mcp_serve_requires_launch |
 | TC-1032 | `run` with `mcp-serve` on a root that has no `.ladon/meta.turso`. | `Err` carrying `Reported { code: 1 }`; no `Engine::open` is attempted. | src/entry.rs::tests::mcp_serve_reports_uninitialized_workspace |
+
+## Remote Gate Command Cases
+
+| Case ID | Input / Setup | Expected Outcome | Test Location |
+| --- | --- | --- | --- |
+| TC-1033 | `ignore_check_label` on a tracked copy `shared/a.txt` of excluded content `contracts/a.txt` (rule `/contracts/`), and on an untracked `docs/req.md` that no rule matches. | `EXCLUDED: local only` for the copy; `ALLOWED: subject to explicit archive action` for `docs/req.md`. | src/entry.rs::tests::ignore_check_reports_copy_of_excluded_content_as_local_only |
+| TC-1034 | `ignore_check_label` after the root `.LADONignore` has been removed from an initialised workspace. | `Err` whose text names `.LADONignore`; no label is returned. | src/entry.rs::tests::ignore_check_fails_while_root_rule_is_missing |
+| TC-1035 | `tag-folder` with `--endpoint` (a remote URL) and `--model`, after the root `.LADONignore` has been removed. | `Err` whose text names `.LADONignore`; the tagger is never called. | src/entry.rs::tests::tag_folder_fails_while_root_rule_is_missing_and_never_calls_ai |

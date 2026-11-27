@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "source": "src/agent_api.rs",
-  "baseline_source_sha256": "dbd88e2485d27caff9aec253311bfc18c63402f6c51fccc294c6de0d9b3398bb",
+  "baseline_source_sha256": "c8c92a65d82fde0be18575a2999357d5dee338f61d9ef20c1992c262308519c4",
   "prepared_branch": "fix/compile-errors",
   "technical_design": ".quality/docs/src/agent_api.rs.md",
   "test_design": ".quality/test-design/src/agent_api.rs.test.md",
-  "prepared_technical_design_sha256": "933e68d64136ddc27bcf4bd298e50a1656786116a4d194e7197783d0a16d1dd6",
-  "prepared_test_design_sha256": "d1b54ed4cb3fddbbca2100c6a9d2b8872bf4b84c4515d478c0de73ffcf4806dd",
+  "prepared_technical_design_sha256": "07e0fcc91de7544d9b7a107ca012c697e7d7dd372d49db074f23ad4c22cd1246",
+  "prepared_test_design_sha256": "8664eb85680b6fc5f69955d3813835a04e01f3c06a8eb7fb83152cb05b65f408",
   "prepared_related_design_sha256": {}
 }
